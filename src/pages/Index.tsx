@@ -1,16 +1,142 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { MapPin, Calendar, Search, ArrowRight, Star, Bus, Shield, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cities, agencies } from "@/data/mockData";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const navigate = useNavigate();
+  const [departure, setDeparture] = useState("");
+  const [destination, setDestination] = useState("");
+  const [date, setDate] = useState("");
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (departure) params.set("from", departure);
+    if (destination) params.set("to", destination);
+    if (date) params.set("date", date);
+    navigate(`/search?${params.toString()}`);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen pb-20">
+      {/* Hero */}
+      <section className="relative gradient-hero px-4 pt-12 pb-16 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="relative z-10 max-w-lg mx-auto"
+        >
+          <h1 className="font-display text-3xl md:text-5xl font-bold text-primary-foreground mb-2">
+            Voyagez<br />simplement.
+          </h1>
+          <p className="text-primary-foreground/80 text-sm md:text-base mb-8">
+            Réservez vos billets de transport terrestre au Congo en quelques clics.
+          </p>
+
+          {/* Search Card */}
+          <div className="glass rounded-2xl p-4 space-y-3">
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 h-4 w-4 text-primary" />
+              <select
+                value={departure}
+                onChange={(e) => setDeparture(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Ville de départ</option>
+                {cities.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 h-4 w-4 text-accent" />
+              <select
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Destination</option>
+                {cities.filter((c) => c !== departure).map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
+              <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <Button
+              onClick={handleSearch}
+              className="w-full gradient-primary text-primary-foreground py-3 rounded-xl font-display font-semibold text-base h-12"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              Rechercher un trajet
+            </Button>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Features */}
+      <section className="px-4 py-10 max-w-lg mx-auto">
+        <h2 className="font-display text-lg font-bold mb-4">Pourquoi TransCongo ?</h2>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { icon: Shield, label: "Paiement\nsécurisé", color: "text-accent" },
+            { icon: Clock, label: "Réservation\ninstantanée", color: "text-primary" },
+            { icon: Bus, label: "Meilleures\nagences", color: "text-warning" },
+          ].map(({ icon: Icon, label, color }) => (
+            <div key={label} className="bg-card rounded-xl p-4 text-center border border-border/50">
+              <Icon className={`h-6 w-6 mx-auto mb-2 ${color}`} />
+              <p className="text-xs font-body text-muted-foreground whitespace-pre-line">{label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Popular Agencies */}
+      <section className="px-4 pb-10 max-w-lg mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-lg font-bold">Agences populaires</h2>
+          <button className="text-primary text-sm font-medium flex items-center gap-1">
+            Voir tout <ArrowRight className="h-3 w-3" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          {agencies.map((agency, i) => (
+            <motion.div
+              key={agency.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="flex items-center gap-4 bg-card rounded-xl p-4 border border-border/50"
+            >
+              <span className="text-3xl">{agency.logo}</span>
+              <div className="flex-1">
+                <h3 className="font-display font-semibold text-sm">{agency.name}</h3>
+                <p className="text-xs text-muted-foreground">{agency.totalTrips} trajets</p>
+              </div>
+              <div className="flex items-center gap-1">
+                <Star className="h-3 w-3 fill-warning text-warning" />
+                <span className="text-sm font-semibold">{agency.rating}</span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
