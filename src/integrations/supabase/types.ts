@@ -14,16 +14,289 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agencies: {
+        Row: {
+          address: string | null
+          commission_rate: number | null
+          created_at: string
+          email: string | null
+          id: string
+          logo: string | null
+          name: string
+          owner_id: string | null
+          phone: string | null
+          rating: number | null
+          status: string
+          total_trips: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          commission_rate?: number | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo?: string | null
+          name: string
+          owner_id?: string | null
+          phone?: string | null
+          rating?: number | null
+          status?: string
+          total_trips?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          commission_rate?: number | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo?: string | null
+          name?: string
+          owner_id?: string | null
+          phone?: string | null
+          rating?: number | null
+          status?: string
+          total_trips?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bookings: {
+        Row: {
+          booking_date: string
+          created_at: string
+          id: string
+          passenger_name: string
+          payment_method: string
+          payment_status: string
+          phone: string
+          qr_code: string
+          seat_number: number
+          status: string
+          total_amount: number
+          trip_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          booking_date?: string
+          created_at?: string
+          id?: string
+          passenger_name: string
+          payment_method: string
+          payment_status?: string
+          phone: string
+          qr_code: string
+          seat_number: number
+          status?: string
+          total_amount: number
+          trip_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          booking_date?: string
+          created_at?: string
+          id?: string
+          passenger_name?: string
+          payment_method?: string
+          payment_status?: string
+          phone?: string
+          qr_code?: string
+          seat_number?: number
+          status?: string
+          total_amount?: number
+          trip_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_settings: {
+        Row: {
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          agency_id: string | null
+          amount: number
+          booking_id: string | null
+          commission: number
+          created_at: string
+          id: string
+          net_amount: number
+          payment_method: string
+          status: string
+        }
+        Insert: {
+          agency_id?: string | null
+          amount: number
+          booking_id?: string | null
+          commission?: number
+          created_at?: string
+          id?: string
+          net_amount?: number
+          payment_method: string
+          status?: string
+        }
+        Update: {
+          agency_id?: string | null
+          amount?: number
+          booking_id?: string | null
+          commission?: number
+          created_at?: string
+          id?: string
+          net_amount?: number
+          payment_method?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trips: {
+        Row: {
+          agency_id: string
+          arrival_time: string
+          available_seats: number
+          bus_type: string | null
+          created_at: string
+          currency: string
+          date: string
+          departure: string
+          departure_time: string
+          destination: string
+          id: string
+          price: number
+          status: string
+          total_seats: number
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          arrival_time: string
+          available_seats: number
+          bus_type?: string | null
+          created_at?: string
+          currency?: string
+          date: string
+          departure: string
+          departure_time: string
+          destination: string
+          id?: string
+          price: number
+          status?: string
+          total_seats: number
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          arrival_time?: string
+          available_seats?: number
+          bus_type?: string | null
+          created_at?: string
+          currency?: string
+          date?: string
+          departure?: string
+          departure_time?: string
+          destination?: string
+          id?: string
+          price?: number
+          status?: string
+          total_seats?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trips_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +423,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
