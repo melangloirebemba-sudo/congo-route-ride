@@ -3,12 +3,22 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/hooks/useAuth";
 import BottomNav from "@/components/BottomNav";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import SearchResults from "./pages/SearchResults";
 import TripDetails from "./pages/TripDetails";
 import BookingPage from "./pages/BookingPage";
 import BookingHistory from "./pages/BookingHistory";
+import Auth from "./pages/Auth";
+import AdminLayout from "./pages/admin/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
+import AgenciesAdmin from "./pages/admin/AgenciesAdmin";
+import TransactionsAdmin from "./pages/admin/TransactionsAdmin";
+import UsersAdmin from "./pages/admin/UsersAdmin";
+import StatsAdmin from "./pages/admin/StatsAdmin";
+import SettingsAdmin from "./pages/admin/SettingsAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -16,19 +26,40 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/search" element={<SearchResults />} />
-          <Route path="/trip/:id" element={<TripDetails />} />
-          <Route path="/booking/:id" element={<BookingPage />} />
-          <Route path="/bookings" element={<BookingHistory />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <BottomNav />
-      </BrowserRouter>
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/trip/:id" element={<TripDetails />} />
+            <Route path="/booking/:id" element={<BookingPage />} />
+            <Route path="/bookings" element={<BookingHistory />} />
+            
+            {/* Admin routes */}
+            <Route path="/admin" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<Dashboard />} />
+              <Route path="agencies" element={<AgenciesAdmin />} />
+              <Route path="transactions" element={<TransactionsAdmin />} />
+              <Route path="users" element={<UsersAdmin />} />
+              <Route path="stats" element={<StatsAdmin />} />
+              <Route path="settings" element={<SettingsAdmin />} />
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Routes>
+            <Route path="/admin/*" element={null} />
+            <Route path="*" element={<BottomNav />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
