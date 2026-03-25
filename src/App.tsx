@@ -19,6 +19,11 @@ import TransactionsAdmin from "./pages/admin/TransactionsAdmin";
 import UsersAdmin from "./pages/admin/UsersAdmin";
 import StatsAdmin from "./pages/admin/StatsAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
+import AgencyLayout from "./pages/agency/AgencyLayout";
+import AgencyDashboard from "./pages/agency/AgencyDashboard";
+import AgencyTrips from "./pages/agency/AgencyTrips";
+import AgencyBookings from "./pages/agency/AgencyBookings";
+import AgencySettings from "./pages/agency/AgencySettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,10 +57,19 @@ const App = () => (
               <Route path="settings" element={<SettingsAdmin />} />
             </Route>
 
+            {/* Agency routes */}
+            <Route path="/agency" element={<AgencyLayout />}>
+              <Route index element={<AgencyDashboard />} />
+              <Route path="trips" element={<AgencyTrips />} />
+              <Route path="bookings" element={<AgencyBookings />} />
+              <Route path="settings" element={<AgencySettings />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Routes>
             <Route path="/admin/*" element={null} />
+            <Route path="/agency/*" element={null} />
             <Route path="*" element={<BottomNav />} />
           </Routes>
         </BrowserRouter>
