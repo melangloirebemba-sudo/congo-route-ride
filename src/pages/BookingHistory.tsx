@@ -1,7 +1,24 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, QrCode, MapPin, Calendar } from "lucide-react";
-import { sampleBookings } from "@/data/mockData";
+import { ArrowLeft, QrCode, MapPin, Calendar, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface BookingRow {
+  id: string;
+  status: string;
+  qr_code: string;
+  seat_number: number;
+  total_amount: number;
+  booking_date: string;
+  trips: {
+    departure: string;
+    destination: string;
+    departure_time: string;
+    date: string;
+    agencies: { name: string } | null;
+  } | null;
+}
 
 const statusColors: Record<string, string> = {
   confirmed: "bg-accent text-accent-foreground",
@@ -17,6 +34,20 @@ const statusLabels: Record<string, string> = {
 
 const BookingHistory = () => {
   const navigate = useNavigate();
+  const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("id, status, qr_code, seat_number, total_amount, booking_date, trips(departure, destination, departure_time, date, agencies(name))")
+        .order("created_at", { ascending: false });
+      setBookings((data as unknown as BookingRow[]) || []);
+      setLoading(false);
+    };
+    fetch();
+  }, []);
 
   return (
     <div className="min-h-screen pb-24">
@@ -28,13 +59,17 @@ const BookingHistory = () => {
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-3">
-        {sampleBookings.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          </div>
+        ) : bookings.length === 0 ? (
           <div className="text-center py-16">
             <QrCode className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
             <p className="text-muted-foreground">Aucune réservation</p>
           </div>
         ) : (
-          sampleBookings.map((b, i) => (
+          bookings.map((b, i) => (
             <motion.div
               key={b.id}
               initial={{ opacity: 0, y: 10 }}
@@ -43,28 +78,32 @@ const BookingHistory = () => {
               className="bg-card rounded-2xl p-4 border border-border/50"
             >
               <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[b.status]}`}>
-                  {statusLabels[b.status]}
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[b.status] || ""}`}>
+                  {statusLabels[b.status] || b.status}
                 </span>
-                <span className="text-xs text-muted-foreground">{b.qrCode}</span>
+                <span className="text-xs text-muted-foreground">{b.qr_code}</span>
               </div>
 
               <div className="flex items-center gap-2 mb-2">
                 <MapPin className="h-3 w-3 text-primary" />
                 <span className="text-sm font-medium">
-                  {b.trip.departure} → {b.trip.destination}
+                  {b.trips?.departure} → {b.trips?.destination}
                 </span>
               </div>
 
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3" />
-                <span>{new Date(b.trip.date).toLocaleDateString("fr-FR")} · {b.trip.departureTime}</span>
+                <span>
+                  {b.trips?.date ? new Date(b.trips.date).toLocaleDateString("fr-FR") : ""} · {b.trips?.departure_time}
+                </span>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                <span className="text-xs text-muted-foreground">Siège {b.seatNumber} · {b.trip.agencyName}</span>
+                <span className="text-xs text-muted-foreground">
+                  Siège {b.seat_number} · {b.trips?.agencies?.name || "Agence"}
+                </span>
                 <span className="font-display font-bold text-sm text-primary">
-                  {b.totalAmount.toLocaleString()} FCFA
+                  {b.total_amount.toLocaleString()} FCFA
                 </span>
               </div>
             </motion.div>
