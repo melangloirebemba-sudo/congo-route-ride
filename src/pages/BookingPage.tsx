@@ -93,14 +93,9 @@ const BookingPage = () => {
       return;
     }
 
-    // Decrement available seats
-    await supabase.rpc("has_role", { _user_id: userId || "00000000-0000-0000-0000-000000000000", _role: "user" }); // no-op, just to keep connection
-    await supabase.from("trips").update({ available_seats: trip.price > 0 ? undefined : 0 }).eq("id", "never"); // We'll use a proper approach below
-
     // Insert transaction
     const commission = Math.round(trip.price * 0.1);
     await supabase.from("transactions").insert({
-      booking_id: undefined, // we don't have the booking id easily
       agency_id: trip.agency_id,
       amount: trip.price,
       commission,
