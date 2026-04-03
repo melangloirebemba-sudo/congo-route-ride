@@ -1,16 +1,61 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Clock, Bus, Users, CreditCard } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Bus, Users, CreditCard, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { trips } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
 import SeatSelector from "@/components/SeatSelector";
+
+interface TripData {
+  id: string;
+  departure: string;
+  destination: string;
+  departure_time: string;
+  arrival_time: string;
+  date: string;
+  price: number;
+  available_seats: number;
+  total_seats: number;
+  bus_type: string | null;
+  agencies: { name: string } | null;
+}
 
 const TripDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const trip = trips.find((t) => t.id === id);
+  const [trip, setTrip] = useState<TripData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
+  const [bookedSeats, setBookedSeats] = useState<number[]>([]);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const [tripRes, seatsRes] = await Promise.all([
+        supabase
+          .from("trips")
+          .select("id, departure, destination, departure_time, arrival_time, date, price, available_seats, total_seats, bus_type, agencies(name)")
+          .eq("id", id!)
+          .maybeSingle(),
+        supabase
+          .from("bookings")
+          .select("seat_number")
+          .eq("trip_id", id!)
+          .neq("status", "cancelled"),
+      ]);
+      setTrip(tripRes.data as unknown as TripData);
+      setBookedSeats(seatsRes.data?.map((b) => b.seat_number) || []);
+      setLoading(false);
+    };
+    fetch();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!trip) {
     return (
@@ -19,6 +64,8 @@ const TripDetails = () => {
       </div>
     );
   }
+
+  const agencyName = trip.agencies?.name || "Agence";
 
   return (
     <div className="min-h-screen pb-28">
@@ -32,14 +79,13 @@ const TripDetails = () => {
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-4">
-        {/* Route Card */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-card rounded-2xl p-5 border border-border/50"
         >
           <div className="flex items-center gap-1 mb-1">
-            <span className="text-sm font-medium">{trip.agencyName}</span>
+            <span className="text-sm font-medium">{agencyName}</span>
           </div>
 
           <div className="flex items-start gap-4 my-4">
@@ -50,13 +96,13 @@ const TripDetails = () => {
             </div>
             <div className="flex-1 space-y-8">
               <div>
-                <p className="font-display font-bold text-lg">{trip.departureTime}</p>
+                <p className="font-display font-bold text-lg">{trip.departure_time}</p>
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <MapPin className="h-3 w-3" /> {trip.departure}
                 </p>
               </div>
               <div>
-                <p className="font-display font-bold text-lg">{trip.arrivalTime}</p>
+                <p className="font-display font-bold text-lg">{trip.arrival_time}</p>
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <MapPin className="h-3 w-3" /> {trip.destination}
                 </p>
@@ -67,11 +113,11 @@ const TripDetails = () => {
           <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/50">
             <div className="text-center">
               <Bus className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-              <p className="text-xs text-muted-foreground">{trip.busType}</p>
+              <p className="text-xs text-muted-foreground">{trip.bus_type}</p>
             </div>
             <div className="text-center">
               <Users className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-              <p className="text-xs text-muted-foreground">{trip.availableSeats} places</p>
+              <p className="text-xs text-muted-foreground">{trip.available_seats} places</p>
             </div>
             <div className="text-center">
               <Clock className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
@@ -82,7 +128,6 @@ const TripDetails = () => {
           </div>
         </motion.div>
 
-        {/* Seat Selector */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -91,15 +136,14 @@ const TripDetails = () => {
         >
           <h2 className="font-display font-semibold mb-3">Choisir un siège</h2>
           <SeatSelector
-            totalSeats={trip.totalSeats}
-            availableSeats={trip.availableSeats}
+            totalSeats={trip.total_seats}
+            bookedSeats={bookedSeats}
             selected={selectedSeat}
             onSelect={setSelectedSeat}
           />
         </motion.div>
       </div>
 
-      {/* Bottom CTA */}
       <div className="fixed bottom-16 left-0 right-0 p-4 bg-background/90 backdrop-blur-lg border-t border-border/50">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div>

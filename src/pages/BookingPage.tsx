@@ -1,22 +1,59 @@
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Phone, User, CreditCard, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Phone, User, CreditCard, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { trips } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
+import { toast } from "sonner";
+
+interface TripData {
+  id: string;
+  departure: string;
+  destination: string;
+  departure_time: string;
+  arrival_time: string;
+  date: string;
+  price: number;
+  agency_id: string;
+  agencies: { name: string } | null;
+}
 
 const BookingPage = () => {
   const { id } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const trip = trips.find((t) => t.id === id);
   const seat = params.get("seat");
 
+  const [trip, setTrip] = useState<TripData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("mtn");
   const [step, setStep] = useState<"form" | "confirmed">("form");
+  const [bookingRef, setBookingRef] = useState("");
+
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("trips")
+        .select("id, departure, destination, departure_time, arrival_time, date, price, agency_id, agencies(name)")
+        .eq("id", id!)
+        .maybeSingle();
+      setTrip(data as unknown as TripData);
+      setLoading(false);
+    };
+    fetch();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!trip) {
     return (
@@ -26,11 +63,50 @@ const BookingPage = () => {
     );
   }
 
-  const bookingRef = `TC-${Date.now().toString(36).toUpperCase()}`;
+  const agencyName = trip.agencies?.name || "Agence";
+  const paymentLabels: Record<string, string> = { mtn: "MTN MoMo", airtel: "Airtel Money", card: "Carte bancaire" };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!name || !phone) return;
+    setSubmitting(true);
+
+    const qrCode = `TC-${Date.now().toString(36).toUpperCase()}`;
+    const { data: session } = await supabase.auth.getSession();
+    const userId = session?.session?.user?.id || null;
+
+    const { error } = await supabase.from("bookings").insert({
+      trip_id: trip.id,
+      passenger_name: name,
+      phone,
+      seat_number: Number(seat),
+      payment_method: paymentLabels[paymentMethod] || paymentMethod,
+      payment_status: "paid",
+      status: "confirmed",
+      total_amount: trip.price,
+      qr_code: qrCode,
+      user_id: userId,
+    });
+
+    if (error) {
+      toast.error("Erreur lors de la réservation. Veuillez réessayer.");
+      setSubmitting(false);
+      return;
+    }
+
+    // Insert transaction
+    const commission = Math.round(trip.price * 0.1);
+    await supabase.from("transactions").insert({
+      agency_id: trip.agency_id,
+      amount: trip.price,
+      commission,
+      net_amount: trip.price - commission,
+      payment_method: paymentLabels[paymentMethod] || paymentMethod,
+      status: "completed",
+    });
+
+    setBookingRef(qrCode);
     setStep("confirmed");
+    setSubmitting(false);
   };
 
   if (step === "confirmed") {
@@ -70,7 +146,7 @@ const BookingPage = () => {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Heure</span>
-                <span className="font-medium">{trip.departureTime}</span>
+                <span className="font-medium">{trip.departure_time}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Siège</span>
@@ -78,7 +154,7 @@ const BookingPage = () => {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Agence</span>
-                <span className="font-medium">{trip.agencyName}</span>
+                <span className="font-medium">{agencyName}</span>
               </div>
               <div className="flex justify-between text-sm border-t border-border/50 pt-3">
                 <span className="text-muted-foreground">Total payé</span>
@@ -111,7 +187,6 @@ const BookingPage = () => {
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-4">
-        {/* Passenger info */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -138,7 +213,6 @@ const BookingPage = () => {
           </div>
         </motion.div>
 
-        {/* Payment method */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -169,7 +243,6 @@ const BookingPage = () => {
           ))}
         </motion.div>
 
-        {/* Summary */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -195,11 +268,15 @@ const BookingPage = () => {
 
         <Button
           onClick={handleConfirm}
-          disabled={!name || !phone}
+          disabled={!name || !phone || submitting}
           className="w-full gradient-primary text-primary-foreground py-3 rounded-xl font-display font-semibold h-12"
         >
-          <CreditCard className="mr-2 h-4 w-4" />
-          Confirmer et payer
+          {submitting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <CreditCard className="mr-2 h-4 w-4" />
+          )}
+          {submitting ? "Traitement..." : "Confirmer et payer"}
         </Button>
       </div>
     </div>
