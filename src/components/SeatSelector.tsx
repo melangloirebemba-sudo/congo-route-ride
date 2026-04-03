@@ -1,17 +1,12 @@
 interface SeatSelectorProps {
   totalSeats: number;
-  availableSeats: number;
+  bookedSeats: number[];
   selected: number | null;
   onSelect: (seat: number) => void;
 }
 
-const SeatSelector = ({ totalSeats, availableSeats, selected, onSelect }: SeatSelectorProps) => {
-  const occupied = new Set<number>();
-  // Simulate occupied seats
-  for (let i = 1; occupied.size < totalSeats - availableSeats; i++) {
-    occupied.add((i * 7 + 3) % totalSeats + 1);
-  }
-
+const SeatSelector = ({ totalSeats, bookedSeats, selected, onSelect }: SeatSelectorProps) => {
+  const occupiedSet = new Set(bookedSeats);
   const cols = 4;
   const rows = Math.ceil(totalSeats / cols);
 
@@ -26,9 +21,8 @@ const SeatSelector = ({ totalSeats, availableSeats, selected, onSelect }: SeatSe
         {Array.from({ length: rows * cols }, (_, i) => {
           const seatNum = i + 1;
           if (seatNum > totalSeats) return <div key={i} />;
-          const isOccupied = occupied.has(seatNum);
+          const isOccupied = occupiedSet.has(seatNum);
           const isSelected = selected === seatNum;
-          // Add aisle gap
           const isAisle = (i % cols) === 1;
           return (
             <button

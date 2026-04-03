@@ -1,15 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { MapPin, Calendar, Search, ArrowRight, Star, Bus, Shield, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cities, agencies } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const navigate = useNavigate();
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
   const [date, setDate] = useState("");
+  const [cities, setCities] = useState<string[]>([]);
+  const [agencies, setAgencies] = useState<{ id: string; name: string; logo: string | null; rating: number | null; total_trips: number | null }[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [citiesRes, agenciesRes] = await Promise.all([
+        supabase.from("trips").select("departure, destination"),
+        supabase.from("agencies").select("id, name, logo, rating, total_trips").eq("status", "active").order("rating", { ascending: false }).limit(5),
+      ]);
+
+      if (citiesRes.data) {
+        const allCities = new Set<string>();
+        citiesRes.data.forEach((t) => {
+          allCities.add(t.departure);
+          allCities.add(t.destination);
+        });
+        setCities(Array.from(allCities).sort());
+      }
+
+      if (agenciesRes.data) setAgencies(agenciesRes.data);
+    };
+    fetchData();
+  }, []);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -37,7 +60,6 @@ const Index = () => {
             Réservez vos billets de transport terrestre au Congo en quelques clics.
           </p>
 
-          {/* Search Card */}
           <div className="glass rounded-2xl p-4 space-y-3">
             <div className="relative">
               <MapPin className="absolute left-3 top-3 h-4 w-4 text-primary" />
@@ -122,14 +144,14 @@ const Index = () => {
               transition={{ delay: i * 0.1 }}
               className="flex items-center gap-4 bg-card rounded-xl p-4 border border-border/50"
             >
-              <span className="text-3xl">{agency.logo}</span>
+              <span className="text-3xl">{agency.logo || "🚌"}</span>
               <div className="flex-1">
                 <h3 className="font-display font-semibold text-sm">{agency.name}</h3>
-                <p className="text-xs text-muted-foreground">{agency.totalTrips} trajets</p>
+                <p className="text-xs text-muted-foreground">{agency.total_trips || 0} trajets</p>
               </div>
               <div className="flex items-center gap-1">
                 <Star className="h-3 w-3 fill-warning text-warning" />
-                <span className="text-sm font-semibold">{agency.rating}</span>
+                <span className="text-sm font-semibold">{agency.rating || 0}</span>
               </div>
             </motion.div>
           ))}
