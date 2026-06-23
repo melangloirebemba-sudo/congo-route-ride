@@ -121,6 +121,36 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          cancellation_alerts: boolean
+          channel: Database["public"]["Enums"]["notification_channel"]
+          created_at: string
+          id: string
+          trip_reminders: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancellation_alerts?: boolean
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          created_at?: string
+          id?: string
+          trip_reminders?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancellation_alerts?: boolean
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          created_at?: string
+          id?: string
+          trip_reminders?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           description: string | null
@@ -297,6 +327,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      notification_channel: "sms" | "whatsapp"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -425,6 +456,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      notification_channel: ["sms", "whatsapp"],
     },
   },
 } as const

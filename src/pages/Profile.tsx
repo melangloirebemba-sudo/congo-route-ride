@@ -119,7 +119,7 @@ const Profile = () => {
     ...(agencyId
       ? [{ icon: Building2, label: "Espace Agence", onClick: () => navigate("/agency") }]
       : []),
-    { icon: Bell, label: "Notifications", onClick: () => toast.info("Bientôt disponible") },
+    { icon: Bell, label: "Préférences de notifications", onClick: () => navigate("/preferences") },
     { icon: HelpCircle, label: "Aide & Support", onClick: () => toast.info("Bientôt disponible") },
     { icon: FileText, label: "Conditions d'utilisation", onClick: () => toast.info("Bientôt disponible") },
   ];
