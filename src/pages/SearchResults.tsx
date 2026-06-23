@@ -31,8 +31,9 @@ const SearchResults = () => {
       setLoading(true);
       let query = supabase
         .from("trips")
-        .select("id, departure, destination, departure_time, arrival_time, date, price, available_seats, bus_type, agencies(name)")
+        .select("id, departure, destination, departure_time, arrival_time, date, price, available_seats, bus_type, agencies!inner(name, status)")
         .eq("status", "active")
+        .eq("agencies.status", "active")
         .gt("available_seats", 0);
 
       if (from) query = query.eq("departure", from);

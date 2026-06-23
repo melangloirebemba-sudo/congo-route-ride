@@ -16,7 +16,9 @@ const AgenciesAdmin = () => {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [newAgency, setNewAgency] = useState({ name: "", email: "", phone: "", address: "", commission_rate: "10" });
+  const [newAgency, setNewAgency] = useState({ name: "", email: "", password: "", phone: "", address: "", commission_rate: "10" });
+  const [creating, setCreating] = useState(false);
+  const [createdCreds, setCreatedCreds] = useState<{ email: string; password: string } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editAgency, setEditAgency] = useState<Agency | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -47,17 +49,41 @@ const AgenciesAdmin = () => {
     fetchAgencies();
   };
 
+  const generatePassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    let p = "";
+    for (let i = 0; i < 12; i++) p += chars.charAt(Math.floor(Math.random() * chars.length));
+    setNewAgency(prev => ({ ...prev, password: p }));
+  };
+
   const createAgency = async () => {
-    if (!newAgency.name) { toast.error("Le nom est requis"); return; }
-    const { error } = await supabase.from("agencies").insert({
-      name: newAgency.name, email: newAgency.email || null,
-      phone: newAgency.phone || null, address: newAgency.address || null,
-      commission_rate: parseFloat(newAgency.commission_rate) || 10,
-      status: "active",
+    if (!newAgency.name || !newAgency.email || !newAgency.password) {
+      toast.error("Nom, email et mot de passe sont requis");
+      return;
+    }
+    if (newAgency.password.length < 8) {
+      toast.error("Le mot de passe doit faire au moins 8 caractères");
+      return;
+    }
+    setCreating(true);
+    const { data, error } = await supabase.functions.invoke("create-agency-account", {
+      body: {
+        name: newAgency.name,
+        email: newAgency.email,
+        password: newAgency.password,
+        phone: newAgency.phone || null,
+        address: newAgency.address || null,
+        commission_rate: parseFloat(newAgency.commission_rate) || 10,
+      },
     });
-    if (error) { toast.error(error.message); return; }
-    toast.success("Agence créée");
-    setNewAgency({ name: "", email: "", phone: "", address: "", commission_rate: "10" });
+    setCreating(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Erreur lors de la création");
+      return;
+    }
+    toast.success("Compte agence créé");
+    setCreatedCreds({ email: newAgency.email, password: newAgency.password });
+    setNewAgency({ name: "", email: "", password: "", phone: "", address: "", commission_rate: "10" });
     setDialogOpen(false);
     fetchAgencies();
   };
@@ -103,12 +129,20 @@ const AgenciesAdmin = () => {
   });
 
   const statusBadge = (status: string) => {
+    const labels: Record<string, string> = {
+      active: "Active",
+      pending: "En attente",
+      pending_setup: "À compléter",
+      pending_review: "À valider",
+      suspended: "Suspendue",
+    };
     const styles: Record<string, string> = {
       active: "bg-accent/20 text-accent",
       pending: "bg-warning/20 text-warning-foreground",
+      pending_setup: "bg-muted text-muted-foreground",
+      pending_review: "bg-primary/20 text-primary",
       suspended: "bg-destructive/20 text-destructive",
     };
-    const labels: Record<string, string> = { active: "Active", pending: "En attente", suspended: "Suspendue" };
     return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${styles[status] || ""}`}>{labels[status] || status}</span>;
   };
 
@@ -124,18 +158,47 @@ const AgenciesAdmin = () => {
             <Button className="gradient-primary text-primary-foreground"><Plus className="h-4 w-4 mr-1" /> Ajouter</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nouvelle agence</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Créer un compte agence</DialogTitle>
+              <p className="text-xs text-muted-foreground pt-1">L'agence se connectera avec l'email et le mot de passe ci-dessous, puis complètera son profil avant validation.</p>
+            </DialogHeader>
             <div className="space-y-3 pt-2">
               <Input placeholder="Nom de l'agence *" value={newAgency.name} onChange={e => setNewAgency(p => ({ ...p, name: e.target.value }))} />
-              <Input placeholder="Email" value={newAgency.email} onChange={e => setNewAgency(p => ({ ...p, email: e.target.value }))} />
+              <Input placeholder="Email de connexion *" type="email" value={newAgency.email} onChange={e => setNewAgency(p => ({ ...p, email: e.target.value }))} />
+              <div className="flex gap-2">
+                <Input placeholder="Mot de passe temporaire *" value={newAgency.password} onChange={e => setNewAgency(p => ({ ...p, password: e.target.value }))} />
+                <Button type="button" variant="outline" onClick={generatePassword}>Générer</Button>
+              </div>
               <Input placeholder="Téléphone" value={newAgency.phone} onChange={e => setNewAgency(p => ({ ...p, phone: e.target.value }))} />
               <Input placeholder="Adresse" value={newAgency.address} onChange={e => setNewAgency(p => ({ ...p, address: e.target.value }))} />
               <Input placeholder="Commission (%)" type="number" value={newAgency.commission_rate} onChange={e => setNewAgency(p => ({ ...p, commission_rate: e.target.value }))} />
-              <Button onClick={createAgency} className="w-full gradient-primary text-primary-foreground">Créer l'agence</Button>
+              <Button onClick={createAgency} disabled={creating} className="w-full gradient-primary text-primary-foreground">
+                {creating ? "Création..." : "Créer le compte"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Credentials display dialog */}
+      <Dialog open={!!createdCreds} onOpenChange={(o) => !o && setCreatedCreds(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Identifiants de connexion</DialogTitle></DialogHeader>
+          {createdCreds && (
+            <div className="space-y-3 pt-2 text-sm">
+              <p className="text-muted-foreground">Communiquez ces identifiants à l'agence. Ils ne seront plus affichés après fermeture.</p>
+              <div className="p-3 rounded-lg bg-secondary/50 space-y-2 font-mono text-xs">
+                <div><span className="text-muted-foreground">Email :</span> {createdCreds.email}</div>
+                <div><span className="text-muted-foreground">Mot de passe :</span> {createdCreds.password}</div>
+              </div>
+              <Button className="w-full" onClick={() => {
+                navigator.clipboard.writeText(`Email: ${createdCreds.email}\nMot de passe: ${createdCreds.password}`);
+                toast.success("Copié dans le presse-papier");
+              }}>Copier</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="flex gap-3">
         <div className="relative flex-1">
@@ -148,8 +211,9 @@ const AgenciesAdmin = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les statuts</SelectItem>
+            <SelectItem value="pending_setup">À compléter</SelectItem>
+            <SelectItem value="pending_review">À valider</SelectItem>
             <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="pending">En attente</SelectItem>
             <SelectItem value="suspended">Suspendue</SelectItem>
           </SelectContent>
         </Select>
