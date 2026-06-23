@@ -158,18 +158,47 @@ const AgenciesAdmin = () => {
             <Button className="gradient-primary text-primary-foreground"><Plus className="h-4 w-4 mr-1" /> Ajouter</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nouvelle agence</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Créer un compte agence</DialogTitle>
+              <p className="text-xs text-muted-foreground pt-1">L'agence se connectera avec l'email et le mot de passe ci-dessous, puis complètera son profil avant validation.</p>
+            </DialogHeader>
             <div className="space-y-3 pt-2">
               <Input placeholder="Nom de l'agence *" value={newAgency.name} onChange={e => setNewAgency(p => ({ ...p, name: e.target.value }))} />
-              <Input placeholder="Email" value={newAgency.email} onChange={e => setNewAgency(p => ({ ...p, email: e.target.value }))} />
+              <Input placeholder="Email de connexion *" type="email" value={newAgency.email} onChange={e => setNewAgency(p => ({ ...p, email: e.target.value }))} />
+              <div className="flex gap-2">
+                <Input placeholder="Mot de passe temporaire *" value={newAgency.password} onChange={e => setNewAgency(p => ({ ...p, password: e.target.value }))} />
+                <Button type="button" variant="outline" onClick={generatePassword}>Générer</Button>
+              </div>
               <Input placeholder="Téléphone" value={newAgency.phone} onChange={e => setNewAgency(p => ({ ...p, phone: e.target.value }))} />
               <Input placeholder="Adresse" value={newAgency.address} onChange={e => setNewAgency(p => ({ ...p, address: e.target.value }))} />
               <Input placeholder="Commission (%)" type="number" value={newAgency.commission_rate} onChange={e => setNewAgency(p => ({ ...p, commission_rate: e.target.value }))} />
-              <Button onClick={createAgency} className="w-full gradient-primary text-primary-foreground">Créer l'agence</Button>
+              <Button onClick={createAgency} disabled={creating} className="w-full gradient-primary text-primary-foreground">
+                {creating ? "Création..." : "Créer le compte"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Credentials display dialog */}
+      <Dialog open={!!createdCreds} onOpenChange={(o) => !o && setCreatedCreds(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Identifiants de connexion</DialogTitle></DialogHeader>
+          {createdCreds && (
+            <div className="space-y-3 pt-2 text-sm">
+              <p className="text-muted-foreground">Communiquez ces identifiants à l'agence. Ils ne seront plus affichés après fermeture.</p>
+              <div className="p-3 rounded-lg bg-secondary/50 space-y-2 font-mono text-xs">
+                <div><span className="text-muted-foreground">Email :</span> {createdCreds.email}</div>
+                <div><span className="text-muted-foreground">Mot de passe :</span> {createdCreds.password}</div>
+              </div>
+              <Button className="w-full" onClick={() => {
+                navigator.clipboard.writeText(`Email: ${createdCreds.email}\nMot de passe: ${createdCreds.password}`);
+                toast.success("Copié dans le presse-papier");
+              }}>Copier</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="flex gap-3">
         <div className="relative flex-1">
@@ -182,8 +211,9 @@ const AgenciesAdmin = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les statuts</SelectItem>
+            <SelectItem value="pending_setup">À compléter</SelectItem>
+            <SelectItem value="pending_review">À valider</SelectItem>
             <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="pending">En attente</SelectItem>
             <SelectItem value="suspended">Suspendue</SelectItem>
           </SelectContent>
         </Select>
