@@ -8,6 +8,8 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   agencyId: string | null;
+  agencyStatus: string | null;
+  refreshAgency: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -17,6 +19,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   agencyId: null,
+  agencyStatus: null,
+  refreshAgency: async () => {},
   signOut: async () => {},
 });
 
@@ -26,6 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [agencyId, setAgencyId] = useState<string | null>(null);
+  const [agencyStatus, setAgencyStatus] = useState<string | null>(null);
 
   const checkAdmin = async (userId: string) => {
     const { data } = await supabase.rpc("has_role", {
@@ -38,12 +43,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkAgency = async (userId: string) => {
     const { data } = await supabase
       .from("agencies")
-      .select("id")
+      .select("id, status")
       .eq("owner_id", userId)
-      .eq("status", "active")
       .limit(1)
       .maybeSingle();
     setAgencyId(data?.id || null);
+    setAgencyStatus(data?.status || null);
+  };
+
+  const refreshAgency = async () => {
+    if (user) await checkAgency(user.id);
   };
 
   useEffect(() => {
@@ -59,6 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setIsAdmin(false);
           setAgencyId(null);
+          setAgencyStatus(null);
         }
         setLoading(false);
       }
@@ -81,10 +91,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setIsAdmin(false);
     setAgencyId(null);
+    setAgencyStatus(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, agencyId, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, agencyId, agencyStatus, refreshAgency, signOut }}>
       {children}
     </AuthContext.Provider>
   );
