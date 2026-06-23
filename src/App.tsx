@@ -12,6 +12,7 @@ import TripDetails from "./pages/TripDetails";
 import BookingPage from "./pages/BookingPage";
 import BookingHistory from "./pages/BookingHistory";
 import Auth from "./pages/Auth";
+import Profile from "./pages/Profile";
 import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import AgenciesAdmin from "./pages/admin/AgenciesAdmin";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/trip/:id" element={<TripDetails />} />
             <Route path="/booking/:id" element={<BookingPage />} />
             <Route path="/bookings" element={<BookingHistory />} />
+            <Route path="/profile" element={<Profile />} />
             
             {/* Admin routes */}
             <Route path="/admin" element={
