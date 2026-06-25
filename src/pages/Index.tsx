@@ -17,7 +17,7 @@ const Index = () => {
     const fetchData = async () => {
       const [citiesRes, agenciesRes] = await Promise.all([
         supabase.from("trips").select("departure, destination"),
-        supabase.from("agencies").select("id, name, logo, rating, total_trips").eq("status", "active").order("rating", { ascending: false }).limit(5),
+        supabase.from("agencies").select("id, name, logo, rating, total_trips").eq("status", "active").eq("is_popular", true).order("popularity_rank", { ascending: true, nullsFirst: false }).order("rating", { ascending: false }).limit(5),
       ]);
 
       if (citiesRes.data) {
