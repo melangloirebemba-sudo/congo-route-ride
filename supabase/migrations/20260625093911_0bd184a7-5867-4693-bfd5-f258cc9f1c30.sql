@@ -1,0 +1,2 @@
+ALTER TABLE public.agencies DROP CONSTRAINT IF EXISTS agencies_status_check;
+ALTER TABLE public.agencies ADD CONSTRAINT agencies_status_check CHECK (status IN ('active','pending','pending_setup','pending_review','suspended'));
