@@ -131,18 +131,27 @@ const Index = () => {
       <section className="px-4 pb-10 max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-lg font-bold">Agences populaires</h2>
-          <button className="text-primary text-sm font-medium flex items-center gap-1">
+          <button
+            onClick={() => navigate("/agencies")}
+            className="text-primary text-sm font-medium flex items-center gap-1"
+          >
             Voir tout <ArrowRight className="h-3 w-3" />
           </button>
         </div>
         <div className="space-y-3">
+          {agencies.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Aucune agence active pour le moment.
+            </p>
+          )}
           {agencies.map((agency, i) => (
-            <motion.div
+            <motion.button
               key={agency.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="flex items-center gap-4 bg-card rounded-xl p-4 border border-border/50"
+              onClick={() => navigate(`/agencies/${agency.id}`)}
+              className="w-full flex items-center gap-4 bg-card rounded-xl p-4 border border-border/50 hover:border-primary/50 transition text-left"
             >
               <span className="text-3xl">{agency.logo || "🚌"}</span>
               <div className="flex-1">
@@ -153,7 +162,7 @@ const Index = () => {
                 <Star className="h-3 w-3 fill-warning text-warning" />
                 <span className="text-sm font-semibold">{agency.rating || 0}</span>
               </div>
-            </motion.div>
+            </motion.button>
           ))}
         </div>
       </section>

@@ -14,6 +14,8 @@ import BookingHistory from "./pages/BookingHistory";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Preferences from "./pages/Preferences";
+import Agencies from "./pages/Agencies";
+import AgencyDetail from "./pages/AgencyDetail";
 import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import AgenciesAdmin from "./pages/admin/AgenciesAdmin";
@@ -46,6 +48,8 @@ const App = () => (
             <Route path="/bookings" element={<BookingHistory />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/preferences" element={<Preferences />} />
+            <Route path="/agencies" element={<Agencies />} />
+            <Route path="/agencies/:id" element={<AgencyDetail />} />
             
             {/* Admin routes */}
             <Route path="/admin" element={
