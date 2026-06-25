@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Check, X, Trash2, Plus, Search, Edit, Eye, Bus } from "lucide-react";
+import { Check, X, Trash2, Plus, Search, Edit, Eye, Bus, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tables } from "@/integrations/supabase/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 
 type Agency = Tables<"agencies">;
 
@@ -38,6 +39,19 @@ const AgenciesAdmin = () => {
     const { error } = await supabase.from("agencies").update({ status }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Agence ${status === "active" ? "activée" : status === "suspended" ? "suspendue" : "mise en attente"}`);
+    fetchAgencies();
+  };
+
+  const togglePopular = async (a: Agency, value: boolean) => {
+    const { error } = await supabase.from("agencies").update({ is_popular: value }).eq("id", a.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(value ? "Ajoutée aux agences populaires" : "Retirée des agences populaires");
+    fetchAgencies();
+  };
+
+  const updateRank = async (id: string, rank: number | null) => {
+    const { error } = await supabase.from("agencies").update({ popularity_rank: rank }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
     fetchAgencies();
   };
 
@@ -229,13 +243,14 @@ const AgenciesAdmin = () => {
                   <TableHead>Contact</TableHead>
                   <TableHead>Commission</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead>Populaire</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aucune agence trouvée</TableCell>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucune agence trouvée</TableCell>
                   </TableRow>
                 ) : (
                   filtered.map(agency => (
@@ -257,6 +272,27 @@ const AgenciesAdmin = () => {
                         <span className="font-semibold text-sm">{agency.commission_rate}%</span>
                       </TableCell>
                       <TableCell>{statusBadge(agency.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={!!(agency as any).is_popular}
+                            disabled={agency.status !== "active"}
+                            onCheckedChange={(v) => togglePopular(agency, v)}
+                          />
+                          {(agency as any).is_popular && (
+                            <Input
+                              type="number"
+                              className="h-8 w-16"
+                              placeholder="Rang"
+                              value={(agency as any).popularity_rank ?? ""}
+                              onChange={(e) => {
+                                const v = e.target.value === "" ? null : parseInt(e.target.value);
+                                updateRank(agency.id, Number.isNaN(v as number) ? null : v);
+                              }}
+                            />
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
                           <Button size="icon" variant="ghost" onClick={() => viewDetails(agency)} title="Détails">
