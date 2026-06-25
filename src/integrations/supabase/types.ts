@@ -21,10 +21,12 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          is_popular: boolean
           logo: string | null
           name: string
           owner_id: string | null
           phone: string | null
+          popularity_rank: number | null
           rating: number | null
           status: string
           total_trips: number | null
@@ -36,10 +38,12 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          is_popular?: boolean
           logo?: string | null
           name: string
           owner_id?: string | null
           phone?: string | null
+          popularity_rank?: number | null
           rating?: number | null
           status?: string
           total_trips?: number | null
@@ -51,10 +55,12 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          is_popular?: boolean
           logo?: string | null
           name?: string
           owner_id?: string | null
           phone?: string | null
+          popularity_rank?: number | null
           rating?: number | null
           status?: string
           total_trips?: number | null
