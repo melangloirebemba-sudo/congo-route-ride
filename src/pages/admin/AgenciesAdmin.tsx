@@ -243,8 +243,14 @@ const AgenciesAdmin = () => {
                   <TableHead>Contact</TableHead>
                   <TableHead>Commission</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead>Populaire</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucune agence trouvée</TableCell>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
