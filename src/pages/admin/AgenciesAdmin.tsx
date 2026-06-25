@@ -251,11 +251,6 @@ const AgenciesAdmin = () => {
                 {filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucune agence trouvée</TableCell>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aucune agence trouvée</TableCell>
                   </TableRow>
                 ) : (
                   filtered.map(agency => (
@@ -277,6 +272,27 @@ const AgenciesAdmin = () => {
                         <span className="font-semibold text-sm">{agency.commission_rate}%</span>
                       </TableCell>
                       <TableCell>{statusBadge(agency.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={!!(agency as any).is_popular}
+                            disabled={agency.status !== "active"}
+                            onCheckedChange={(v) => togglePopular(agency, v)}
+                          />
+                          {(agency as any).is_popular && (
+                            <Input
+                              type="number"
+                              className="h-8 w-16"
+                              placeholder="Rang"
+                              value={(agency as any).popularity_rank ?? ""}
+                              onChange={(e) => {
+                                const v = e.target.value === "" ? null : parseInt(e.target.value);
+                                updateRank(agency.id, Number.isNaN(v as number) ? null : v);
+                              }}
+                            />
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
                           <Button size="icon" variant="ghost" onClick={() => viewDetails(agency)} title="Détails">
