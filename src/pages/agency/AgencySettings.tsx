@@ -5,16 +5,34 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { Save, Send, ShieldCheck, Clock, AlertTriangle } from "lucide-react";
+import { Save, Send, ShieldCheck, Clock, AlertTriangle, KeyRound } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 
 type Agency = Tables<"agencies">;
 
 const AgencySettings = () => {
-  const { agencyId, refreshAgency } = useAuth();
+  const { agencyId, user, refreshAgency } = useAuth();
   const [agency, setAgency] = useState<Partial<Agency>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPwd, setChangingPwd] = useState(false);
+  const mustChangePassword = !!user?.user_metadata?.must_change_password;
+
+  const changePassword = async () => {
+    if (newPassword.length < 8) { toast.error("Le mot de passe doit contenir au moins 8 caractères"); return; }
+    if (newPassword !== confirmPassword) { toast.error("Les mots de passe ne correspondent pas"); return; }
+    setChangingPwd(true);
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+      data: { must_change_password: false },
+    });
+    setChangingPwd(false);
+    if (error) { toast.error(error.message); return; }
+    setNewPassword(""); setConfirmPassword("");
+    toast.success("Mot de passe mis à jour");
+  };
 
   useEffect(() => {
     if (!agencyId) return;
@@ -110,6 +128,40 @@ const AgencySettings = () => {
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold">Paramètres de l'agence</h1>
       <StatusBanner />
+
+      {mustChangePassword && (
+        <div className="flex gap-3 p-4 rounded-lg bg-warning/10 border border-warning/30">
+          <KeyRound className="h-5 w-5 text-warning-foreground shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold">Première connexion : changez votre mot de passe</p>
+            <p className="text-muted-foreground">Pour des raisons de sécurité, veuillez définir un nouveau mot de passe personnel ci-dessous.</p>
+          </div>
+        </div>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <KeyRound className="h-4 w-4" /> Mot de passe
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nouveau mot de passe</label>
+              <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Minimum 8 caractères" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Confirmer le mot de passe</label>
+              <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+            </div>
+          </div>
+          <Button onClick={changePassword} disabled={changingPwd || !newPassword} className="gradient-primary text-primary-foreground">
+            <KeyRound className="h-4 w-4 mr-1" /> Mettre à jour le mot de passe
+          </Button>
+        </CardContent>
+      </Card>
+
 
       <Card>
         <CardHeader><CardTitle className="text-lg">Informations générales</CardTitle></CardHeader>

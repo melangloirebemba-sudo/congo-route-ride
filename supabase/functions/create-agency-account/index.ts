@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       email: body.email,
       password: body.password,
       email_confirm: true,
-      user_metadata: { role: "agency", agency_name: body.name },
+      user_metadata: { role: "agency", agency_name: body.name, must_change_password: true },
     });
     if (createErr || !created.user) {
       return new Response(JSON.stringify({ error: createErr?.message || "Création échouée" }), {
