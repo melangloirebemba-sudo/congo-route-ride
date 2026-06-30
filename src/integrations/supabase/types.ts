@@ -68,6 +68,63 @@ export type Database = {
         }
         Relationships: []
       }
+      agency_branches: {
+        Row: {
+          address: string | null
+          agency_id: string
+          city: string | null
+          created_at: string
+          id: string
+          manager_name: string | null
+          name: string
+          parent_branch_id: string | null
+          phone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          agency_id: string
+          city?: string | null
+          created_at?: string
+          id?: string
+          manager_name?: string | null
+          name: string
+          parent_branch_id?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          agency_id?: string
+          city?: string | null
+          created_at?: string
+          id?: string
+          manager_name?: string | null
+          name?: string
+          parent_branch_id?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_branches_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_branches_parent_branch_id_fkey"
+            columns: ["parent_branch_id"]
+            isOneToOne: false
+            referencedRelation: "agency_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           booking_date: string
@@ -240,6 +297,7 @@ export type Database = {
           agency_id: string
           arrival_time: string
           available_seats: number
+          branch_id: string | null
           bus_type: string | null
           created_at: string
           currency: string
@@ -257,6 +315,7 @@ export type Database = {
           agency_id: string
           arrival_time: string
           available_seats: number
+          branch_id?: string | null
           bus_type?: string | null
           created_at?: string
           currency?: string
@@ -274,6 +333,7 @@ export type Database = {
           agency_id?: string
           arrival_time?: string
           available_seats?: number
+          branch_id?: string | null
           bus_type?: string | null
           created_at?: string
           currency?: string
@@ -293,6 +353,13 @@ export type Database = {
             columns: ["agency_id"]
             isOneToOne: false
             referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "agency_branches"
             referencedColumns: ["id"]
           },
         ]
