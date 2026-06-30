@@ -19,6 +19,7 @@ import AgencyDetail from "./pages/AgencyDetail";
 import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import AgenciesAdmin from "./pages/admin/AgenciesAdmin";
+import AgencyBookingsAdmin from "./pages/admin/AgencyBookingsAdmin";
 import TransactionsAdmin from "./pages/admin/TransactionsAdmin";
 import UsersAdmin from "./pages/admin/UsersAdmin";
 import StatsAdmin from "./pages/admin/StatsAdmin";
@@ -60,6 +61,7 @@ const App = () => (
             }>
               <Route index element={<Dashboard />} />
               <Route path="agencies" element={<AgenciesAdmin />} />
+              <Route path="agency-bookings" element={<AgencyBookingsAdmin />} />
               <Route path="transactions" element={<TransactionsAdmin />} />
               <Route path="users" element={<UsersAdmin />} />
               <Route path="stats" element={<StatsAdmin />} />

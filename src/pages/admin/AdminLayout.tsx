@@ -1,11 +1,12 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Building2, CreditCard, Settings, Users, BarChart3, LogOut } from "lucide-react";
+import { LayoutDashboard, Building2, CreditCard, Settings, Users, BarChart3, LogOut, Ticket } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Tableau de bord", end: true },
   { to: "/admin/agencies", icon: Building2, label: "Agences" },
+  { to: "/admin/agency-bookings", icon: Ticket, label: "Réservations agences" },
   { to: "/admin/transactions", icon: CreditCard, label: "Transactions" },
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
   { to: "/admin/stats", icon: BarChart3, label: "Statistiques" },
