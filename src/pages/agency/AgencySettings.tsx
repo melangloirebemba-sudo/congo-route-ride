@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { Save, Send, ShieldCheck, Clock, AlertTriangle } from "lucide-react";
+import { Save, Send, ShieldCheck, Clock, AlertTriangle, KeyRound } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 
 type Agency = Tables<"agencies">;
