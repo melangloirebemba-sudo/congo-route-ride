@@ -11,10 +11,28 @@ import { Tables } from "@/integrations/supabase/types";
 type Agency = Tables<"agencies">;
 
 const AgencySettings = () => {
-  const { agencyId, refreshAgency } = useAuth();
+  const { agencyId, user, refreshAgency } = useAuth();
   const [agency, setAgency] = useState<Partial<Agency>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPwd, setChangingPwd] = useState(false);
+  const mustChangePassword = !!user?.user_metadata?.must_change_password;
+
+  const changePassword = async () => {
+    if (newPassword.length < 8) { toast.error("Le mot de passe doit contenir au moins 8 caractères"); return; }
+    if (newPassword !== confirmPassword) { toast.error("Les mots de passe ne correspondent pas"); return; }
+    setChangingPwd(true);
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+      data: { must_change_password: false },
+    });
+    setChangingPwd(false);
+    if (error) { toast.error(error.message); return; }
+    setNewPassword(""); setConfirmPassword("");
+    toast.success("Mot de passe mis à jour");
+  };
 
   useEffect(() => {
     if (!agencyId) return;
