@@ -158,6 +158,7 @@ const ScanAdmin = () => {
   }, []);
 
   const [validating, setValidating] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const markAsUsed = async () => {
     if (!booking) return;
