@@ -36,6 +36,8 @@ const Agencies = () => {
   const filtered = agencies.filter((a) =>
     a.name.toLowerCase().includes(query.toLowerCase())
   );
+  const pg = usePagination(filtered, 5, [query]);
+
 
   return (
     <div className="min-h-screen pb-20">
