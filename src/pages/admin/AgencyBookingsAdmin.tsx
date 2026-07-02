@@ -271,7 +271,7 @@ const AgencyBookingsAdmin = () => {
                 ) : filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Aucune réservation</TableCell></TableRow>
                 ) : filtered.map((r) => (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelected(r)}>
                     <TableCell className="text-xs">{new Date(r.created_at).toLocaleDateString("fr")}</TableCell>
                     <TableCell className="text-sm">{r.agency_name}</TableCell>
                     <TableCell className="text-sm font-medium">{r.passenger_name}</TableCell>
@@ -290,7 +290,89 @@ const AgencyBookingsAdmin = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          {selected && (
+            <>
+              <SheetHeader>
+                <SheetTitle>Détail de la réservation</SheetTitle>
+                <SheetDescription>{selected.agency_name} • {new Date(selected.created_at).toLocaleString("fr")}</SheetDescription>
+              </SheetHeader>
+
+              <div className="mt-6 space-y-6">
+                <section className="space-y-2">
+                  <h3 className="text-xs uppercase tracking-wide text-muted-foreground">Passager</h3>
+                  <div className="text-sm"><span className="text-muted-foreground">Nom : </span><span className="font-medium">{selected.passenger_name}</span></div>
+                  <div className="text-sm"><span className="text-muted-foreground">Téléphone : </span>{selected.phone || "—"}</div>
+                  <div className="text-sm"><span className="text-muted-foreground">Siège : </span>#{selected.seat_number}</div>
+                  <div className="text-sm"><span className="text-muted-foreground">Trajet : </span>{selected.trips?.departure} → {selected.trips?.destination}</div>
+                </section>
+
+                <section className="space-y-3 rounded-lg border p-4 bg-muted/30">
+                  <h3 className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <CreditCard className="h-3.5 w-3.5" /> Paiement
+                  </h3>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Statut</span>
+                    <Badge variant={selected.payment_status === "paid" ? "default" : selected.payment_status === "failed" ? "destructive" : "secondary"}>
+                      {selected.payment_status || "en attente"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Mode</span>
+                    <span className="font-medium">{paymentLabel(selected.payment_method)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Identifiant transaction</span>
+                    {selected.transaction?.id ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selected.transaction.id);
+                          setCopied(true);
+                          toast.success("Identifiant copié");
+                          setTimeout(() => setCopied(false), 1500);
+                        }}
+                        className="flex items-center gap-1.5 font-mono text-xs bg-background border rounded px-2 py-1 hover:bg-muted"
+                      >
+                        {selected.transaction.id.slice(0, 8)}…{selected.transaction.id.slice(-4)}
+                        {copied ? <Check className="h-3 w-3 text-accent" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">Non disponible</span>
+                    )}
+                  </div>
+                  {selected.transaction && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Statut transaction</span>
+                      <Badge variant={selected.transaction.status === "completed" ? "default" : selected.transaction.status === "failed" ? "destructive" : "secondary"}>
+                        {selected.transaction.status}
+                      </Badge>
+                    </div>
+                  )}
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-xs uppercase tracking-wide text-muted-foreground">Montants</h3>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total</span><span className="font-semibold">{selected.total_amount.toLocaleString()} FCFA</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Commission</span><span className="text-warning">{selected.commission.toLocaleString()} FCFA</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Net agence</span><span className="text-accent font-semibold">{selected.net.toLocaleString()} FCFA</span></div>
+                </section>
+
+                {selected.qr_code && (
+                  <section className="space-y-1">
+                    <h3 className="text-xs uppercase tracking-wide text-muted-foreground">Référence billet</h3>
+                    <div className="font-mono text-xs bg-muted p-2 rounded">{selected.qr_code}</div>
+                  </section>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
+
   );
 };
 
