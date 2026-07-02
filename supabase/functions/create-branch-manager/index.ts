@@ -74,7 +74,27 @@ Deno.serve(async (req) => {
       },
     });
     if (createErr || !created.user) {
-      return json({ error: createErr?.message || "Création échouée" }, 400);
+      const msg = createErr?.message || "";
+      const code = (createErr as any)?.code || "";
+      if (code === "email_exists" || /already been registered|already registered|already exists/i.test(msg)) {
+        // Check if this email is already a manager or already linked elsewhere
+        const { data: existingMgr } = await admin
+          .from("branch_managers")
+          .select("id, agency_id")
+          .eq("email", body.email)
+          .maybeSingle();
+        if (existingMgr) {
+          return json({
+            error: existingMgr.agency_id === agency.id
+              ? "Ce gestionnaire existe déjà dans votre agence."
+              : "Cet email est déjà utilisé par un gestionnaire d'une autre agence.",
+          }, 409);
+        }
+        return json({
+          error: "Un compte existe déjà avec cet email. Utilisez une autre adresse ou demandez à l'utilisateur de réinitialiser son mot de passe.",
+        }, 409);
+      }
+      return json({ error: msg || "Création échouée" }, 400);
     }
 
     const { data: manager, error: mgrErr } = await admin
