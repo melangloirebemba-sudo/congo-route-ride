@@ -48,7 +48,15 @@ const AgencyBookingsAdmin = () => {
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (agencyFilter !== "all" && r.agency_id !== agencyFilter) return false;
+      if (paymentFilter !== "all" && (r.payment_method || "") !== paymentFilter) return false;
+      if (dateFrom && new Date(r.created_at) < new Date(dateFrom)) return false;
+      if (dateTo) {
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59, 999);
+        if (new Date(r.created_at) > end) return false;
+      }
       if (search) {
+
         const s = search.toLowerCase();
         return (
           r.passenger_name?.toLowerCase().includes(s) ||
