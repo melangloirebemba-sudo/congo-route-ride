@@ -4,15 +4,17 @@ import { motion } from "framer-motion";
 import { MapPin, Calendar, Search, ArrowRight, Star, Bus, Shield, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { districtsFor } from "@/lib/districts";
 
 const Index = () => {
   const navigate = useNavigate();
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
   const [date, setDate] = useState("");
+  const [district, setDistrict] = useState("");
   const [branchId, setBranchId] = useState("");
   const [cities, setCities] = useState<string[]>([]);
-  const [branches, setBranches] = useState<{ id: string; name: string; city: string | null; agency: { name: string } | null }[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string; city: string | null; district: string | null; agency: { name: string } | null }[]>([]);
   const [agencies, setAgencies] = useState<{ id: string; name: string; logo: string | null; rating: number | null; total_trips: number | null }[]>([]);
 
   useEffect(() => {
