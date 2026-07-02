@@ -7,7 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Shield, User, Search, Ban, CheckCircle2, Trash2, KeyRound, Mail,
-  MoreHorizontal, RefreshCcw, Loader2,
+  MoreHorizontal, RefreshCcw, Loader2, Download, ChevronLeft, ChevronRight,
+  ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
