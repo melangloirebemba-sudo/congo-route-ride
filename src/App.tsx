@@ -23,6 +23,7 @@ import AgenciesAdmin from "./pages/admin/AgenciesAdmin";
 import AgencyBookingsAdmin from "./pages/admin/AgencyBookingsAdmin";
 import TransactionsAdmin from "./pages/admin/TransactionsAdmin";
 import UsersAdmin from "./pages/admin/UsersAdmin";
+import AuditLogAdmin from "./pages/admin/AuditLogAdmin";
 import StatsAdmin from "./pages/admin/StatsAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
 import ScanAdmin from "./pages/admin/ScanAdmin";
