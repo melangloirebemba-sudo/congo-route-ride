@@ -34,6 +34,8 @@ const AgencyBookings = () => {
     return matchSearch && matchStatus;
   });
 
+  const pg = usePagination(filtered, 5, [search, statusFilter]);
+
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {
       confirmed: "bg-accent/20 text-accent",
