@@ -23,6 +23,86 @@ const paymentLabel = (m?: string) => {
   }
 };
 
+const buildPdf = async (r: any, kind: "receipt" | "ticket") => {
+  const doc = new jsPDF({ unit: "mm", format: "a5" });
+  const W = doc.internal.pageSize.getWidth();
+  const orange: [number, number, number] = [234, 88, 12];
+
+  doc.setFillColor(...orange);
+  doc.rect(0, 0, W, 20, "F");
+  doc.setTextColor(255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("TransCongo", 10, 13);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(kind === "receipt" ? "Reçu de paiement" : "Billet électronique", W - 10, 13, { align: "right" });
+
+  doc.setTextColor(20);
+  let y = 30;
+  const line = (label: string, value: string) => {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(label, 10, y);
+    doc.setTextColor(20);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(value || "—", W - 10, y, { align: "right" });
+    y += 6;
+  };
+
+  line("Référence", r.qr_code || r.id.slice(0, 8));
+  line("Date", new Date(r.created_at).toLocaleString("fr"));
+  line("Agence", r.agency_name);
+  doc.setDrawColor(220);
+  doc.line(10, y, W - 10, y);
+  y += 6;
+
+  line("Passager", r.passenger_name);
+  line("Téléphone", r.phone || "—");
+  line("Trajet", `${r.trips?.departure || "?"} → ${r.trips?.destination || "?"}`);
+  if (r.trips?.date) line("Date voyage", new Date(r.trips.date).toLocaleDateString("fr"));
+  line("Siège", `#${r.seat_number}`);
+  doc.line(10, y, W - 10, y);
+  y += 6;
+
+  if (kind === "receipt") {
+    line("Mode paiement", paymentLabel(r.payment_method));
+    line("Statut paiement", r.payment_status || "en attente");
+    if (r.transaction?.id) line("ID transaction", r.transaction.id);
+    doc.line(10, y, W - 10, y);
+    y += 6;
+    line("Montant total", `${r.total_amount.toLocaleString()} FCFA`);
+    line("Commission", `${r.commission.toLocaleString()} FCFA`);
+    line("Net agence", `${r.net.toLocaleString()} FCFA`);
+  } else {
+    line("Montant", `${r.total_amount.toLocaleString()} FCFA`);
+    y += 4;
+    try {
+      const qrText = r.qr_code || `TC-${r.id}`;
+      const qrData = await QRCode.toDataURL(qrText, { margin: 1, width: 200 });
+      const size = 45;
+      doc.addImage(qrData, "PNG", (W - size) / 2, y, size, size);
+      y += size + 4;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text(qrText, W / 2, y, { align: "center" });
+    } catch {
+      // ignore
+    }
+  }
+
+  doc.setFontSize(8);
+  doc.setTextColor(150);
+  doc.text("TransCongo • République du Congo", W / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
+
+  const suffix = kind === "receipt" ? "recu" : "billet";
+  doc.save(`transcongo-${suffix}-${r.qr_code || r.id.slice(0, 8)}.pdf`);
+};
+
+
 const AgencyBookingsAdmin = () => {
   const [rows, setRows] = useState<any[]>([]);
   const [agencies, setAgencies] = useState<{ id: string; name: string }[]>([]);
