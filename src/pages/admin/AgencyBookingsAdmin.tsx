@@ -178,7 +178,7 @@ const AgencyBookingsAdmin = () => {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-3">
           <div className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
             <CardTitle className="text-lg">Détail des réservations</CardTitle>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -195,7 +195,40 @@ const AgencyBookingsAdmin = () => {
               </Select>
             </div>
           </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Du</label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full sm:w-40" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Au</label>
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full sm:w-40" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Paiement</label>
+              <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Mode de paiement" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les paiements</SelectItem>
+                  <SelectItem value="mtn_momo">MTN MoMo</SelectItem>
+                  <SelectItem value="airtel_money">Airtel Money</SelectItem>
+                  <SelectItem value="cash">Espèces</SelectItem>
+                  <SelectItem value="card">Carte</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(dateFrom || dateTo || paymentFilter !== "all" || agencyFilter !== "all") && (
+              <button
+                type="button"
+                onClick={() => { setDateFrom(""); setDateTo(""); setPaymentFilter("all"); setAgencyFilter("all"); }}
+                className="text-xs text-primary underline self-start sm:self-end sm:pb-2"
+              >
+                Réinitialiser les filtres
+              </button>
+            )}
+          </div>
         </CardHeader>
+
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
