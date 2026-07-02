@@ -5,9 +5,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Ticket, TrendingUp, CreditCard, Search, Copy, Check } from "lucide-react";
+import { Building2, Ticket, TrendingUp, CreditCard, Search, Copy, Check, Download, Ticket as TicketIcon } from "lucide-react";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import QRCode from "qrcode";
+
 
 const paymentLabel = (m?: string) => {
   switch (m) {
