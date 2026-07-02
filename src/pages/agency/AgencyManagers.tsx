@@ -16,7 +16,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Plus, Trash2, Copy, UserCog, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Copy, UserCog, RefreshCw, Mail } from "lucide-react";
 
 type Manager = {
   id: string;
