@@ -66,7 +66,7 @@ const AgencyBookingsAdmin = () => {
       }
       return true;
     });
-  }, [rows, agencyFilter, search]);
+  }, [rows, agencyFilter, paymentFilter, dateFrom, dateTo, search]);
 
   const summary = useMemo(() => {
     const byAgency = new Map<string, { name: string; bookings: number; revenue: number; commission: number }>();
