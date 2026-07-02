@@ -421,7 +421,7 @@ const ScanAdmin = () => {
                             <div className="text-muted-foreground">
                               {booking.trip?.departure_date} · {booking.trip?.departure_time}
                             </div>
-                            <div className="text-muted-foreground">{booking.agency?.name}</div>
+                            <div className="text-muted-foreground">{booking.trip?.agency?.name}</div>
                           </div>
                           <div className="rounded-lg border p-3 space-y-1">
                             <div className="text-xs font-semibold text-muted-foreground uppercase">Passager</div>
