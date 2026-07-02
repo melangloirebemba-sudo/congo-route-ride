@@ -513,6 +513,14 @@ const ScanAdmin = () => {
                         Nouveau scan
                       </Button>
                     </div>
+                    <div className="flex gap-2">
+                      <Button variant="secondary" onClick={downloadTicket} className="flex-1">
+                        <Download className="h-4 w-4 mr-2" /> Télécharger PDF
+                      </Button>
+                      <Button variant="secondary" onClick={printTicket} className="flex-1">
+                        <Printer className="h-4 w-4 mr-2" /> Réimprimer
+                      </Button>
+                    </div>
 
                     <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                       <AlertDialogContent>
