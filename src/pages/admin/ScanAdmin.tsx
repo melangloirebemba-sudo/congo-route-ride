@@ -147,17 +147,73 @@ const ScanAdmin = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [validating, setValidating] = useState(false);
+
   const markAsUsed = async () => {
     if (!booking) return;
-    const { error } = await supabase
+    if (verdict !== "valid") {
+      toast.error("Ce billet ne peut pas être validé");
+      return;
+    }
+    setValidating(true);
+
+    // Re-check the current state in DB to prevent double check-in / race conditions
+    const { data: fresh, error: fetchErr } = await supabase
+      .from("bookings")
+      .select("status, payment_status")
+      .eq("id", booking.id)
+      .maybeSingle();
+
+    if (fetchErr || !fresh) {
+      setValidating(false);
+      toast.error("Impossible de vérifier l'état du billet");
+      return;
+    }
+
+    if (fresh.status === "used" || fresh.status === "checked_in") {
+      setValidating(false);
+      setBooking({ ...booking, status: fresh.status });
+      setVerdict("used");
+      toast.error("Ce billet a déjà été utilisé — embarquement refusé");
+      return;
+    }
+    if (fresh.status === "cancelled") {
+      setValidating(false);
+      setBooking({ ...booking, status: "cancelled" });
+      setVerdict("cancelled");
+      toast.error("Billet annulé — embarquement refusé");
+      return;
+    }
+    if (fresh.payment_status !== "paid") {
+      setValidating(false);
+      setBooking({ ...booking, payment_status: fresh.payment_status });
+      setVerdict("unpaid");
+      toast.error("Billet non payé — embarquement refusé");
+      return;
+    }
+
+    // Conditional update: only flip to "used" if still not used/cancelled
+    const { data: updated, error } = await supabase
       .from("bookings")
       .update({ status: "used" })
-      .eq("id", booking.id);
+      .eq("id", booking.id)
+      .not("status", "in", '("used","checked_in","cancelled")')
+      .select("id")
+      .maybeSingle();
+
+    setValidating(false);
     if (error) return toast.error("Impossible de marquer comme utilisé");
-    toast.success("Billet marqué comme utilisé");
+    if (!updated) {
+      toast.error("Le billet vient d'être utilisé par un autre agent");
+      setBooking({ ...booking, status: "used" });
+      setVerdict("used");
+      return;
+    }
+    toast.success("Embarquement validé");
     setBooking({ ...booking, status: "used" });
     setVerdict("used");
   };
+
 
   const resetCheck = () => {
     setBooking(null);
