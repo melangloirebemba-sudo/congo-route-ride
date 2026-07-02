@@ -117,6 +117,14 @@ const AgencyManagers = () => {
     fetchData();
   };
 
+  const sendReset = async (m: Manager) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(m.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Lien de réinitialisation envoyé à ${m.email}`);
+  };
+
   const updateBranch = async (m: Manager, branch_id: string) => {
     const { error } = await supabase
       .from("branch_managers" as any)
@@ -267,7 +275,10 @@ const AgencyManagers = () => {
                   </TableCell>
                   <TableCell><Badge variant="outline">{m.status}</Badge></TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => remove(m)}>
+                    <Button variant="ghost" size="icon" title="Envoyer un lien de réinitialisation" onClick={() => sendReset(m)}>
+                      <Mail className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" title="Retirer" onClick={() => remove(m)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
