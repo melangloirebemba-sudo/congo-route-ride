@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { QrCode, Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Search, Loader2 } from "lucide-react";
+import { QrCode, Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Search, Loader2, ShieldCheck, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+
 
 type BookingResult = {
   id: string;
@@ -28,7 +30,7 @@ type BookingResult = {
     destination: string;
     departure_date: string;
     departure_time: string;
-    agency: { name: string } | null;
+    agency: { id: string; name: string } | null;
   } | null;
 };
 
@@ -44,6 +46,8 @@ const verdictMeta: Record<Verdict, { label: string; tone: string; icon: any }> =
 };
 
 const ScanAdmin = () => {
+  const { isAdmin, agencyId } = useAuth();
+  const scope: "admin" | "agency" = isAdmin ? "admin" : "agency";
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
@@ -65,7 +69,7 @@ const ScanAdmin = () => {
       .select(`
         id, qr_code, passenger_name, phone, seat_number, status, payment_status,
         payment_method, total_amount, booking_date,
-        trip:trips ( id, origin, destination, departure_date, departure_time, agency:agencies ( name ) )
+        trip:trips ( id, origin, destination, departure_date, departure_time, agency:agencies ( id, name ) )
       `)
       .eq("qr_code", trimmed)
       .maybeSingle();
@@ -82,6 +86,14 @@ const ScanAdmin = () => {
     }
 
     const b = data as unknown as BookingResult;
+
+    // Agency scope: only tickets on this agency's trips
+    if (scope === "agency" && b.trip?.agency?.id !== agencyId) {
+      setVerdict("notfound");
+      toast.error("Ce billet n'appartient pas à votre agence");
+      return;
+    }
+
     setBooking(b);
 
     let v: Verdict = "valid";
@@ -94,6 +106,7 @@ const ScanAdmin = () => {
     if (v === "valid") toast.success("Billet valide");
     else toast.warning(verdictMeta[v].label);
   };
+
 
   const startScanner = async () => {
     try {
@@ -157,10 +170,21 @@ const ScanAdmin = () => {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-display font-bold">Scan de billets</h1>
-        <p className="text-muted-foreground text-sm">Vérifier la validité d'un QR code passager</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-display font-bold">Scan de billets</h1>
+          <p className="text-muted-foreground text-sm">
+            {scope === "admin"
+              ? "Super Admin — vérification de tous les billets de la plateforme"
+              : "Agence — vérification des billets de vos propres trajets"}
+          </p>
+        </div>
+        <Badge variant="outline" className="gap-1.5">
+          {scope === "admin" ? <ShieldCheck className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}
+          {scope === "admin" ? "Super Admin" : "Agence"}
+        </Badge>
       </div>
+
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
