@@ -10,8 +10,12 @@ const AgencyBookingsAdmin = () => {
   const [rows, setRows] = useState<any[]>([]);
   const [agencies, setAgencies] = useState<{ id: string; name: string }[]>([]);
   const [agencyFilter, setAgencyFilter] = useState<string>("all");
+  const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     const load = async () => {
