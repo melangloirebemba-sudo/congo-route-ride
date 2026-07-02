@@ -219,6 +219,9 @@ const AgencyBranches = () => {
               </Table>
             </div>
           )}
+          {!loading && branches.length > 0 && (
+            <div className="p-4 border-t"><ListPagination {...pg} /></div>
+          )}
         </CardContent>
       </Card>
     </div>
