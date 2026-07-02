@@ -67,6 +67,7 @@ const App = () => (
               <Route path="users" element={<UsersAdmin />} />
               <Route path="stats" element={<StatsAdmin />} />
               <Route path="settings" element={<SettingsAdmin />} />
+              <Route path="scan" element={<ScanAdmin />} />
             </Route>
 
             {/* Agency routes */}
