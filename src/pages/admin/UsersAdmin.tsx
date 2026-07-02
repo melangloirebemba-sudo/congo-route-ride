@@ -7,7 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Shield, User, Search, Ban, CheckCircle2, Trash2, KeyRound, Mail,
-  MoreHorizontal, RefreshCcw, Loader2,
+  MoreHorizontal, RefreshCcw, Loader2, Download, ChevronLeft, ChevronRight,
+  ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -84,7 +85,10 @@ const UsersAdmin = () => {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selfId, setSelfId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const [confirm, setConfirm] = useState<
     | { kind: "disable" | "enable" | "delete" | "reset"; user: AdminUser }
@@ -115,6 +119,17 @@ const UsersAdmin = () => {
     const q = search.trim().toLowerCase();
     return users.filter((u) => {
       if (statusFilter !== "all" && u.status !== statusFilter) return false;
+      if (roleFilter !== "all") {
+        const role =
+          u.roles.includes("admin")
+            ? "admin"
+            : u.agency
+              ? "agency"
+              : u.manager
+                ? "manager"
+                : "client";
+        if (role !== roleFilter) return false;
+      }
       if (!q) return true;
       return (
         (u.email || "").toLowerCase().includes(q) ||
@@ -123,7 +138,46 @@ const UsersAdmin = () => {
         u.id.toLowerCase().includes(q)
       );
     });
-  }, [users, search, statusFilter]);
+  }, [users, search, statusFilter, roleFilter]);
+
+  useEffect(() => { setPage(1); }, [search, statusFilter, roleFilter, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageRows = filtered.slice(pageStart, pageStart + pageSize);
+
+  const exportCsv = () => {
+    if (filtered.length === 0) { toast.error("Aucun compte à exporter"); return; }
+    const headers = [
+      "id", "email", "phone", "full_name", "role", "agency", "status",
+      "email_confirmed_at", "last_sign_in_at", "created_at",
+    ];
+    const roleOf = (u: AdminUser) =>
+      u.roles.includes("admin") ? "admin"
+      : u.agency ? "agency"
+      : u.manager ? "manager"
+      : "client";
+    const esc = (v: unknown) => {
+      const s = v === null || v === undefined ? "" : String(v);
+      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = filtered.map((u) => [
+      u.id, u.email ?? "", u.phone ?? "", u.full_name ?? "",
+      roleOf(u), u.agency?.name ?? "", u.status,
+      u.email_confirmed_at ?? "", u.last_sign_in_at ?? "", u.created_at,
+    ].map(esc).join(","));
+    const csv = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `comptes_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast.success(`${filtered.length} compte(s) exporté(s)`);
+  };
+
 
   const callAction = async (payload: Record<string, unknown>, user: AdminUser) => {
     setBusyId(user.id);
@@ -189,10 +243,16 @@ const UsersAdmin = () => {
             Tous les comptes du système : statut, rôles et actions administrateur.
           </p>
         </div>
-        <Button variant="outline" onClick={fetchUsers} disabled={loading}>
-          <RefreshCcw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-          Actualiser
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={exportCsv} disabled={loading || filtered.length === 0}>
+            <Download className="h-4 w-4 mr-2" />
+            Exporter CSV ({filtered.length})
+          </Button>
+          <Button variant="outline" onClick={fetchUsers} disabled={loading}>
+            <RefreshCcw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Actualiser
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -224,12 +284,22 @@ const UsersAdmin = () => {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="md:w-52"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="md:w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les statuts</SelectItem>
                 <SelectItem value="active">Actifs</SelectItem>
                 <SelectItem value="disabled">Désactivés</SelectItem>
                 <SelectItem value="pending">En attente</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="md:w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les rôles</SelectItem>
+                <SelectItem value="admin">Administrateurs</SelectItem>
+                <SelectItem value="agency">Agences</SelectItem>
+                <SelectItem value="manager">Gestionnaires</SelectItem>
+                <SelectItem value="client">Clients</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -260,7 +330,7 @@ const UsersAdmin = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((u) => (
+                  pageRows.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell>
                         <div className="font-medium">{u.email || u.phone || u.id.slice(0, 8)}</div>
@@ -338,6 +408,46 @@ const UsersAdmin = () => {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm">
+            <div className="text-muted-foreground">
+              {filtered.length === 0
+                ? "Aucun résultat"
+                : `Affichage ${pageStart + 1}–${Math.min(pageStart + pageSize, filtered.length)} sur ${filtered.length}`}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Lignes</span>
+              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50, 100].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-1 ml-2">
+                <Button size="icon" variant="outline" className="h-8 w-8"
+                  onClick={() => setPage(1)} disabled={currentPage === 1}>
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="px-2 tabular-nums">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button size="icon" variant="outline" className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" className="h-8 w-8"
+                  onClick={() => setPage(totalPages)} disabled={currentPage === totalPages}>
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
