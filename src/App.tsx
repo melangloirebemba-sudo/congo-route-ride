@@ -54,6 +54,18 @@ const App = () => (
             <Route path="/agencies" element={<Agencies />} />
             <Route path="/agencies/:id" element={<AgencyDetail />} />
             
+            {/* Scan billets — accessible aux admins et aux agences actives */}
+            <Route
+              path="/admin/scan"
+              element={
+                <ProtectedRoute requireScanAccess>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<ScanAdmin />} />
+            </Route>
+
             {/* Admin routes */}
             <Route path="/admin" element={
               <ProtectedRoute requireAdmin>
@@ -67,8 +79,8 @@ const App = () => (
               <Route path="users" element={<UsersAdmin />} />
               <Route path="stats" element={<StatsAdmin />} />
               <Route path="settings" element={<SettingsAdmin />} />
-              <Route path="scan" element={<ScanAdmin />} />
             </Route>
+
 
             {/* Agency routes */}
             <Route path="/agency" element={<AgencyLayout />}>
