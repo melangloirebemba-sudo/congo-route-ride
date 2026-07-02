@@ -24,6 +24,7 @@ import TransactionsAdmin from "./pages/admin/TransactionsAdmin";
 import UsersAdmin from "./pages/admin/UsersAdmin";
 import StatsAdmin from "./pages/admin/StatsAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
+import ScanAdmin from "./pages/admin/ScanAdmin";
 import AgencyLayout from "./pages/agency/AgencyLayout";
 import AgencyDashboard from "./pages/agency/AgencyDashboard";
 import AgencyTrips from "./pages/agency/AgencyTrips";
@@ -66,6 +67,7 @@ const App = () => (
               <Route path="users" element={<UsersAdmin />} />
               <Route path="stats" element={<StatsAdmin />} />
               <Route path="settings" element={<SettingsAdmin />} />
+              <Route path="scan" element={<ScanAdmin />} />
             </Route>
 
             {/* Agency routes */}
