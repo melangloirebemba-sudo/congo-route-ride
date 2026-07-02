@@ -36,10 +36,14 @@ type BookingResult = {
   booking_date: string;
   trip: {
     id: string;
-    origin: string;
+    departure: string;
     destination: string;
-    departure_date: string;
+    date: string;
     departure_time: string;
+    arrival_time: string | null;
+    bus_type: string | null;
+    price: number;
+    currency: string;
     agency: { id: string; name: string } | null;
   } | null;
 };
