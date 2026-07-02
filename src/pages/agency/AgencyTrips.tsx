@@ -13,23 +13,29 @@ import { Tables } from "@/integrations/supabase/types";
 import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Trip = Tables<"trips">;
+type Branch = { id: string; name: string; city: string | null };
 
 const emptyTrip = {
   departure: "", destination: "", date: "", departure_time: "", arrival_time: "",
-  price: "", total_seats: "", bus_type: "Standard",
+  price: "", total_seats: "", bus_type: "Standard", branch_id: "",
 };
 
 const AgencyTrips = () => {
   const { agencyId } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyTrip);
   const [editId, setEditId] = useState<string | null>(null);
 
   const fetchTrips = async () => {
     if (!agencyId) return;
-    const { data } = await supabase.from("trips").select("*").eq("agency_id", agencyId).order("date", { ascending: false });
+    const [{ data }, { data: br }] = await Promise.all([
+      supabase.from("trips").select("*").eq("agency_id", agencyId).order("date", { ascending: false }),
+      supabase.from("agency_branches" as any).select("id, name, city").eq("agency_id", agencyId).eq("status", "active").order("name"),
+    ]);
     setTrips(data || []);
+    setBranches((br as any) || []);
   };
 
   useEffect(() => { fetchTrips(); }, [agencyId]);
@@ -51,6 +57,7 @@ const AgencyTrips = () => {
       total_seats: parseInt(form.total_seats),
       available_seats: editId ? undefined : parseInt(form.total_seats),
       bus_type: form.bus_type,
+      branch_id: form.branch_id || null,
     };
 
     let error;
@@ -87,6 +94,7 @@ const AgencyTrips = () => {
       price: trip.price.toString(),
       total_seats: trip.total_seats.toString(),
       bus_type: trip.bus_type || "Standard",
+      branch_id: (trip as any).branch_id || "",
     });
     setEditId(trip.id);
     setDialogOpen(true);
@@ -203,6 +211,18 @@ const AgencyTrips = () => {
                 <SelectItem value="Luxe">Luxe</SelectItem>
               </SelectContent>
             </Select>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Agence régionale (branche) — indispensable pour qu'un gestionnaire local voie ce trajet</label>
+              <Select value={form.branch_id || "none"} onValueChange={v => setForm(p => ({ ...p, branch_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Aucune branche" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucune (siège / agence mère)</SelectItem>
+                  {branches.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}{b.city ? ` — ${b.city}` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button onClick={saveTrip} className="w-full gradient-primary text-primary-foreground">
               {editId ? "Enregistrer" : "Créer le trajet"}
             </Button>

@@ -18,11 +18,13 @@ const ManagerBookings = () => {
   useEffect(() => {
     if (!manager) return;
     (async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("bookings")
-        .select("*, trips!inner(departure, destination, date, departure_time, agency_id)")
+        .select("*, trips!inner(departure, destination, date, departure_time, agency_id, branch_id)")
         .eq("trips.agency_id", manager.agency_id)
         .order("created_at", { ascending: false });
+      if (manager.branch_id) q = q.eq("trips.branch_id", manager.branch_id);
+      const { data } = await q;
       setBookings(data || []);
     })();
   }, [manager]);
@@ -39,7 +41,7 @@ const ManagerBookings = () => {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold">Réservations</h1>
-        <p className="text-sm text-muted-foreground">{bookings.length} réservations pour votre entreprise</p>
+        <p className="text-sm text-muted-foreground">{bookings.length} réservations pour votre branche (en ligne + guichet)</p>
       </div>
 
       <div className="flex gap-3">

@@ -10,14 +10,17 @@ const Index = () => {
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
   const [date, setDate] = useState("");
+  const [branchId, setBranchId] = useState("");
   const [cities, setCities] = useState<string[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string; city: string | null; agency: { name: string } | null }[]>([]);
   const [agencies, setAgencies] = useState<{ id: string; name: string; logo: string | null; rating: number | null; total_trips: number | null }[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const [citiesRes, agenciesRes] = await Promise.all([
+      const [citiesRes, agenciesRes, branchesRes] = await Promise.all([
         supabase.from("trips").select("departure, destination"),
         supabase.from("agencies").select("id, name, logo, rating, total_trips").eq("status", "active").eq("is_popular", true).order("popularity_rank", { ascending: true, nullsFirst: false }).order("rating", { ascending: false }).limit(5),
+        supabase.from("agency_branches" as any).select("id, name, city, agency:agencies!inner(name, status)").eq("status", "active").eq("agencies.status", "active").order("city"),
       ]);
 
       if (citiesRes.data) {
@@ -30,15 +33,22 @@ const Index = () => {
       }
 
       if (agenciesRes.data) setAgencies(agenciesRes.data);
+      if (branchesRes.data) setBranches((branchesRes.data as any) || []);
     };
     fetchData();
   }, []);
+
+  // Filter branches by chosen departure city (when set)
+  const filteredBranches = departure
+    ? branches.filter((b) => (b.city || "").toLowerCase() === departure.toLowerCase())
+    : branches;
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (departure) params.set("from", departure);
     if (destination) params.set("to", destination);
     if (date) params.set("date", date);
+    if (branchId) params.set("branch", branchId);
     navigate(`/search?${params.toString()}`);
   };
 
@@ -85,6 +95,23 @@ const Index = () => {
                 <option value="">Destination</option>
                 {cities.filter((c) => c !== departure).map((c) => (
                   <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+
+            <div className="relative">
+              <Bus className="absolute left-3 top-3 h-4 w-4 text-primary" />
+              <select
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Agence régionale (toutes)</option>
+                {filteredBranches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.agency?.name ? `${b.agency.name} — ` : ""}{b.name}{b.city ? ` (${b.city})` : ""}
+                  </option>
                 ))}
               </select>
             </div>
