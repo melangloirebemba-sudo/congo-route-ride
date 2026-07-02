@@ -389,7 +389,7 @@ const ScanAdmin = () => {
                     )}
                     <div className="flex gap-2">
                       {verdict === "valid" ? (
-                        <Button onClick={markAsUsed} disabled={validating} className="flex-1">
+                        <Button onClick={() => setConfirmOpen(true)} disabled={validating} className="flex-1">
                           {validating ? (
                             <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Validation…</>
                           ) : (
@@ -405,6 +405,56 @@ const ScanAdmin = () => {
                         Nouveau scan
                       </Button>
                     </div>
+
+                    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmer l'embarquement</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Vérifiez les informations ci-dessous avant de valider. Un contrôle final sera effectué en base pour éviter tout double embarquement.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="space-y-3 text-sm">
+                          <div className="rounded-lg border p-3 space-y-1">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase">Trajet</div>
+                            <div className="font-medium">{booking.trip?.origin} → {booking.trip?.destination}</div>
+                            <div className="text-muted-foreground">
+                              {booking.trip?.departure_date} · {booking.trip?.departure_time}
+                            </div>
+                            <div className="text-muted-foreground">{booking.agency?.name}</div>
+                          </div>
+                          <div className="rounded-lg border p-3 space-y-1">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase">Passager</div>
+                            <div className="font-medium">{booking.passenger_name}</div>
+                            <div className="text-muted-foreground">{booking.phone}</div>
+                            <div className="text-muted-foreground">Siège {booking.seat_number} · Billet {booking.qr_code}</div>
+                          </div>
+                          <div className="rounded-lg border p-3 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-muted-foreground uppercase">Statut actuel</span>
+                            <div className="flex gap-2">
+                              <Badge variant="outline">{booking.status}</Badge>
+                              <Badge variant={booking.payment_status === "paid" ? "default" : "destructive"}>
+                                {booking.payment_status}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={validating}>Annuler</AlertDialogCancel>
+                          <AlertDialogAction
+                            disabled={validating}
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              await markAsUsed();
+                              setConfirmOpen(false);
+                            }}
+                          >
+                            {validating ? "Validation…" : "Confirmer l'embarquement"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
 
                   </div>
                 )}
