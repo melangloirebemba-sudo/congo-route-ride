@@ -170,10 +170,21 @@ const ScanAdmin = () => {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-display font-bold">Scan de billets</h1>
-        <p className="text-muted-foreground text-sm">Vérifier la validité d'un QR code passager</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-display font-bold">Scan de billets</h1>
+          <p className="text-muted-foreground text-sm">
+            {scope === "admin"
+              ? "Super Admin — vérification de tous les billets de la plateforme"
+              : "Agence — vérification des billets de vos propres trajets"}
+          </p>
+        </div>
+        <Badge variant="outline" className="gap-1.5">
+          {scope === "admin" ? <ShieldCheck className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}
+          {scope === "admin" ? "Super Admin" : "Agence"}
+        </Badge>
       </div>
+
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
