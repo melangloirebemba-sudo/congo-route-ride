@@ -257,7 +257,7 @@ const AgencyManagers = () => {
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Chargement...</TableCell></TableRow>
               ) : managers.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Aucun gestionnaire.</TableCell></TableRow>
-              ) : managers.map((m) => (
+              ) : pg.paginated.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.full_name}</TableCell>
                   <TableCell className="text-sm">{m.email}</TableCell>
