@@ -30,7 +30,7 @@ type BookingResult = {
     destination: string;
     departure_date: string;
     departure_time: string;
-    agency: { name: string } | null;
+    agency: { id: string; name: string } | null;
   } | null;
 };
 
