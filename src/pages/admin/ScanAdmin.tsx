@@ -250,6 +250,7 @@ const ScanAdmin = () => {
     setVerdict(null);
     setLastCode("");
     setManualCode("");
+    setRpcError(null);
   };
 
   const VerdictIcon = verdict ? verdictMeta[verdict].icon : QrCode;
