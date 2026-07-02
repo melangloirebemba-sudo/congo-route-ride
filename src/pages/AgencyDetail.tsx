@@ -120,7 +120,7 @@ const AgencyDetail = () => {
           </p>
         ) : (
           <div className="space-y-3">
-            {trips.map((trip) => (
+            {pg.paginated.map((trip) => (
               <button
                 key={trip.id}
                 onClick={() => navigate(`/trip/${trip.id}`)}
