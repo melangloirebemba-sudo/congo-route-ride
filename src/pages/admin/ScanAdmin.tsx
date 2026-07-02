@@ -189,6 +189,12 @@ const ScanAdmin = () => {
     setValidating(false);
 
     if (error) {
+      setRpcError({
+        code: "rpc_error",
+        title: "Erreur technique",
+        message: error.message || "L'appel de validation a échoué.",
+        hint: "Vérifiez votre connexion réseau puis réessayez. Si le problème persiste, contactez le support.",
+      });
       toast.error("Impossible de valider l'embarquement");
       return;
     }
@@ -205,6 +211,7 @@ const ScanAdmin = () => {
       toast.success(res.message || "Embarquement validé");
       setBooking({ ...booking, status: res.status || "used" });
       setVerdict("used");
+      setRpcError(null);
       return;
     }
 
@@ -216,33 +223,23 @@ const ScanAdmin = () => {
     };
     setBooking(nextBooking);
 
-    switch (res.code) {
-      case "used":
-        setVerdict("used");
-        toast.error("Ce billet vient d'être utilisé par un autre agent");
-        break;
-      case "cancelled":
-        setVerdict("cancelled");
-        toast.error("Billet annulé — embarquement refusé");
-        break;
-      case "unpaid":
-        setVerdict("unpaid");
-        toast.error("Billet non payé — embarquement refusé");
-        break;
-      case "expired":
-        setVerdict("expired");
-        toast.error("Trajet expiré — embarquement refusé");
-        break;
-      case "notfound":
-        setVerdict("notfound");
-        toast.error("Réservation introuvable");
-        break;
-      case "forbidden":
-        toast.error("Vous n'êtes pas autorisé à valider ce billet");
-        break;
-      default:
-        toast.error(res.message || "Validation refusée");
-    }
+    const code = res.code || "unknown";
+    const meta = rpcErrorMeta[code] ?? {
+      title: "Validation refusée",
+      message: res.message || "La validation a été refusée par le serveur.",
+      hint: "Rescannez le billet ou contactez un Super Admin.",
+    };
+    setRpcError({ code, ...meta });
+
+    const verdictByCode: Record<string, Verdict> = {
+      used: "used",
+      cancelled: "cancelled",
+      unpaid: "unpaid",
+      expired: "expired",
+      notfound: "notfound",
+    };
+    if (verdictByCode[code]) setVerdict(verdictByCode[code]);
+    toast.error(meta.title);
   };
 
 
