@@ -93,68 +93,103 @@ Deno.serve(async (req) => {
       return json({ error: "Vous ne pouvez pas effectuer cette action sur votre propre compte" }, 400);
     }
 
-    if (action === "disable") {
-      const { error } = await admin.auth.admin.updateUserById(targetId, {
-        ban_duration: "876000h", // ~100 years
-      } as any);
-      if (error) return json({ error: error.message }, 400);
-      return json({ ok: true, message: "Compte désactivé" });
-    }
+    // Fetch target email for the audit trail (best effort)
+    let targetEmail: string | null = null;
+    try {
+      const { data: t } = await admin.auth.admin.getUserById(targetId);
+      targetEmail = t.user?.email ?? null;
+    } catch { /* ignore */ }
 
-    if (action === "enable") {
-      const { error } = await admin.auth.admin.updateUserById(targetId, {
-        ban_duration: "none",
-      } as any);
-      if (error) return json({ error: error.message }, 400);
-      return json({ ok: true, message: "Compte réactivé" });
-    }
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("cf-connecting-ip") ||
+      null;
+    const userAgent = req.headers.get("user-agent");
 
-    if (action === "delete") {
-      const { error } = await admin.auth.admin.deleteUser(targetId);
-      if (error) return json({ error: error.message }, 400);
-      return json({ ok: true, message: "Compte supprimé" });
-    }
+    const audit = async (
+      status: "success" | "error",
+      message?: string,
+      metadata: Record<string, unknown> = {},
+    ) => {
+      try {
+        await admin.from("admin_audit_logs").insert({
+          actor_id: userData.user.id,
+          actor_email: userData.user.email,
+          action,
+          target_user_id: targetId,
+          target_email: targetEmail,
+          metadata,
+          status,
+          error_message: status === "error" ? message ?? null : null,
+          ip_address: ip,
+          user_agent: userAgent,
+        });
+      } catch { /* logging must not break the action */ }
+    };
 
-    if (action === "reset_password") {
-      const { data: u, error: getErr } = await admin.auth.admin.getUserById(targetId);
-      if (getErr || !u.user?.email) return json({ error: "Email introuvable" }, 400);
-      const redirectTo = (body.redirect_to as string) || undefined;
-      const { error } = await admin.auth.resetPasswordForEmail(u.user.email, {
-        redirectTo,
-      });
-      if (error) return json({ error: error.message }, 400);
-      return json({ ok: true, message: "Lien de réinitialisation envoyé" });
-    }
-
-    if (action === "set_password") {
-      const newPassword = body.password as string;
-      if (!newPassword || newPassword.length < 8) {
-        return json({ error: "Mot de passe (≥ 8 caractères) requis" }, 400);
+    const run = async () => {
+      if (action === "disable") {
+        const { error } = await admin.auth.admin.updateUserById(targetId, {
+          ban_duration: "876000h",
+        } as any);
+        if (error) return { error: error.message };
+        return { message: "Compte désactivé" };
       }
-      const { error } = await admin.auth.admin.updateUserById(targetId, {
-        password: newPassword,
-        user_metadata: { must_change_password: true },
-      } as any);
-      if (error) return json({ error: error.message }, 400);
-      return json({ ok: true, message: "Mot de passe défini" });
-    }
-
-    if (action === "set_role") {
-      const role = body.role as string; // 'admin' | 'user' | null (remove all)
-      // Remove existing roles then add the requested one
-      const { error: delErr } = await admin.from("user_roles").delete().eq("user_id", targetId);
-      if (delErr) return json({ error: delErr.message }, 400);
-      if (role) {
-        const { error: insErr } = await admin
-          .from("user_roles")
-          .insert({ user_id: targetId, role });
-        if (insErr) return json({ error: insErr.message }, 400);
+      if (action === "enable") {
+        const { error } = await admin.auth.admin.updateUserById(targetId, {
+          ban_duration: "none",
+        } as any);
+        if (error) return { error: error.message };
+        return { message: "Compte réactivé" };
       }
-      return json({ ok: true, message: "Rôle mis à jour" });
-    }
+      if (action === "delete") {
+        const { error } = await admin.auth.admin.deleteUser(targetId);
+        if (error) return { error: error.message };
+        return { message: "Compte supprimé" };
+      }
+      if (action === "reset_password") {
+        if (!targetEmail) return { error: "Email introuvable" };
+        const redirectTo = (body.redirect_to as string) || undefined;
+        const { error } = await admin.auth.resetPasswordForEmail(targetEmail, { redirectTo });
+        if (error) return { error: error.message };
+        return { message: "Lien de réinitialisation envoyé", metadata: { redirect_to: redirectTo } };
+      }
+      if (action === "set_password") {
+        const newPassword = body.password as string;
+        if (!newPassword || newPassword.length < 8) {
+          return { error: "Mot de passe (≥ 8 caractères) requis" };
+        }
+        const { error } = await admin.auth.admin.updateUserById(targetId, {
+          password: newPassword,
+          user_metadata: { must_change_password: true },
+        } as any);
+        if (error) return { error: error.message };
+        return { message: "Mot de passe défini", metadata: { must_change_password: true } };
+      }
+      if (action === "set_role") {
+        const role = body.role as string | null;
+        const { error: delErr } = await admin.from("user_roles").delete().eq("user_id", targetId);
+        if (delErr) return { error: delErr.message };
+        if (role) {
+          const { error: insErr } = await admin
+            .from("user_roles")
+            .insert({ user_id: targetId, role });
+          if (insErr) return { error: insErr.message };
+        }
+        return { message: "Rôle mis à jour", metadata: { role: role ?? "none" } };
+      }
+      return { error: "Action inconnue" };
+    };
 
-    return json({ error: "Action inconnue" }, 400);
+    const result = await run();
+    if ("error" in result && result.error) {
+      await audit("error", result.error);
+      return json({ error: result.error }, 400);
+    }
+    await audit("success", undefined, (result as any).metadata ?? {});
+    return json({ ok: true, message: (result as any).message });
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
   }
 });
+
