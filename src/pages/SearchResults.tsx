@@ -80,7 +80,7 @@ const SearchResults = () => {
               </div>
             )}
 
-            {trips.map((trip, i) => (
+            {pg.paginated.map((trip, i) => (
               <motion.div
                 key={trip.id}
                 initial={{ opacity: 0, y: 15 }}
