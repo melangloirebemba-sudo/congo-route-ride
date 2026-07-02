@@ -60,18 +60,70 @@ const ManagerSale = () => {
   }, [manager]);
 
   const trip = useMemo(() => trips.find((t) => t.id === tripId), [tripId, trips]);
+  const [lockedSeats, setLockedSeats] = useState<number[]>([]);
+  const [mySeatLock, setMySeatLock] = useState<{ seat: number; expiresAt: number } | null>(null);
+  const [lockCountdown, setLockCountdown] = useState<number>(0);
+
+  const refreshSeats = async (id: string) => {
+    const [{ data: bookings }, { data: locks }] = await Promise.all([
+      supabase.from("bookings").select("seat_number").eq("trip_id", id).neq("status", "cancelled"),
+      supabase.from("seat_locks" as any).select("seat_number, locked_by, expires_at").eq("trip_id", id).gt("expires_at", new Date().toISOString()),
+    ]);
+    setTakenSeats((bookings || []).map((b: any) => b.seat_number));
+    const myId = user?.id;
+    setLockedSeats((locks || []).filter((l: any) => l.locked_by !== myId).map((l: any) => l.seat_number));
+  };
 
   useEffect(() => {
-    if (!tripId) { setTakenSeats([]); return; }
-    (async () => {
-      const { data } = await supabase.from("bookings").select("seat_number").eq("trip_id", tripId).neq("status", "cancelled");
-      setTakenSeats((data || []).map((b: any) => b.seat_number));
-    })();
+    if (!tripId) { setTakenSeats([]); setLockedSeats([]); return; }
+    refreshSeats(tripId);
     setSeat(null);
-  }, [tripId]);
+    setMySeatLock(null);
+    const t = setInterval(() => refreshSeats(tripId), 10000);
+    return () => clearInterval(t);
+  }, [tripId, user?.id]);
+
+  // Countdown for my lock
+  useEffect(() => {
+    if (!mySeatLock) { setLockCountdown(0); return; }
+    const tick = () => setLockCountdown(Math.max(0, Math.round((mySeatLock.expiresAt - Date.now()) / 1000)));
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [mySeatLock]);
+
+  // Release lock on unmount or trip change
+  useEffect(() => {
+    return () => {
+      if (mySeatLock && tripId) {
+        supabase.rpc("release_seat" as any, { _trip_id: tripId, _seat_number: mySeatLock.seat });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSelectSeat = async (n: number) => {
+    if (!tripId) return;
+    // release previous
+    if (mySeatLock && mySeatLock.seat !== n) {
+      await supabase.rpc("release_seat" as any, { _trip_id: tripId, _seat_number: mySeatLock.seat });
+    }
+    const { data, error } = await supabase.rpc("lock_seat" as any, { _trip_id: tripId, _seat_number: n, _ttl_seconds: 300 });
+    if (error) { toast.error(error.message); return; }
+    const res: any = data;
+    if (!res?.ok) {
+      toast.error(res?.message || "Impossible de verrouiller ce siège");
+      refreshSeats(tripId);
+      return;
+    }
+    setSeat(n);
+    setMySeatLock({ seat: n, expiresAt: new Date(res.expires_at).getTime() });
+    refreshSeats(tripId);
+  };
 
   const resetForm = () => {
     setPassengerName(""); setPhone(""); setSeat(null); setPayment("cash"); setLastTicket(null);
+    setMySeatLock(null);
   };
 
   const submit = async () => {
@@ -80,6 +132,15 @@ const ManagerSale = () => {
       toast.error("Remplissez tous les champs"); return;
     }
     if (takenSeats.includes(seat)) { toast.error("Siège déjà occupé"); return; }
+    if (lockedSeats.includes(seat)) { toast.error("Siège verrouillé par un autre agent"); return; }
+    if (!mySeatLock || mySeatLock.seat !== seat) {
+      toast.error("Verrouillage du siège perdu, resélectionnez-le"); return;
+    }
+    if (Date.now() > mySeatLock.expiresAt) {
+      toast.error("Verrouillage expiré, resélectionnez le siège");
+      setMySeatLock(null); setSeat(null);
+      return;
+    }
 
     setSubmitting(true);
     const qr = `TC-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -97,8 +158,17 @@ const ManagerSale = () => {
       total_amount: trip.price,
     });
 
-    if (error) { setSubmitting(false); toast.error(error.message); return; }
+    if (error) {
+      setSubmitting(false);
+      toast.error(error.message.includes("bookings_trip_id_seat")
+        ? "Ce siège vient d'être réservé par un autre agent"
+        : error.message);
+      refreshSeats(trip.id);
+      return;
+    }
 
+    // Consume the lock
+    await supabase.rpc("release_seat" as any, { _trip_id: trip.id, _seat_number: seat });
     await supabase.from("trips").update({ available_seats: Math.max(0, (trip.available_seats || 0) - 1) }).eq("id", trip.id);
 
     const qrDataUrl = await QRCode.toDataURL(qr, { width: 240, margin: 1 });
@@ -115,6 +185,7 @@ const ManagerSale = () => {
       trip,
     });
     setTakenSeats((s) => [...s, seat]);
+    setMySeatLock(null);
   };
 
   const downloadPdf = async () => {
@@ -173,12 +244,25 @@ const ManagerSale = () => {
 
           {trip && (
             <>
-              <div className="bg-secondary/50 rounded-lg p-3 text-sm">
+              <div className="bg-secondary/50 rounded-lg p-3 text-sm space-y-1">
                 <p><strong>Prix :</strong> {trip.price.toLocaleString()} {trip.currency} · <strong>Places :</strong> {takenSeats.length}/{trip.total_seats}</p>
+                {lockedSeats.length > 0 && (
+                  <p className="text-xs text-muted-foreground">🔒 Sièges verrouillés par d'autres agents : {lockedSeats.sort((a,b)=>a-b).join(", ")}</p>
+                )}
+                {mySeatLock && lockCountdown > 0 && (
+                  <p className="text-xs text-primary font-medium">
+                    Siège #{mySeatLock.seat} verrouillé — {Math.floor(lockCountdown/60)}:{String(lockCountdown%60).padStart(2,"0")} restant
+                  </p>
+                )}
               </div>
               <div>
                 <Label className="mb-2 block">Choix du siège</Label>
-                <SeatSelector totalSeats={trip.total_seats} bookedSeats={takenSeats} selected={seat} onSelect={setSeat} />
+                <SeatSelector
+                  totalSeats={trip.total_seats}
+                  bookedSeats={[...takenSeats, ...lockedSeats]}
+                  selected={seat}
+                  onSelect={handleSelectSeat}
+                />
               </div>
             </>
           )}
