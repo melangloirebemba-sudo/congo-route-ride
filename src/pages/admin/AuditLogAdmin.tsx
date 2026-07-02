@@ -222,7 +222,7 @@ const AuditLogAdmin = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((r) => (
+                  pg.paginated.map((r) => (
                     <TableRow
                       key={r.id}
                       className="cursor-pointer"
