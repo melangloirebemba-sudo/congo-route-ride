@@ -24,6 +24,27 @@ const ResetPassword = () => {
   const [resendEmail, setResendEmail] = useState("");
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  const COOLDOWN_SECONDS = 60;
+  const cooldownKey = (email: string) => `reset-link-cooldown:${email.trim().toLowerCase()}`;
+
+  // Recompute cooldown whenever the email changes (per-address throttle)
+  useEffect(() => {
+    if (!resendEmail) { setCooldown(0); return; }
+    try {
+      const until = Number(localStorage.getItem(cooldownKey(resendEmail)) || 0);
+      const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+      setCooldown(remaining);
+    } catch { setCooldown(0); }
+  }, [resendEmail]);
+
+  // Tick the countdown every second while active
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setInterval(() => setCooldown((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
 
   useEffect(() => {
     const hash = window.location.hash || "";
@@ -130,6 +151,17 @@ const ResetPassword = () => {
       toast.error("Adresse email invalide");
       return;
     }
+    // Client-side per-email throttle to prevent spamming the send button
+    try {
+      const until = Number(localStorage.getItem(cooldownKey(resendEmail)) || 0);
+      const remaining = Math.ceil((until - Date.now()) / 1000);
+      if (remaining > 0) {
+        setCooldown(remaining);
+        toast.error(`Patientez ${remaining}s avant de renvoyer un lien`);
+        return;
+      }
+    } catch { /* ignore storage errors */ }
+
     setResending(true);
     const { error } = await supabase.auth.resetPasswordForEmail(resendEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
@@ -139,6 +171,14 @@ const ResetPassword = () => {
       toast.error(error.message);
       return;
     }
+    // Start cooldown regardless of whether the address exists (avoids enumeration)
+    try {
+      localStorage.setItem(
+        cooldownKey(resendEmail),
+        String(Date.now() + COOLDOWN_SECONDS * 1000),
+      );
+    } catch { /* ignore */ }
+    setCooldown(COOLDOWN_SECONDS);
     setResent(true);
     toast.success("Nouveau lien envoyé — vérifiez votre boîte mail");
   };
@@ -185,10 +225,19 @@ const ResetPassword = () => {
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={resending}>
+                  <Button type="submit" className="w-full" disabled={resending || cooldown > 0}>
                     <Mail className="h-4 w-4 mr-2" />
-                    {resending ? "Envoi..." : "Envoyer un nouveau lien"}
+                    {resending
+                      ? "Envoi..."
+                      : cooldown > 0
+                        ? `Renvoi possible dans ${cooldown}s`
+                        : "Envoyer un nouveau lien"}
                   </Button>
+                  {cooldown > 0 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Pour éviter le spam, attendez {cooldown} seconde{cooldown > 1 ? "s" : ""} avant un nouvel envoi.
+                    </p>
+                  )}
                 </form>
               )}
 
