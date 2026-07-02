@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Building2, CreditCard, Settings, Users, BarChart3, LogOut, Ticket, QrCode } from "lucide-react";
+import { LayoutDashboard, Building2, CreditCard, Settings, Users, BarChart3, LogOut, Ticket, QrCode, ScrollText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 
@@ -10,6 +10,7 @@ const navItems = [
   { to: "/admin/scan", icon: QrCode, label: "Scan billets" },
   { to: "/admin/transactions", icon: CreditCard, label: "Transactions" },
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
+  { to: "/admin/audit", icon: ScrollText, label: "Journal d'audit" },
   { to: "/admin/stats", icon: BarChart3, label: "Statistiques" },
   { to: "/admin/settings", icon: Settings, label: "Paramètres" },
 ];
