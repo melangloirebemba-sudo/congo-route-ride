@@ -375,6 +375,7 @@ const AgencyBookingsAdmin = () => {
                 ))}
               </TableBody>
             </Table>
+            <ListPagination {...pg} className="pt-4" />
           </div>
         </CardContent>
       </Card>
