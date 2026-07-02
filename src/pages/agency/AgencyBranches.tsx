@@ -12,12 +12,15 @@ import { toast } from "sonner";
 import { Plus, Edit, Trash2, Building2, MapPin } from "lucide-react";
 import { ListPagination, usePagination } from "@/components/ListPagination";
 
+import { districtsFor } from "@/lib/districts";
+
 type Branch = {
   id: string;
   agency_id: string;
   parent_branch_id: string | null;
   name: string;
   city: string | null;
+  district: string | null;
   address: string | null;
   phone: string | null;
   manager_name: string | null;
@@ -27,6 +30,7 @@ type Branch = {
 const emptyForm = {
   name: "",
   city: "",
+  district: "",
   address: "",
   phone: "",
   manager_name: "",
