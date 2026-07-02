@@ -36,10 +36,14 @@ type BookingResult = {
   booking_date: string;
   trip: {
     id: string;
-    origin: string;
+    departure: string;
     destination: string;
-    departure_date: string;
+    date: string;
     departure_time: string;
+    arrival_time: string | null;
+    bus_type: string | null;
+    price: number;
+    currency: string;
     agency: { id: string; name: string } | null;
   } | null;
 };
@@ -80,7 +84,7 @@ const ScanAdmin = () => {
       .select(`
         id, qr_code, passenger_name, phone, seat_number, status, payment_status,
         payment_method, total_amount, booking_date,
-        trip:trips ( id, origin, destination, departure_date, departure_time, agency:agencies ( id, name ) )
+        trip:trips ( id, departure, destination, date, departure_time, arrival_time, bus_type, price, currency, agency:agencies ( id, name ) )
       `)
       .eq("qr_code", trimmed)
       .maybeSingle();
@@ -111,7 +115,7 @@ const ScanAdmin = () => {
     if (b.status === "cancelled") v = "cancelled";
     else if (b.status === "used" || b.status === "checked_in") v = "used";
     else if (b.payment_status !== "paid") v = "unpaid";
-    else if (b.trip?.departure_date && new Date(b.trip.departure_date) < new Date(new Date().toDateString())) v = "expired";
+    else if (b.trip?.date && new Date(b.trip.date) < new Date(new Date().toDateString())) v = "expired";
 
     setVerdict(v);
     if (v === "valid") toast.success("Billet valide");
@@ -374,15 +378,22 @@ const ScanAdmin = () => {
                     {booking.trip && (
                       <>
                         <Separator />
-                        <div>
+                        <div className="space-y-0.5">
                           <div className="font-medium mb-1">Trajet</div>
                           <div className="text-muted-foreground">
-                            {booking.trip.origin} → {booking.trip.destination}
+                            {booking.trip.departure} → {booking.trip.destination}
                           </div>
                           <div className="text-muted-foreground">
-                            {format(new Date(booking.trip.departure_date), "EEEE d MMM yyyy", { locale: fr })}
+                            {format(new Date(booking.trip.date), "EEEE d MMM yyyy", { locale: fr })}
                             {" · "}
                             {booking.trip.departure_time?.slice(0, 5)}
+                            {booking.trip.arrival_time ? ` → ${booking.trip.arrival_time.slice(0,5)}` : ""}
+                          </div>
+                          {booking.trip.bus_type && (
+                            <div className="text-muted-foreground">Bus : {booking.trip.bus_type}</div>
+                          )}
+                          <div className="text-muted-foreground">
+                            Prix : {booking.trip.price.toLocaleString("fr-FR")} {booking.trip.currency}
                           </div>
                           {booking.trip.agency?.name && (
                             <div className="text-muted-foreground">Agence : {booking.trip.agency.name}</div>
@@ -458,9 +469,9 @@ const ScanAdmin = () => {
                         <div className="space-y-3 text-sm">
                           <div className="rounded-lg border p-3 space-y-1">
                             <div className="text-xs font-semibold text-muted-foreground uppercase">Trajet</div>
-                            <div className="font-medium">{booking.trip?.origin} → {booking.trip?.destination}</div>
+                            <div className="font-medium">{booking.trip?.departure} → {booking.trip?.destination}</div>
                             <div className="text-muted-foreground">
-                              {booking.trip?.departure_date} · {booking.trip?.departure_time}
+                              {booking.trip?.date} · {booking.trip?.departure_time}
                             </div>
                             <div className="text-muted-foreground">{booking.trip?.agency?.name}</div>
                           </div>
