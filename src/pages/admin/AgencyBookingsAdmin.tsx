@@ -450,7 +450,28 @@ const AgencyBookingsAdmin = () => {
                     <div className="font-mono text-xs bg-muted p-2 rounded">{selected.qr_code}</div>
                   </section>
                 )}
+
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try { await buildPdf(selected, "receipt"); toast.success("Reçu téléchargé"); }
+                      catch { toast.error("Impossible de générer le reçu"); }
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" /> Reçu
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      try { await buildPdf(selected, "ticket"); toast.success("Billet téléchargé"); }
+                      catch { toast.error("Impossible de générer le billet"); }
+                    }}
+                  >
+                    <TicketIcon className="h-4 w-4 mr-2" /> Billet
+                  </Button>
+                </div>
               </div>
+
             </>
           )}
         </SheetContent>
