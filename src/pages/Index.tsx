@@ -22,7 +22,7 @@ const Index = () => {
       const [citiesRes, agenciesRes, branchesRes] = await Promise.all([
         supabase.from("trips").select("departure, destination"),
         supabase.from("agencies").select("id, name, logo, rating, total_trips").eq("status", "active").eq("is_popular", true).order("popularity_rank", { ascending: true, nullsFirst: false }).order("rating", { ascending: false }).limit(5),
-        supabase.from("agency_branches" as any).select("id, name, city, agency:agencies!inner(name, status)").eq("status", "active").eq("agencies.status", "active").order("city"),
+        supabase.from("agency_branches" as any).select("id, name, city, district, agency:agencies!inner(name, status)").eq("status", "active").eq("agencies.status", "active").order("city"),
       ]);
 
       if (citiesRes.data) {
