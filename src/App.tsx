@@ -30,6 +30,7 @@ import AgencyDashboard from "./pages/agency/AgencyDashboard";
 import AgencyTrips from "./pages/agency/AgencyTrips";
 import AgencyBookings from "./pages/agency/AgencyBookings";
 import AgencyBranches from "./pages/agency/AgencyBranches";
+import AgencyManagers from "./pages/agency/AgencyManagers";
 import AgencySettings from "./pages/agency/AgencySettings";
 import NotFound from "./pages/NotFound";
 
@@ -86,6 +87,7 @@ const App = () => (
             <Route path="/agency" element={<AgencyLayout />}>
               <Route index element={<AgencyDashboard />} />
               <Route path="branches" element={<AgencyBranches />} />
+              <Route path="managers" element={<AgencyManagers />} />
               <Route path="trips" element={<AgencyTrips />} />
               <Route path="bookings" element={<AgencyBookings />} />
               <Route path="settings" element={<AgencySettings />} />

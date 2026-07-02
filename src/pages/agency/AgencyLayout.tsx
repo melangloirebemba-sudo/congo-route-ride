@@ -1,11 +1,12 @@
 import { NavLink, Outlet, Navigate } from "react-router-dom";
-import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode } from "lucide-react";
+import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
   { to: "/agency", icon: LayoutDashboard, label: "Tableau de bord", end: true },
   { to: "/agency/branches", icon: Building2, label: "Mes agences" },
+  { to: "/agency/managers", icon: UserCog, label: "Gestionnaires" },
   { to: "/agency/trips", icon: Bus, label: "Trajets" },
   { to: "/agency/bookings", icon: Ticket, label: "Réservations" },
   { to: "/admin/scan", icon: QrCode, label: "Scan billets" },
