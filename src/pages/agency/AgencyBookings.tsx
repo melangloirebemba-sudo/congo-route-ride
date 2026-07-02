@@ -107,6 +107,7 @@ const AgencyBookings = () => {
               </TableBody>
             </Table>
           </div>
+          <div className="p-4 border-t"><ListPagination {...pg} /></div>
         </CardContent>
       </Card>
     </div>
