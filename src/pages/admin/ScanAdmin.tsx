@@ -84,7 +84,7 @@ const ScanAdmin = () => {
       .select(`
         id, qr_code, passenger_name, phone, seat_number, status, payment_status,
         payment_method, total_amount, booking_date,
-        trip:trips ( id, origin, destination, departure_date, departure_time, agency:agencies ( id, name ) )
+        trip:trips ( id, departure, destination, date, departure_time, arrival_time, bus_type, price, currency, agency:agencies ( id, name ) )
       `)
       .eq("qr_code", trimmed)
       .maybeSingle();
