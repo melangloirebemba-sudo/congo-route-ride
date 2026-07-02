@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Search, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Agency = {
   id: string;
@@ -35,6 +36,8 @@ const Agencies = () => {
   const filtered = agencies.filter((a) =>
     a.name.toLowerCase().includes(query.toLowerCase())
   );
+  const pg = usePagination(filtered, 5, [query]);
+
 
   return (
     <div className="min-h-screen pb-20">
@@ -62,7 +65,7 @@ const Agencies = () => {
           <p className="text-center text-muted-foreground py-10">Aucune agence trouvée.</p>
         ) : (
           <div className="space-y-3">
-            {filtered.map((agency, i) => (
+            {pg.paginated.map((agency, i) => (
               <motion.button
                 key={agency.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -84,6 +87,7 @@ const Agencies = () => {
                 </div>
               </motion.button>
             ))}
+            <ListPagination {...pg} className="pt-2" />
           </div>
         )}
       </div>

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tables } from "@/integrations/supabase/types";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Trip = Tables<"trips">;
 
@@ -97,6 +98,8 @@ const AgencyTrips = () => {
     setDialogOpen(true);
   };
 
+  const pg = usePagination(trips);
+
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {
       active: "bg-accent/20 text-accent",
@@ -142,7 +145,7 @@ const AgencyTrips = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  trips.map(trip => (
+                  pg.paginated.map(trip => (
                     <TableRow key={trip.id}>
                       <TableCell className="font-medium text-sm">{trip.departure} → {trip.destination}</TableCell>
                       <TableCell className="text-sm">{trip.date}</TableCell>
@@ -169,8 +172,10 @@ const AgencyTrips = () => {
               </TableBody>
             </Table>
           </div>
+          <div className="p-4 border-t"><ListPagination {...pg} /></div>
         </CardContent>
       </Card>
+
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>

@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Plus, Trash2, Copy, UserCog, RefreshCw, Mail } from "lucide-react";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Manager = {
   id: string;
@@ -50,6 +51,7 @@ const AgencyManagers = () => {
   const [form, setForm] = useState({ ...emptyForm });
   const [submitting, setSubmitting] = useState(false);
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
+  const pg = usePagination(managers);
 
   const fetchData = async () => {
     if (!agencyId) return;
@@ -255,7 +257,7 @@ const AgencyManagers = () => {
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Chargement...</TableCell></TableRow>
               ) : managers.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Aucun gestionnaire.</TableCell></TableRow>
-              ) : managers.map((m) => (
+              ) : pg.paginated.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.full_name}</TableCell>
                   <TableCell className="text-sm">{m.email}</TableCell>
@@ -286,6 +288,7 @@ const AgencyManagers = () => {
               ))}
             </TableBody>
           </Table>
+          <div className="p-4 border-t"><ListPagination {...pg} /></div>
         </CardContent>
       </Card>
     </div>

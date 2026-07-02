@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, QrCode, MapPin, Calendar, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 interface BookingRow {
   id: string;
@@ -36,6 +37,7 @@ const BookingHistory = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const pg = usePagination(bookings);
 
   useEffect(() => {
     const fetch = async () => {
@@ -69,7 +71,7 @@ const BookingHistory = () => {
             <p className="text-muted-foreground">Aucune réservation</p>
           </div>
         ) : (
-          bookings.map((b, i) => (
+          pg.paginated.map((b, i) => (
             <motion.div
               key={b.id}
               initial={{ opacity: 0, y: 10 }}
@@ -109,6 +111,7 @@ const BookingHistory = () => {
             </motion.div>
           ))
         )}
+        {!loading && bookings.length > 0 && <ListPagination {...pg} className="pt-2" />}
       </div>
     </div>
   );

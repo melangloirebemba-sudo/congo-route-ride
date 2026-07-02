@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, Phone, Mail, Star, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Agency = {
   id: string;
@@ -32,6 +33,7 @@ const AgencyDetail = () => {
   const [agency, setAgency] = useState<Agency | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
+  const pg = usePagination(trips);
 
   useEffect(() => {
     if (!id) return;
@@ -118,7 +120,7 @@ const AgencyDetail = () => {
           </p>
         ) : (
           <div className="space-y-3">
-            {trips.map((trip) => (
+            {pg.paginated.map((trip) => (
               <button
                 key={trip.id}
                 onClick={() => navigate(`/trip/${trip.id}`)}
@@ -146,6 +148,7 @@ const AgencyDetail = () => {
                 </div>
               </button>
             ))}
+            <ListPagination {...pg} className="pt-2" />
           </div>
         )}
       </section>

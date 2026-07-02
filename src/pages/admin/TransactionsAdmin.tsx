@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 const TransactionsAdmin = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -16,6 +17,8 @@ const TransactionsAdmin = () => {
     };
     fetch();
   }, []);
+
+  const pg = usePagination(transactions);
 
   const statusColor = (s: string) => {
     if (s === "completed") return "bg-accent/20 text-accent";
@@ -51,7 +54,7 @@ const TransactionsAdmin = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  transactions.map(tx => (
+                  pg.paginated.map(tx => (
                     <TableRow key={tx.id}>
                       <TableCell className="text-xs">{new Date(tx.created_at).toLocaleDateString("fr")}</TableCell>
                       <TableCell className="text-sm font-medium">{tx.bookings?.passenger_name || "—"}</TableCell>
@@ -71,6 +74,7 @@ const TransactionsAdmin = () => {
               </TableBody>
             </Table>
           </div>
+          <div className="p-4 border-t"><ListPagination {...pg} /></div>
         </CardContent>
       </Card>
     </div>

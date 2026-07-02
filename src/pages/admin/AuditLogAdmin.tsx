@@ -14,6 +14,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
@@ -96,6 +97,9 @@ const AuditLogAdmin = () => {
     errors: filtered.filter((r) => r.status === "error").length,
     actors: new Set(filtered.map((r) => r.actor_id)).size,
   }), [filtered]);
+
+  const pg = usePagination(filtered, 5, [filtered]);
+
 
   const exportCsv = () => {
     const header = ["Date", "Acteur", "Action", "Cible", "Statut", "IP", "Erreur"];
@@ -218,7 +222,7 @@ const AuditLogAdmin = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((r) => (
+                  pg.paginated.map((r) => (
                     <TableRow
                       key={r.id}
                       className="cursor-pointer"
@@ -253,6 +257,7 @@ const AuditLogAdmin = () => {
                 )}
               </TableBody>
             </Table>
+            <ListPagination {...pg} className="pt-4" />
           </div>
         </CardContent>
       </Card>

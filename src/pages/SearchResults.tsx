@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Clock, Users, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 interface TripRow {
   id: string;
@@ -25,6 +26,7 @@ const SearchResults = () => {
   const date = params.get("date") || "";
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const pg = usePagination(trips);
 
   useEffect(() => {
     const fetch = async () => {
@@ -78,7 +80,7 @@ const SearchResults = () => {
               </div>
             )}
 
-            {trips.map((trip, i) => (
+            {pg.paginated.map((trip, i) => (
               <motion.div
                 key={trip.id}
                 initial={{ opacity: 0, y: 15 }}
@@ -123,6 +125,7 @@ const SearchResults = () => {
                 </div>
               </motion.div>
             ))}
+            {trips.length > 0 && <ListPagination {...pg} className="pt-2" />}
           </>
         )}
       </div>

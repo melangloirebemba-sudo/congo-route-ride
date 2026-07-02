@@ -10,6 +10,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Agency = Tables<"agencies">;
 
@@ -141,6 +142,9 @@ const AgenciesAdmin = () => {
     const matchStatus = statusFilter === "all" || a.status === statusFilter;
     return matchSearch && matchStatus;
   });
+  const pg = usePagination(filtered, 5, [search, statusFilter]);
+  const tripsPg = usePagination(agencyTrips, 5, [agencyTrips]);
+
 
   const statusBadge = (status: string) => {
     const labels: Record<string, string> = {
@@ -253,7 +257,7 @@ const AgenciesAdmin = () => {
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucune agence trouvée</TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map(agency => (
+                  pg.paginated.map(agency => (
                     <TableRow key={agency.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -321,6 +325,7 @@ const AgenciesAdmin = () => {
                 )}
               </TableBody>
             </Table>
+            <ListPagination {...pg} className="pt-4" />
           </div>
         </CardContent>
       </Card>
@@ -381,13 +386,14 @@ const AgenciesAdmin = () => {
                   <h4 className="font-display font-semibold text-sm mb-2 flex items-center gap-1">
                     <Bus className="h-4 w-4" /> Derniers trajets
                   </h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {agencyTrips.map(trip => (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {tripsPg.paginated.map(trip => (
                       <div key={trip.id} className="flex justify-between items-center p-2 rounded bg-secondary/30 text-sm">
                         <span>{trip.departure} → {trip.destination}</span>
                         <span className="text-xs text-muted-foreground">{trip.date} • {trip.price.toLocaleString()} FCFA</span>
                       </div>
                     ))}
+                    <ListPagination {...tripsPg} className="pt-2" />
                   </div>
                 </div>
               )}

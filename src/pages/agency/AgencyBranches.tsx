@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Building2, MapPin } from "lucide-react";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Branch = {
   id: string;
@@ -40,6 +41,7 @@ const AgencyBranches = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Branch | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
+  const pg = usePagination(branches);
 
   const fetchBranches = async () => {
     if (!agencyId) return;
@@ -183,7 +185,7 @@ const AgencyBranches = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {branches.map(b => (
+                  {pg.paginated.map(b => (
                     <TableRow key={b.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -216,6 +218,9 @@ const AgencyBranches = () => {
                 </TableBody>
               </Table>
             </div>
+          )}
+          {!loading && branches.length > 0 && (
+            <div className="p-4 border-t"><ListPagination {...pg} /></div>
           )}
         </CardContent>
       </Card>

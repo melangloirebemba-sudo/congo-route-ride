@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 const AgencyBookings = () => {
   const { agencyId } = useAuth();
@@ -32,6 +33,8 @@ const AgencyBookings = () => {
     const matchStatus = statusFilter === "all" || b.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  const pg = usePagination(filtered, 5, [search, statusFilter]);
 
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -86,7 +89,7 @@ const AgencyBookings = () => {
                     <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune réservation</TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map(b => (
+                  pg.paginated.map(b => (
                     <TableRow key={b.id}>
                       <TableCell>
                         <p className="font-medium text-sm">{b.passenger_name}</p>
@@ -104,6 +107,7 @@ const AgencyBookings = () => {
               </TableBody>
             </Table>
           </div>
+          <div className="p-4 border-t"><ListPagination {...pg} /></div>
         </CardContent>
       </Card>
     </div>

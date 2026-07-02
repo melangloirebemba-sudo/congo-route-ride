@@ -11,6 +11,7 @@ import { Building2, Ticket, TrendingUp, CreditCard, Search, Copy, Check, Downloa
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 
 const paymentLabel = (m?: string) => {
@@ -196,6 +197,9 @@ const AgencyBookingsAdmin = () => {
     return { list, totals };
   }, [filtered]);
 
+  const pg = usePagination(filtered, 5, [agencyFilter, paymentFilter, dateFrom, dateTo, search]);
+
+
   const statusBadge = (s: string) => {
     if (s === "confirmed") return "bg-accent/20 text-accent";
     if (s === "cancelled") return "bg-destructive/20 text-destructive";
@@ -354,7 +358,7 @@ const AgencyBookingsAdmin = () => {
                   <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Chargement…</TableCell></TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Aucune réservation</TableCell></TableRow>
-                ) : filtered.map((r) => (
+                ) : pg.paginated.map((r) => (
                   <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelected(r)}>
                     <TableCell className="text-xs">{new Date(r.created_at).toLocaleDateString("fr")}</TableCell>
                     <TableCell className="text-sm">{r.agency_name}</TableCell>
@@ -371,6 +375,7 @@ const AgencyBookingsAdmin = () => {
                 ))}
               </TableBody>
             </Table>
+            <ListPagination {...pg} className="pt-4" />
           </div>
         </CardContent>
       </Card>
