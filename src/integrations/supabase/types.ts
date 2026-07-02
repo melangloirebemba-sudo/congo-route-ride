@@ -119,6 +119,7 @@ export type Database = {
           agency_id: string
           city: string | null
           created_at: string
+          district: string | null
           id: string
           manager_name: string | null
           name: string
@@ -132,6 +133,7 @@ export type Database = {
           agency_id: string
           city?: string | null
           created_at?: string
+          district?: string | null
           id?: string
           manager_name?: string | null
           name: string
@@ -145,6 +147,7 @@ export type Database = {
           agency_id?: string
           city?: string | null
           created_at?: string
+          district?: string | null
           id?: string
           manager_name?: string | null
           name?: string

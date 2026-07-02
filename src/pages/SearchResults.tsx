@@ -25,6 +25,7 @@ const SearchResults = () => {
   const to = params.get("to") || "";
   const date = params.get("date") || "";
   const branch = params.get("branch") || "";
+  const district = params.get("district") || "";
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [branchLabel, setBranchLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -33,6 +34,27 @@ const SearchResults = () => {
   useEffect(() => {
     const fetch = async () => {
       setLoading(true);
+
+      // Si un arrondissement est choisi (sans branche précise), on résout d'abord
+      // les branches correspondant à la ville + arrondissement pour restreindre les trajets.
+      let branchIdsFilter: string[] | null = null;
+      if (!branch && district) {
+        let bq = supabase
+          .from("agency_branches" as any)
+          .select("id, city, district, status")
+          .eq("status", "active")
+          .ilike("district", district);
+        if (from) bq = bq.ilike("city", from);
+        const { data: bs } = await bq;
+        branchIdsFilter = ((bs as any[]) || []).map((b) => b.id);
+        if (branchIdsFilter.length === 0) {
+          setTrips([]);
+          setBranchLabel(`Arrondissement : ${district}`);
+          setLoading(false);
+          return;
+        }
+      }
+
       let query = supabase
         .from("trips")
         .select("id, departure, destination, departure_time, arrival_time, date, price, available_seats, bus_type, agencies!inner(name, status)")
@@ -44,6 +66,7 @@ const SearchResults = () => {
       if (to) query = query.eq("destination", to);
       if (date) query = query.eq("date", date);
       if (branch) query = query.eq("branch_id", branch);
+      else if (branchIdsFilter) query = query.in("branch_id", branchIdsFilter);
 
       const { data } = await query.order("departure_time");
       // Mélange équitable: regroupe par heure de départ puis mélange aléatoirement
@@ -69,16 +92,18 @@ const SearchResults = () => {
       if (branch) {
         const { data: br } = await supabase
           .from("agency_branches" as any)
-          .select("name, city, agency:agencies(name)")
+          .select("name, city, district, agency:agencies(name)")
           .eq("id", branch)
           .maybeSingle();
-        if (br) setBranchLabel(`${(br as any).agency?.name ? (br as any).agency.name + " — " : ""}${(br as any).name}${(br as any).city ? " (" + (br as any).city + ")" : ""}`);
+        if (br) setBranchLabel(`${(br as any).agency?.name ? (br as any).agency.name + " — " : ""}${(br as any).name}${(br as any).district ? " · " + (br as any).district : ""}${(br as any).city ? " (" + (br as any).city + ")" : ""}`);
+      } else if (district) {
+        setBranchLabel(`Arrondissement : ${district}${from ? " (" + from + ")" : ""}`);
       } else setBranchLabel("");
 
       setLoading(false);
     };
     fetch();
-  }, [from, to, date, branch]);
+  }, [from, to, date, branch, district]);
 
   return (
     <div className="min-h-screen pb-24">

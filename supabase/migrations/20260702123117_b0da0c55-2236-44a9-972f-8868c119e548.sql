@@ -1,0 +1,1 @@
+ALTER TABLE public.agency_branches ADD COLUMN IF NOT EXISTS district text;

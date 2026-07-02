@@ -4,15 +4,17 @@ import { motion } from "framer-motion";
 import { MapPin, Calendar, Search, ArrowRight, Star, Bus, Shield, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { districtsFor } from "@/lib/districts";
 
 const Index = () => {
   const navigate = useNavigate();
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
   const [date, setDate] = useState("");
+  const [district, setDistrict] = useState("");
   const [branchId, setBranchId] = useState("");
   const [cities, setCities] = useState<string[]>([]);
-  const [branches, setBranches] = useState<{ id: string; name: string; city: string | null; agency: { name: string } | null }[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string; city: string | null; district: string | null; agency: { name: string } | null }[]>([]);
   const [agencies, setAgencies] = useState<{ id: string; name: string; logo: string | null; rating: number | null; total_trips: number | null }[]>([]);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ const Index = () => {
       const [citiesRes, agenciesRes, branchesRes] = await Promise.all([
         supabase.from("trips").select("departure, destination"),
         supabase.from("agencies").select("id, name, logo, rating, total_trips").eq("status", "active").eq("is_popular", true).order("popularity_rank", { ascending: true, nullsFirst: false }).order("rating", { ascending: false }).limit(5),
-        supabase.from("agency_branches" as any).select("id, name, city, agency:agencies!inner(name, status)").eq("status", "active").eq("agencies.status", "active").order("city"),
+        supabase.from("agency_branches" as any).select("id, name, city, district, agency:agencies!inner(name, status)").eq("status", "active").eq("agencies.status", "active").order("city"),
       ]);
 
       if (citiesRes.data) {
@@ -39,15 +41,25 @@ const Index = () => {
   }, []);
 
   // Filter branches by chosen departure city (when set)
-  const filteredBranches = departure
+  const cityBranches = departure
     ? branches.filter((b) => (b.city || "").toLowerCase() === departure.toLowerCase())
     : branches;
+  const availableDistricts = Array.from(
+    new Set([
+      ...districtsFor(departure),
+      ...cityBranches.map((b) => b.district).filter(Boolean) as string[],
+    ])
+  ).sort();
+  const filteredBranches = district
+    ? cityBranches.filter((b) => (b.district || "").toLowerCase() === district.toLowerCase())
+    : cityBranches;
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (departure) params.set("from", departure);
     if (destination) params.set("to", destination);
     if (date) params.set("date", date);
+    if (district) params.set("district", district);
     if (branchId) params.set("branch", branchId);
     navigate(`/search?${params.toString()}`);
   };
@@ -100,6 +112,22 @@ const Index = () => {
             </div>
 
 
+            {departure && (
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 h-4 w-4 text-primary" />
+                <select
+                  value={district}
+                  onChange={(e) => { setDistrict(e.target.value); setBranchId(""); }}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Arrondissement / quartier (tous)</option>
+                  {availableDistricts.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="relative">
               <Bus className="absolute left-3 top-3 h-4 w-4 text-primary" />
               <select
@@ -107,14 +135,15 @@ const Index = () => {
                 onChange={(e) => setBranchId(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">Agence régionale (toutes)</option>
+                <option value="">Agence la plus proche (toutes)</option>
                 {filteredBranches.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.agency?.name ? `${b.agency.name} — ` : ""}{b.name}{b.city ? ` (${b.city})` : ""}
+                    {b.agency?.name ? `${b.agency.name} — ` : ""}{b.name}{b.district ? ` · ${b.district}` : ""}{b.city ? ` (${b.city})` : ""}
                   </option>
                 ))}
               </select>
             </div>
+
 
             <div className="relative">
               <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />

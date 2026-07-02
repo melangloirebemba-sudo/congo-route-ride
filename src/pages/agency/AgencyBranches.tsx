@@ -12,12 +12,15 @@ import { toast } from "sonner";
 import { Plus, Edit, Trash2, Building2, MapPin } from "lucide-react";
 import { ListPagination, usePagination } from "@/components/ListPagination";
 
+import { districtsFor } from "@/lib/districts";
+
 type Branch = {
   id: string;
   agency_id: string;
   parent_branch_id: string | null;
   name: string;
   city: string | null;
+  district: string | null;
   address: string | null;
   phone: string | null;
   manager_name: string | null;
@@ -27,6 +30,7 @@ type Branch = {
 const emptyForm = {
   name: "",
   city: "",
+  district: "",
   address: "",
   phone: "",
   manager_name: "",
@@ -69,6 +73,7 @@ const AgencyBranches = () => {
     setForm({
       name: b.name,
       city: b.city || "",
+      district: b.district || "",
       address: b.address || "",
       phone: b.phone || "",
       manager_name: b.manager_name || "",
@@ -85,6 +90,7 @@ const AgencyBranches = () => {
       agency_id: agencyId,
       name: form.name.trim(),
       city: form.city || null,
+      district: form.district || null,
       address: form.address || null,
       phone: form.phone || null,
       manager_name: form.manager_name || null,
@@ -133,7 +139,23 @@ const AgencyBranches = () => {
             </DialogHeader>
             <div className="space-y-3 pt-2">
               <Input placeholder="Nom (ex. Agence de Brazzaville) *" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
-              <Input placeholder="Ville (ex. Brazzaville)" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} />
+              <Input placeholder="Ville (ex. Brazzaville)" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value, district: "" }))} />
+              {districtsFor(form.city).length > 0 ? (
+                <div>
+                  <label className="text-xs text-muted-foreground">Arrondissement / quartier</label>
+                  <Select value={form.district || "none"} onValueChange={v => setForm(p => ({ ...p, district: v === "none" ? "" : v }))}>
+                    <SelectTrigger><SelectValue placeholder="Choisir un arrondissement" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Aucun —</SelectItem>
+                      {districtsFor(form.city).map(d => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <Input placeholder="Arrondissement / quartier" value={form.district} onChange={e => setForm(p => ({ ...p, district: e.target.value }))} />
+              )}
               <Input placeholder="Adresse (ex. Mafouta, Château d'eau...)" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} />
               <Input placeholder="Téléphone" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
               <Input placeholder="Nom du responsable" value={form.manager_name} onChange={e => setForm(p => ({ ...p, manager_name: e.target.value }))} />
@@ -194,7 +216,7 @@ const AgencyBranches = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">
-                        <div>{b.city || "—"}</div>
+                        <div>{b.city || "—"}{b.district ? ` · ${b.district}` : ""}</div>
                         <div className="text-xs text-muted-foreground">{b.address || ""}</div>
                       </TableCell>
                       <TableCell className="text-sm">
