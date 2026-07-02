@@ -407,6 +407,27 @@ const ScanAdmin = () => {
                         </div>
                       </div>
                     )}
+                    {rpcError && (
+                      <div className="rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs p-3 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                          <div className="space-y-1">
+                            <div className="font-semibold">{rpcError.title}</div>
+                            <div className="opacity-90">{rpcError.message}</div>
+                            <div className="opacity-80"><span className="font-medium">Que faire :</span> {rpcError.hint}</div>
+                            <div className="opacity-60">Code : {rpcError.code}</div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                          <Button size="sm" variant="outline" onClick={() => booking && verify(booking.qr_code)}>
+                            Revérifier
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={resetCheck}>
+                            Nouveau scan
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       {verdict === "valid" ? (
                         <Button onClick={() => setConfirmOpen(true)} disabled={validating} className="flex-1">
