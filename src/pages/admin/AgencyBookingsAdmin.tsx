@@ -197,6 +197,9 @@ const AgencyBookingsAdmin = () => {
     return { list, totals };
   }, [filtered]);
 
+  const pg = usePagination(filtered, 5, [agencyFilter, paymentFilter, dateFrom, dateTo, search]);
+
+
   const statusBadge = (s: string) => {
     if (s === "confirmed") return "bg-accent/20 text-accent";
     if (s === "cancelled") return "bg-destructive/20 text-destructive";
