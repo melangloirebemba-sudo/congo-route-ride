@@ -51,6 +51,7 @@ const AgencyManagers = () => {
   const [form, setForm] = useState({ ...emptyForm });
   const [submitting, setSubmitting] = useState(false);
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
+  const pg = usePagination(managers);
 
   const fetchData = async () => {
     if (!agencyId) return;
