@@ -46,6 +46,8 @@ const verdictMeta: Record<Verdict, { label: string; tone: string; icon: any }> =
 };
 
 const ScanAdmin = () => {
+  const { isAdmin, agencyId } = useAuth();
+  const scope: "admin" | "agency" = isAdmin ? "admin" : "agency";
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
@@ -67,7 +69,7 @@ const ScanAdmin = () => {
       .select(`
         id, qr_code, passenger_name, phone, seat_number, status, payment_status,
         payment_method, total_amount, booking_date,
-        trip:trips ( id, origin, destination, departure_date, departure_time, agency:agencies ( name ) )
+        trip:trips ( id, origin, destination, departure_date, departure_time, agency:agencies ( id, name ) )
       `)
       .eq("qr_code", trimmed)
       .maybeSingle();
@@ -84,6 +86,14 @@ const ScanAdmin = () => {
     }
 
     const b = data as unknown as BookingResult;
+
+    // Agency scope: only tickets on this agency's trips
+    if (scope === "agency" && b.trip?.agency?.id !== agencyId) {
+      setVerdict("notfound");
+      toast.error("Ce billet n'appartient pas à votre agence");
+      return;
+    }
+
     setBooking(b);
 
     let v: Verdict = "valid";
@@ -96,6 +106,7 @@ const ScanAdmin = () => {
     if (v === "valid") toast.success("Billet valide");
     else toast.warning(verdictMeta[v].label);
   };
+
 
   const startScanner = async () => {
     try {
