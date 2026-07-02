@@ -98,7 +98,7 @@ const AuditLogAdmin = () => {
     actors: new Set(filtered.map((r) => r.actor_id)).size,
   }), [filtered]);
 
-  const pg = usePagination(filtered, 5, [filtered]);
+  const pg = usePagination(filtered, 5, [filtered], { paramKey: "" });
 
 
   const exportCsv = () => {

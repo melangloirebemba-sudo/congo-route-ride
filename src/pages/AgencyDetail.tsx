@@ -33,7 +33,7 @@ const AgencyDetail = () => {
   const [agency, setAgency] = useState<Agency | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
-  const pg = usePagination(trips);
+  const pg = usePagination(trips, 5, [], { paramKey: "" });
 
   useEffect(() => {
     if (!id) return;
