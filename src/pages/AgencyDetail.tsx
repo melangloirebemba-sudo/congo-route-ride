@@ -148,6 +148,7 @@ const AgencyDetail = () => {
                 </div>
               </button>
             ))}
+            <ListPagination {...pg} className="pt-2" />
           </div>
         )}
       </section>
