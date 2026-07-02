@@ -73,6 +73,7 @@ const ScanAdmin = () => {
     setLoading(true);
     setBooking(null);
     setVerdict(null);
+    setRpcError(null);
 
     const { data, error } = await supabase
       .from("bookings")
