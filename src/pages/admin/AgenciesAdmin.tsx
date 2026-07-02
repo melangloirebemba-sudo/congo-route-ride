@@ -257,7 +257,7 @@ const AgenciesAdmin = () => {
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucune agence trouvée</TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map(agency => (
+                  pg.paginated.map(agency => (
                     <TableRow key={agency.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
