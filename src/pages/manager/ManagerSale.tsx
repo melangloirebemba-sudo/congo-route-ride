@@ -123,6 +123,7 @@ const ManagerSale = () => {
 
   const resetForm = () => {
     setPassengerName(""); setPhone(""); setSeat(null); setPayment("cash"); setLastTicket(null);
+    setMySeatLock(null);
   };
 
   const submit = async () => {
@@ -131,6 +132,15 @@ const ManagerSale = () => {
       toast.error("Remplissez tous les champs"); return;
     }
     if (takenSeats.includes(seat)) { toast.error("Siège déjà occupé"); return; }
+    if (lockedSeats.includes(seat)) { toast.error("Siège verrouillé par un autre agent"); return; }
+    if (!mySeatLock || mySeatLock.seat !== seat) {
+      toast.error("Verrouillage du siège perdu, resélectionnez-le"); return;
+    }
+    if (Date.now() > mySeatLock.expiresAt) {
+      toast.error("Verrouillage expiré, resélectionnez le siège");
+      setMySeatLock(null); setSeat(null);
+      return;
+    }
 
     setSubmitting(true);
     const qr = `TC-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -148,8 +158,17 @@ const ManagerSale = () => {
       total_amount: trip.price,
     });
 
-    if (error) { setSubmitting(false); toast.error(error.message); return; }
+    if (error) {
+      setSubmitting(false);
+      toast.error(error.message.includes("bookings_trip_id_seat")
+        ? "Ce siège vient d'être réservé par un autre agent"
+        : error.message);
+      refreshSeats(trip.id);
+      return;
+    }
 
+    // Consume the lock
+    await supabase.rpc("release_seat" as any, { _trip_id: trip.id, _seat_number: seat });
     await supabase.from("trips").update({ available_seats: Math.max(0, (trip.available_seats || 0) - 1) }).eq("id", trip.id);
 
     const qrDataUrl = await QRCode.toDataURL(qr, { width: 240, margin: 1 });
@@ -166,6 +185,7 @@ const ManagerSale = () => {
       trip,
     });
     setTakenSeats((s) => [...s, seat]);
+    setMySeatLock(null);
   };
 
   const downloadPdf = async () => {
