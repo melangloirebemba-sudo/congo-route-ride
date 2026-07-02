@@ -73,6 +73,7 @@ const ScanAdmin = () => {
     setLoading(true);
     setBooking(null);
     setVerdict(null);
+    setRpcError(null);
 
     const { data, error } = await supabase
       .from("bookings")
@@ -159,9 +160,21 @@ const ScanAdmin = () => {
 
   const [validating, setValidating] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [rpcError, setRpcError] = useState<{ code: string; title: string; message: string; hint: string } | null>(null);
+
+  const rpcErrorMeta: Record<string, { title: string; message: string; hint: string }> = {
+    unauthenticated: { title: "Session expirée", message: "Vous devez être connecté pour valider un billet.", hint: "Reconnectez-vous puis relancez le scan." },
+    notfound: { title: "Réservation introuvable", message: "Aucune réservation ne correspond à ce billet en base.", hint: "Vérifiez le code QR ou saisissez-le manuellement." },
+    forbidden: { title: "Accès refusé", message: "Ce billet n'appartient pas à votre agence.", hint: "Contactez un Super Admin si vous pensez qu'il s'agit d'une erreur." },
+    used: { title: "Billet déjà utilisé", message: "Ce passager a déjà été embarqué par un autre agent.", hint: "Aucune action requise — refuser un nouvel embarquement." },
+    cancelled: { title: "Réservation annulée", message: "Cette transaction a été annulée et le billet n'est plus valide.", hint: "Orientez le passager vers le guichet pour un nouveau billet." },
+    unpaid: { title: "Paiement non confirmé", message: "Le paiement n'a pas encore été validé pour ce billet.", hint: "Demandez au passager de finaliser le paiement (MTN MoMo / Airtel Money) avant l'embarquement." },
+    expired: { title: "Trajet expiré", message: "Le voyage associé à ce billet est déjà passé.", hint: "Ce billet ne peut plus être utilisé — proposez un nouveau trajet." },
+  };
 
   const markAsUsed = async () => {
     if (!booking) return;
+    setRpcError(null);
     if (verdict !== "valid") {
       toast.error("Ce billet ne peut pas être validé");
       return;
@@ -177,6 +190,12 @@ const ScanAdmin = () => {
     setValidating(false);
 
     if (error) {
+      setRpcError({
+        code: "rpc_error",
+        title: "Erreur technique",
+        message: error.message || "L'appel de validation a échoué.",
+        hint: "Vérifiez votre connexion réseau puis réessayez. Si le problème persiste, contactez le support.",
+      });
       toast.error("Impossible de valider l'embarquement");
       return;
     }
@@ -193,6 +212,7 @@ const ScanAdmin = () => {
       toast.success(res.message || "Embarquement validé");
       setBooking({ ...booking, status: res.status || "used" });
       setVerdict("used");
+      setRpcError(null);
       return;
     }
 
@@ -204,33 +224,23 @@ const ScanAdmin = () => {
     };
     setBooking(nextBooking);
 
-    switch (res.code) {
-      case "used":
-        setVerdict("used");
-        toast.error("Ce billet vient d'être utilisé par un autre agent");
-        break;
-      case "cancelled":
-        setVerdict("cancelled");
-        toast.error("Billet annulé — embarquement refusé");
-        break;
-      case "unpaid":
-        setVerdict("unpaid");
-        toast.error("Billet non payé — embarquement refusé");
-        break;
-      case "expired":
-        setVerdict("expired");
-        toast.error("Trajet expiré — embarquement refusé");
-        break;
-      case "notfound":
-        setVerdict("notfound");
-        toast.error("Réservation introuvable");
-        break;
-      case "forbidden":
-        toast.error("Vous n'êtes pas autorisé à valider ce billet");
-        break;
-      default:
-        toast.error(res.message || "Validation refusée");
-    }
+    const code = res.code || "unknown";
+    const meta = rpcErrorMeta[code] ?? {
+      title: "Validation refusée",
+      message: res.message || "La validation a été refusée par le serveur.",
+      hint: "Rescannez le billet ou contactez un Super Admin.",
+    };
+    setRpcError({ code, ...meta });
+
+    const verdictByCode: Record<string, Verdict> = {
+      used: "used",
+      cancelled: "cancelled",
+      unpaid: "unpaid",
+      expired: "expired",
+      notfound: "notfound",
+    };
+    if (verdictByCode[code]) setVerdict(verdictByCode[code]);
+    toast.error(meta.title);
   };
 
 
@@ -240,6 +250,7 @@ const ScanAdmin = () => {
     setVerdict(null);
     setLastCode("");
     setManualCode("");
+    setRpcError(null);
   };
 
   const VerdictIcon = verdict ? verdictMeta[verdict].icon : QrCode;
@@ -393,6 +404,27 @@ const ScanAdmin = () => {
                             {verdict === "expired" && "Le trajet associé à ce billet est déjà passé."}
                             {verdict === "notfound" && "Aucun billet ne correspond à ce code."}
                           </div>
+                        </div>
+                      </div>
+                    )}
+                    {rpcError && (
+                      <div className="rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs p-3 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                          <div className="space-y-1">
+                            <div className="font-semibold">{rpcError.title}</div>
+                            <div className="opacity-90">{rpcError.message}</div>
+                            <div className="opacity-80"><span className="font-medium">Que faire :</span> {rpcError.hint}</div>
+                            <div className="opacity-60">Code : {rpcError.code}</div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                          <Button size="sm" variant="outline" onClick={() => { if (booking) { setLastCode(""); verify(booking.qr_code); } }}>
+                            Revérifier
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={resetCheck}>
+                            Nouveau scan
+                          </Button>
                         </div>
                       </div>
                     )}
