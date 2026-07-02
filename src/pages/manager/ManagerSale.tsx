@@ -60,15 +60,66 @@ const ManagerSale = () => {
   }, [manager]);
 
   const trip = useMemo(() => trips.find((t) => t.id === tripId), [tripId, trips]);
+  const [lockedSeats, setLockedSeats] = useState<number[]>([]);
+  const [mySeatLock, setMySeatLock] = useState<{ seat: number; expiresAt: number } | null>(null);
+  const [lockCountdown, setLockCountdown] = useState<number>(0);
+
+  const refreshSeats = async (id: string) => {
+    const [{ data: bookings }, { data: locks }] = await Promise.all([
+      supabase.from("bookings").select("seat_number").eq("trip_id", id).neq("status", "cancelled"),
+      supabase.from("seat_locks" as any).select("seat_number, locked_by, expires_at").eq("trip_id", id).gt("expires_at", new Date().toISOString()),
+    ]);
+    setTakenSeats((bookings || []).map((b: any) => b.seat_number));
+    const myId = user?.id;
+    setLockedSeats((locks || []).filter((l: any) => l.locked_by !== myId).map((l: any) => l.seat_number));
+  };
 
   useEffect(() => {
-    if (!tripId) { setTakenSeats([]); return; }
-    (async () => {
-      const { data } = await supabase.from("bookings").select("seat_number").eq("trip_id", tripId).neq("status", "cancelled");
-      setTakenSeats((data || []).map((b: any) => b.seat_number));
-    })();
+    if (!tripId) { setTakenSeats([]); setLockedSeats([]); return; }
+    refreshSeats(tripId);
     setSeat(null);
-  }, [tripId]);
+    setMySeatLock(null);
+    const t = setInterval(() => refreshSeats(tripId), 10000);
+    return () => clearInterval(t);
+  }, [tripId, user?.id]);
+
+  // Countdown for my lock
+  useEffect(() => {
+    if (!mySeatLock) { setLockCountdown(0); return; }
+    const tick = () => setLockCountdown(Math.max(0, Math.round((mySeatLock.expiresAt - Date.now()) / 1000)));
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [mySeatLock]);
+
+  // Release lock on unmount or trip change
+  useEffect(() => {
+    return () => {
+      if (mySeatLock && tripId) {
+        supabase.rpc("release_seat" as any, { _trip_id: tripId, _seat_number: mySeatLock.seat });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSelectSeat = async (n: number) => {
+    if (!tripId) return;
+    // release previous
+    if (mySeatLock && mySeatLock.seat !== n) {
+      await supabase.rpc("release_seat" as any, { _trip_id: tripId, _seat_number: mySeatLock.seat });
+    }
+    const { data, error } = await supabase.rpc("lock_seat" as any, { _trip_id: tripId, _seat_number: n, _ttl_seconds: 300 });
+    if (error) { toast.error(error.message); return; }
+    const res: any = data;
+    if (!res?.ok) {
+      toast.error(res?.message || "Impossible de verrouiller ce siège");
+      refreshSeats(tripId);
+      return;
+    }
+    setSeat(n);
+    setMySeatLock({ seat: n, expiresAt: new Date(res.expires_at).getTime() });
+    refreshSeats(tripId);
+  };
 
   const resetForm = () => {
     setPassengerName(""); setPhone(""); setSeat(null); setPayment("cash"); setLastTicket(null);
