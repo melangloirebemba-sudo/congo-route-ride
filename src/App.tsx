@@ -34,6 +34,12 @@ import AgencyBookings from "./pages/agency/AgencyBookings";
 import AgencyBranches from "./pages/agency/AgencyBranches";
 import AgencyManagers from "./pages/agency/AgencyManagers";
 import AgencySettings from "./pages/agency/AgencySettings";
+import ManagerLayout from "./pages/manager/ManagerLayout";
+import ManagerDashboard from "./pages/manager/ManagerDashboard";
+import ManagerTrips from "./pages/manager/ManagerTrips";
+import ManagerBookings from "./pages/manager/ManagerBookings";
+import ManagerSale from "./pages/manager/ManagerSale";
+import ScanAdmin from "./pages/admin/ScanAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
