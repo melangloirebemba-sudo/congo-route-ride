@@ -361,16 +361,40 @@ const ScanAdmin = () => {
                     )}
 
                     <Separator />
+                    {verdict !== "valid" && (
+                      <div className="rounded-md border border-red-500/30 bg-red-500/10 text-red-700 text-xs p-3 flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <div>
+                          <div className="font-semibold">Embarquement impossible</div>
+                          <div className="opacity-90">
+                            {verdict === "used" && "Ce billet a déjà été utilisé. Le passager est déjà embarqué."}
+                            {verdict === "cancelled" && "Cette réservation a été annulée."}
+                            {verdict === "unpaid" && "Le paiement n'a pas été confirmé pour ce billet."}
+                            {verdict === "expired" && "Le trajet associé à ce billet est déjà passé."}
+                            {verdict === "notfound" && "Aucun billet ne correspond à ce code."}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-2">
-                      {verdict === "valid" && (
-                        <Button onClick={markAsUsed} className="flex-1">
-                          <CheckCircle2 className="h-4 w-4 mr-2" /> Valider l'embarquement
+                      {verdict === "valid" ? (
+                        <Button onClick={markAsUsed} disabled={validating} className="flex-1">
+                          {validating ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Validation…</>
+                          ) : (
+                            <><CheckCircle2 className="h-4 w-4 mr-2" /> Valider l'embarquement</>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button disabled className="flex-1" variant="secondary">
+                          <XCircle className="h-4 w-4 mr-2" /> Validation bloquée
                         </Button>
                       )}
                       <Button variant="outline" onClick={resetCheck} className="flex-1">
                         Nouveau scan
                       </Button>
                     </div>
+
                   </div>
                 )}
               </div>
