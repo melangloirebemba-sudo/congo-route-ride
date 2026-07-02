@@ -39,7 +39,6 @@ import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import ManagerTrips from "./pages/manager/ManagerTrips";
 import ManagerBookings from "./pages/manager/ManagerBookings";
 import ManagerSale from "./pages/manager/ManagerSale";
-import ScanAdmin from "./pages/admin/ScanAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
