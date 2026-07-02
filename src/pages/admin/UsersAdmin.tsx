@@ -119,6 +119,17 @@ const UsersAdmin = () => {
     const q = search.trim().toLowerCase();
     return users.filter((u) => {
       if (statusFilter !== "all" && u.status !== statusFilter) return false;
+      if (roleFilter !== "all") {
+        const role =
+          u.roles.includes("admin")
+            ? "admin"
+            : u.agency
+              ? "agency"
+              : u.manager
+                ? "manager"
+                : "client";
+        if (role !== roleFilter) return false;
+      }
       if (!q) return true;
       return (
         (u.email || "").toLowerCase().includes(q) ||
@@ -127,7 +138,46 @@ const UsersAdmin = () => {
         u.id.toLowerCase().includes(q)
       );
     });
-  }, [users, search, statusFilter]);
+  }, [users, search, statusFilter, roleFilter]);
+
+  useEffect(() => { setPage(1); }, [search, statusFilter, roleFilter, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageRows = filtered.slice(pageStart, pageStart + pageSize);
+
+  const exportCsv = () => {
+    if (filtered.length === 0) { toast.error("Aucun compte à exporter"); return; }
+    const headers = [
+      "id", "email", "phone", "full_name", "role", "agency", "status",
+      "email_confirmed_at", "last_sign_in_at", "created_at",
+    ];
+    const roleOf = (u: AdminUser) =>
+      u.roles.includes("admin") ? "admin"
+      : u.agency ? "agency"
+      : u.manager ? "manager"
+      : "client";
+    const esc = (v: unknown) => {
+      const s = v === null || v === undefined ? "" : String(v);
+      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = filtered.map((u) => [
+      u.id, u.email ?? "", u.phone ?? "", u.full_name ?? "",
+      roleOf(u), u.agency?.name ?? "", u.status,
+      u.email_confirmed_at ?? "", u.last_sign_in_at ?? "", u.created_at,
+    ].map(esc).join(","));
+    const csv = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `comptes_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast.success(`${filtered.length} compte(s) exporté(s)`);
+  };
+
 
   const callAction = async (payload: Record<string, unknown>, user: AdminUser) => {
     setBusyId(user.id);
