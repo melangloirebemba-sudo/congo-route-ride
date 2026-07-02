@@ -139,7 +139,23 @@ const AgencyBranches = () => {
             </DialogHeader>
             <div className="space-y-3 pt-2">
               <Input placeholder="Nom (ex. Agence de Brazzaville) *" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
-              <Input placeholder="Ville (ex. Brazzaville)" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} />
+              <Input placeholder="Ville (ex. Brazzaville)" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value, district: "" }))} />
+              {districtsFor(form.city).length > 0 ? (
+                <div>
+                  <label className="text-xs text-muted-foreground">Arrondissement / quartier</label>
+                  <Select value={form.district || "none"} onValueChange={v => setForm(p => ({ ...p, district: v === "none" ? "" : v }))}>
+                    <SelectTrigger><SelectValue placeholder="Choisir un arrondissement" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Aucun —</SelectItem>
+                      {districtsFor(form.city).map(d => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <Input placeholder="Arrondissement / quartier" value={form.district} onChange={e => setForm(p => ({ ...p, district: e.target.value }))} />
+              )}
               <Input placeholder="Adresse (ex. Mafouta, Château d'eau...)" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} />
               <Input placeholder="Téléphone" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
               <Input placeholder="Nom du responsable" value={form.manager_name} onChange={e => setForm(p => ({ ...p, manager_name: e.target.value }))} />
