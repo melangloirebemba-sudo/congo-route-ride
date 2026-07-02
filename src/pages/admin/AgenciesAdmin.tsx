@@ -142,6 +142,9 @@ const AgenciesAdmin = () => {
     const matchStatus = statusFilter === "all" || a.status === statusFilter;
     return matchSearch && matchStatus;
   });
+  const pg = usePagination(filtered, 5, [search, statusFilter]);
+  const tripsPg = usePagination(agencyTrips, 5, [agencyTrips]);
+
 
   const statusBadge = (status: string) => {
     const labels: Record<string, string> = {
