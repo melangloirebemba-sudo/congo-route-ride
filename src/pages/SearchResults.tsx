@@ -46,7 +46,25 @@ const SearchResults = () => {
       if (branch) query = query.eq("branch_id", branch);
 
       const { data } = await query.order("departure_time");
-      setTrips((data as unknown as TripRow[]) || []);
+      // Mélange équitable: regroupe par heure de départ puis mélange aléatoirement
+      // les trajets de la même tranche horaire pour ne privilégier aucune agence.
+      const rows = ((data as unknown as TripRow[]) || []);
+      const groups = new Map<string, TripRow[]>();
+      rows.forEach((t) => {
+        const key = t.departure_time || "";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(t);
+      });
+      const shuffled: TripRow[] = [];
+      Array.from(groups.keys()).sort().forEach((k) => {
+        const arr = groups.get(k)!;
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        shuffled.push(...arr);
+      });
+      setTrips(shuffled);
 
       if (branch) {
         const { data: br } = await supabase
