@@ -89,7 +89,7 @@ const AgencyBookings = () => {
                     <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune réservation</TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map(b => (
+                  pg.paginated.map(b => (
                     <TableRow key={b.id}>
                       <TableCell>
                         <p className="font-medium text-sm">{b.passenger_name}</p>
