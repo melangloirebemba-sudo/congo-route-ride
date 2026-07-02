@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { MapPin, Calendar, Search, ArrowRight, Star, Bus, Shield, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { districtsFor } from "@/lib/districts";
+import { useDistricts } from "@/hooks/useDistricts";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ const Index = () => {
   const [cities, setCities] = useState<string[]>([]);
   const [branches, setBranches] = useState<{ id: string; name: string; city: string | null; district: string | null; agency: { name: string } | null }[]>([]);
   const [agencies, setAgencies] = useState<{ id: string; name: string; logo: string | null; rating: number | null; total_trips: number | null }[]>([]);
+  const { byCity: districtsByCity } = useDistricts();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,7 +47,7 @@ const Index = () => {
     : branches;
   const availableDistricts = Array.from(
     new Set([
-      ...districtsFor(departure),
+      ...districtsByCity(departure),
       ...cityBranches.map((b) => b.district).filter(Boolean) as string[],
     ])
   ).sort();
