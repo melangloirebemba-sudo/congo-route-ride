@@ -159,9 +159,21 @@ const ScanAdmin = () => {
 
   const [validating, setValidating] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [rpcError, setRpcError] = useState<{ code: string; title: string; message: string; hint: string } | null>(null);
+
+  const rpcErrorMeta: Record<string, { title: string; message: string; hint: string }> = {
+    unauthenticated: { title: "Session expirée", message: "Vous devez être connecté pour valider un billet.", hint: "Reconnectez-vous puis relancez le scan." },
+    notfound: { title: "Réservation introuvable", message: "Aucune réservation ne correspond à ce billet en base.", hint: "Vérifiez le code QR ou saisissez-le manuellement." },
+    forbidden: { title: "Accès refusé", message: "Ce billet n'appartient pas à votre agence.", hint: "Contactez un Super Admin si vous pensez qu'il s'agit d'une erreur." },
+    used: { title: "Billet déjà utilisé", message: "Ce passager a déjà été embarqué par un autre agent.", hint: "Aucune action requise — refuser un nouvel embarquement." },
+    cancelled: { title: "Réservation annulée", message: "Cette transaction a été annulée et le billet n'est plus valide.", hint: "Orientez le passager vers le guichet pour un nouveau billet." },
+    unpaid: { title: "Paiement non confirmé", message: "Le paiement n'a pas encore été validé pour ce billet.", hint: "Demandez au passager de finaliser le paiement (MTN MoMo / Airtel Money) avant l'embarquement." },
+    expired: { title: "Trajet expiré", message: "Le voyage associé à ce billet est déjà passé.", hint: "Ce billet ne peut plus être utilisé — proposez un nouveau trajet." },
+  };
 
   const markAsUsed = async () => {
     if (!booking) return;
+    setRpcError(null);
     if (verdict !== "valid") {
       toast.error("Ce billet ne peut pas être validé");
       return;
