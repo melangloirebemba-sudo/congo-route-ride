@@ -54,7 +54,7 @@ const TransactionsAdmin = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  transactions.map(tx => (
+                  pg.paginated.map(tx => (
                     <TableRow key={tx.id}>
                       <TableCell className="text-xs">{new Date(tx.created_at).toLocaleDateString("fr")}</TableCell>
                       <TableCell className="text-sm font-medium">{tx.bookings?.passenger_name || "—"}</TableCell>
