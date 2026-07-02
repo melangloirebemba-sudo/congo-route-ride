@@ -19,6 +19,21 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const redirectByRole = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return navigate("/");
+    const [{ data: isAdmin }, { data: agency }, { data: mgr }] = await Promise.all([
+      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+      supabase.from("agencies").select("id").eq("owner_id", user.id).limit(1).maybeSingle(),
+      supabase.from("branch_managers" as any).select("id").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle(),
+    ]);
+    if (isAdmin) return navigate("/admin");
+    if (agency) return navigate("/agency");
+    if (mgr) return navigate("/manager");
+    navigate("/");
+  };
+
+
   const handleEmailAuth = async () => {
     if (!email || !password) {
       toast.error("Veuillez remplir tous les champs");
