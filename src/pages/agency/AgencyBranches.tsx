@@ -185,7 +185,7 @@ const AgencyBranches = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {branches.map(b => (
+                  {pg.paginated.map(b => (
                     <TableRow key={b.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
