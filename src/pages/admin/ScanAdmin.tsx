@@ -168,62 +168,71 @@ const ScanAdmin = () => {
     }
     setValidating(true);
 
-    // Re-check the current state in DB to prevent double check-in / race conditions
-    const { data: fresh, error: fetchErr } = await supabase
-      .from("bookings")
-      .select("status, payment_status")
-      .eq("id", booking.id)
-      .maybeSingle();
-
-    if (fetchErr || !fresh) {
-      setValidating(false);
-      toast.error("Impossible de vérifier l'état du billet");
-      return;
-    }
-
-    if (fresh.status === "used" || fresh.status === "checked_in") {
-      setValidating(false);
-      setBooking({ ...booking, status: fresh.status });
-      setVerdict("used");
-      toast.error("Ce billet a déjà été utilisé — embarquement refusé");
-      return;
-    }
-    if (fresh.status === "cancelled") {
-      setValidating(false);
-      setBooking({ ...booking, status: "cancelled" });
-      setVerdict("cancelled");
-      toast.error("Billet annulé — embarquement refusé");
-      return;
-    }
-    if (fresh.payment_status !== "paid") {
-      setValidating(false);
-      setBooking({ ...booking, payment_status: fresh.payment_status });
-      setVerdict("unpaid");
-      toast.error("Billet non payé — embarquement refusé");
-      return;
-    }
-
-    // Conditional update: only flip to "used" if still not used/cancelled
-    const { data: updated, error } = await supabase
-      .from("bookings")
-      .update({ status: "used" })
-      .eq("id", booking.id)
-      .not("status", "in", '("used","checked_in","cancelled")')
-      .select("id")
-      .maybeSingle();
+    // Atomic server-side validation: locks the booking row, re-checks status,
+    // payment and permissions, and flips to "used" in a single transaction.
+    const { data, error } = await supabase.rpc("check_in_booking", {
+      _booking_id: booking.id,
+    });
 
     setValidating(false);
-    if (error) return toast.error("Impossible de marquer comme utilisé");
-    if (!updated) {
-      toast.error("Le billet vient d'être utilisé par un autre agent");
-      setBooking({ ...booking, status: "used" });
+
+    if (error) {
+      toast.error("Impossible de valider l'embarquement");
+      return;
+    }
+
+    const res = (data ?? {}) as {
+      ok?: boolean;
+      code?: string;
+      message?: string;
+      status?: string;
+      payment_status?: string;
+    };
+
+    if (res.ok) {
+      toast.success(res.message || "Embarquement validé");
+      setBooking({ ...booking, status: res.status || "used" });
       setVerdict("used");
       return;
     }
-    toast.success("Embarquement validé");
-    setBooking({ ...booking, status: "used" });
-    setVerdict("used");
+
+    // Failure: sync UI to the authoritative server state
+    const nextBooking = {
+      ...booking,
+      status: res.status ?? booking.status,
+      payment_status: res.payment_status ?? booking.payment_status,
+    };
+    setBooking(nextBooking);
+
+    switch (res.code) {
+      case "used":
+        setVerdict("used");
+        toast.error("Ce billet vient d'être utilisé par un autre agent");
+        break;
+      case "cancelled":
+        setVerdict("cancelled");
+        toast.error("Billet annulé — embarquement refusé");
+        break;
+      case "unpaid":
+        setVerdict("unpaid");
+        toast.error("Billet non payé — embarquement refusé");
+        break;
+      case "expired":
+        setVerdict("expired");
+        toast.error("Trajet expiré — embarquement refusé");
+        break;
+      case "notfound":
+        setVerdict("notfound");
+        toast.error("Réservation introuvable");
+        break;
+      case "forbidden":
+        toast.error("Vous n'êtes pas autorisé à valider ce billet");
+        break;
+      default:
+        toast.error(res.message || "Validation refusée");
+    }
   };
+
 
 
   const resetCheck = () => {
