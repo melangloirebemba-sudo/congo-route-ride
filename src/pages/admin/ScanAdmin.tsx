@@ -419,7 +419,7 @@ const ScanAdmin = () => {
                           </div>
                         </div>
                         <div className="flex gap-2 pt-1">
-                          <Button size="sm" variant="outline" onClick={() => booking && verify(booking.qr_code)}>
+                          <Button size="sm" variant="outline" onClick={() => { if (booking) { setLastCode(""); verify(booking.qr_code); } }}>
                             Revérifier
                           </Button>
                           <Button size="sm" variant="outline" onClick={resetCheck}>
