@@ -3,8 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Ticket, TrendingUp, CreditCard, Search } from "lucide-react";
+import { Building2, Ticket, TrendingUp, CreditCard, Search, Copy, Check } from "lucide-react";
+import { toast } from "sonner";
+
+const paymentLabel = (m?: string) => {
+  switch (m) {
+    case "mtn_momo": return "MTN Mobile Money";
+    case "airtel_money": return "Airtel Money";
+    case "card": return "Carte bancaire";
+    case "cash": return "Espèces";
+    default: return m || "—";
+  }
+};
 
 const AgencyBookingsAdmin = () => {
   const [rows, setRows] = useState<any[]>([]);
@@ -15,19 +28,24 @@ const AgencyBookingsAdmin = () => {
   const [dateTo, setDateTo] = useState<string>("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<any | null>(null);
+  const [copied, setCopied] = useState(false);
 
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [ag, bk] = await Promise.all([
+      const [ag, bk, tx] = await Promise.all([
         supabase.from("agencies").select("id, name, commission_rate").order("name"),
         supabase
           .from("bookings")
-          .select("id, passenger_name, phone, total_amount, status, payment_method, seat_number, created_at, trips(departure, destination, date, agencies(id, name, commission_rate))")
+          .select("id, passenger_name, phone, total_amount, status, payment_method, payment_status, seat_number, qr_code, created_at, trips(departure, destination, date, agencies(id, name, commission_rate))")
           .order("created_at", { ascending: false }),
+        supabase.from("transactions").select("id, booking_id, amount, commission, net_amount, payment_method, status, created_at"),
       ]);
       setAgencies((ag.data || []).map((a: any) => ({ id: a.id, name: a.name })));
+      const txByBooking = new Map<string, any>();
+      (tx.data || []).forEach((t: any) => txByBooking.set(t.booking_id, t));
       const enriched = (bk.data || []).map((b: any) => {
         const rate = b.trips?.agencies?.commission_rate ?? 10;
         const commission = Math.round((b.total_amount * rate) / 100);
@@ -37,12 +55,14 @@ const AgencyBookingsAdmin = () => {
           agency_name: b.trips?.agencies?.name || "—",
           commission,
           net: b.total_amount - commission,
+          transaction: txByBooking.get(b.id) || null,
         };
       });
       setRows(enriched);
       setLoading(false);
     };
     load();
+
   }, []);
 
   const filtered = useMemo(() => {
