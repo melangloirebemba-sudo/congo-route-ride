@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Search, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Agency = {
   id: string;
