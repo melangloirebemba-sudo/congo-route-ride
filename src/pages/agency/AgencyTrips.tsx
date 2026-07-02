@@ -211,6 +211,18 @@ const AgencyTrips = () => {
                 <SelectItem value="Luxe">Luxe</SelectItem>
               </SelectContent>
             </Select>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Agence régionale (branche) — indispensable pour qu'un gestionnaire local voie ce trajet</label>
+              <Select value={form.branch_id || "none"} onValueChange={v => setForm(p => ({ ...p, branch_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Aucune branche" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucune (siège / agence mère)</SelectItem>
+                  {branches.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}{b.city ? ` — ${b.city}` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button onClick={saveTrip} className="w-full gradient-primary text-primary-foreground">
               {editId ? "Enregistrer" : "Créer le trajet"}
             </Button>
