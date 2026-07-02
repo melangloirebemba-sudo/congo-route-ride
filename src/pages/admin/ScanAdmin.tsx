@@ -18,9 +18,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { QrCode, Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Search, Loader2, ShieldCheck, Building2 } from "lucide-react";
+import { QrCode, Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Search, Loader2, ShieldCheck, Building2, Download, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { jsPDF } from "jspdf";
+import QRCode from "qrcode";
 
 
 type BookingResult = {
