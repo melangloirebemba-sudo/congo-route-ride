@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Plus, Edit, Trash2, Building2, MapPin } from "lucide-react";
 import { ListPagination, usePagination } from "@/components/ListPagination";
 
-import { districtsFor } from "@/lib/districts";
+import { useDistricts } from "@/hooks/useDistricts";
 
 type Branch = {
   id: string;
@@ -40,6 +40,7 @@ const emptyForm = {
 
 const AgencyBranches = () => {
   const { agencyId } = useAuth();
+  const { byCity: districtsFor } = useDistricts();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
