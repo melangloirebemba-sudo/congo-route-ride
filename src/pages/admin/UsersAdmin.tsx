@@ -284,12 +284,22 @@ const UsersAdmin = () => {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="md:w-52"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="md:w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les statuts</SelectItem>
                 <SelectItem value="active">Actifs</SelectItem>
                 <SelectItem value="disabled">Désactivés</SelectItem>
                 <SelectItem value="pending">En attente</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="md:w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les rôles</SelectItem>
+                <SelectItem value="admin">Administrateurs</SelectItem>
+                <SelectItem value="agency">Agences</SelectItem>
+                <SelectItem value="manager">Gestionnaires</SelectItem>
+                <SelectItem value="client">Clients</SelectItem>
               </SelectContent>
             </Select>
           </div>
