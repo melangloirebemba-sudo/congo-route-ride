@@ -386,13 +386,14 @@ const AgenciesAdmin = () => {
                   <h4 className="font-display font-semibold text-sm mb-2 flex items-center gap-1">
                     <Bus className="h-4 w-4" /> Derniers trajets
                   </h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {agencyTrips.map(trip => (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {tripsPg.paginated.map(trip => (
                       <div key={trip.id} className="flex justify-between items-center p-2 rounded bg-secondary/30 text-sm">
                         <span>{trip.departure} → {trip.destination}</span>
                         <span className="text-xs text-muted-foreground">{trip.date} • {trip.price.toLocaleString()} FCFA</span>
                       </div>
                     ))}
+                    <ListPagination {...tripsPg} className="pt-2" />
                   </div>
                 </div>
               )}
