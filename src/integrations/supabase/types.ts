@@ -490,6 +490,8 @@ export type Database = {
     }
     Functions: {
       check_in_booking: { Args: { _booking_id: string }; Returns: Json }
+      get_manager_agency: { Args: { _user_id: string }; Returns: string }
+      get_manager_branch: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -498,6 +500,7 @@ export type Database = {
         Returns: boolean
       }
       is_agency_owner: { Args: { _agency_id: string }; Returns: boolean }
+      is_branch_manager_of: { Args: { _agency_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
