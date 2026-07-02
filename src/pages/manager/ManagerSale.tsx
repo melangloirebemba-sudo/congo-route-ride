@@ -244,12 +244,25 @@ const ManagerSale = () => {
 
           {trip && (
             <>
-              <div className="bg-secondary/50 rounded-lg p-3 text-sm">
+              <div className="bg-secondary/50 rounded-lg p-3 text-sm space-y-1">
                 <p><strong>Prix :</strong> {trip.price.toLocaleString()} {trip.currency} · <strong>Places :</strong> {takenSeats.length}/{trip.total_seats}</p>
+                {lockedSeats.length > 0 && (
+                  <p className="text-xs text-muted-foreground">🔒 Sièges verrouillés par d'autres agents : {lockedSeats.sort((a,b)=>a-b).join(", ")}</p>
+                )}
+                {mySeatLock && lockCountdown > 0 && (
+                  <p className="text-xs text-primary font-medium">
+                    Siège #{mySeatLock.seat} verrouillé — {Math.floor(lockCountdown/60)}:{String(lockCountdown%60).padStart(2,"0")} restant
+                  </p>
+                )}
               </div>
               <div>
                 <Label className="mb-2 block">Choix du siège</Label>
-                <SeatSelector totalSeats={trip.total_seats} bookedSeats={takenSeats} selected={seat} onSelect={setSeat} />
+                <SeatSelector
+                  totalSeats={trip.total_seats}
+                  bookedSeats={[...takenSeats, ...lockedSeats]}
+                  selected={seat}
+                  onSelect={handleSelectSeat}
+                />
               </div>
             </>
           )}
