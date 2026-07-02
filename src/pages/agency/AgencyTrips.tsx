@@ -98,7 +98,7 @@ const AgencyTrips = () => {
     setDialogOpen(true);
   };
 
-  const pg = usePagination(trips);
+  const pg = usePagination(trips, 5, [], { paramKey: "" });
 
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {

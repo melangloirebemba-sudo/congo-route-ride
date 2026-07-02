@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -9,11 +10,89 @@ import {
 
 const DEFAULT_SIZES = [5, 10, 25, 50];
 
-export function usePagination<T>(items: T[], initialSize = 5, deps: unknown[] = []) {
-  const [pageSize, setPageSize] = useState(initialSize);
-  const [page, setPage] = useState(1);
+export type UsePaginationOptions = {
+  /** Optional URL query param namespace. When set, page & pageSize are persisted to the URL as `${paramKey}Page` and `${paramKey}Size` (or just `page`/`size` if paramKey === ""). */
+  paramKey?: string;
+};
 
-  useEffect(() => { setPage(1); }, [items.length, pageSize, ...deps]);
+export function usePagination<T>(
+  items: T[],
+  initialSize = 5,
+  deps: unknown[] = [],
+  options: UsePaginationOptions = {},
+) {
+  const { paramKey } = options;
+  const persist = paramKey !== undefined;
+  const pageParam = persist ? (paramKey ? `${paramKey}Page` : "page") : null;
+  const sizeParam = persist ? (paramKey ? `${paramKey}Size` : "size") : null;
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const initialPage = persist ? Math.max(1, Number(searchParams.get(pageParam!)) || 1) : 1;
+  const initialPageSize = persist
+    ? Math.max(1, Number(searchParams.get(sizeParam!)) || initialSize)
+    : initialSize;
+
+  const [pageSize, setPageSizeState] = useState(initialPageSize);
+  const [page, setPageState] = useState(initialPage);
+
+  // Sync FROM url (back/forward navigation)
+  useEffect(() => {
+    if (!persist) return;
+    const urlPage = Math.max(1, Number(searchParams.get(pageParam!)) || 1);
+    const urlSize = Math.max(1, Number(searchParams.get(sizeParam!)) || initialSize);
+    setPageState((p) => (p !== urlPage ? urlPage : p));
+    setPageSizeState((s) => (s !== urlSize ? urlSize : s));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persist ? searchParams.get(pageParam!) : null, persist ? searchParams.get(sizeParam!) : null]);
+
+  const writeParams = useCallback(
+    (next: { page?: number; size?: number }) => {
+      if (!persist) return;
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          if (next.page !== undefined) {
+            if (next.page <= 1) p.delete(pageParam!);
+            else p.set(pageParam!, String(next.page));
+          }
+          if (next.size !== undefined) {
+            if (next.size === initialSize) p.delete(sizeParam!);
+            else p.set(sizeParam!, String(next.size));
+          }
+          return p;
+        },
+        { replace: true },
+      );
+    },
+    [persist, pageParam, sizeParam, initialSize, setSearchParams],
+  );
+
+  const setPage = useCallback(
+    (p: number) => {
+      setPageState(p);
+      writeParams({ page: p });
+    },
+    [writeParams],
+  );
+
+  const setPageSize = useCallback(
+    (n: number) => {
+      setPageSizeState(n);
+      setPageState(1);
+      writeParams({ page: 1, size: n });
+    },
+    [writeParams],
+  );
+
+  // Reset to page 1 when filters/items change (but not on initial mount so URL page survives).
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    setPageState(1);
+    writeParams({ page: 1 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length, pageSize, ...deps]);
 
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(page, totalPages);

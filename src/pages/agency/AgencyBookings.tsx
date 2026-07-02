@@ -34,7 +34,7 @@ const AgencyBookings = () => {
     return matchSearch && matchStatus;
   });
 
-  const pg = usePagination(filtered, 5, [search, statusFilter]);
+  const pg = usePagination(filtered, 5, [search, statusFilter], { paramKey: "" });
 
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {

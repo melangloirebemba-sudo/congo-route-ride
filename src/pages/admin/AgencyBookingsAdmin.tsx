@@ -197,7 +197,7 @@ const AgencyBookingsAdmin = () => {
     return { list, totals };
   }, [filtered]);
 
-  const pg = usePagination(filtered, 5, [agencyFilter, paymentFilter, dateFrom, dateTo, search]);
+  const pg = usePagination(filtered, 5, [agencyFilter, paymentFilter, dateFrom, dateTo, search], { paramKey: "" });
 
 
   const statusBadge = (s: string) => {

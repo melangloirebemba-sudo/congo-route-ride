@@ -41,7 +41,7 @@ const AgencyBranches = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Branch | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
-  const pg = usePagination(branches);
+  const pg = usePagination(branches, 5, [], { paramKey: "" });
 
   const fetchBranches = async () => {
     if (!agencyId) return;

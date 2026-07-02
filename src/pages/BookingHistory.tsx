@@ -37,7 +37,7 @@ const BookingHistory = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const pg = usePagination(bookings);
+  const pg = usePagination(bookings, 5, [], { paramKey: "" });
 
   useEffect(() => {
     const fetch = async () => {
