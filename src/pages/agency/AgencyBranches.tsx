@@ -216,7 +216,7 @@ const AgencyBranches = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">
-                        <div>{b.city || "—"}</div>
+                        <div>{b.city || "—"}{b.district ? ` · ${b.district}` : ""}</div>
                         <div className="text-xs text-muted-foreground">{b.address || ""}</div>
                       </TableCell>
                       <TableCell className="text-sm">
