@@ -151,6 +151,17 @@ const ResetPassword = () => {
       toast.error("Adresse email invalide");
       return;
     }
+    // Client-side per-email throttle to prevent spamming the send button
+    try {
+      const until = Number(localStorage.getItem(cooldownKey(resendEmail)) || 0);
+      const remaining = Math.ceil((until - Date.now()) / 1000);
+      if (remaining > 0) {
+        setCooldown(remaining);
+        toast.error(`Patientez ${remaining}s avant de renvoyer un lien`);
+        return;
+      }
+    } catch { /* ignore storage errors */ }
+
     setResending(true);
     const { error } = await supabase.auth.resetPasswordForEmail(resendEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
@@ -160,6 +171,14 @@ const ResetPassword = () => {
       toast.error(error.message);
       return;
     }
+    // Start cooldown regardless of whether the address exists (avoids enumeration)
+    try {
+      localStorage.setItem(
+        cooldownKey(resendEmail),
+        String(Date.now() + COOLDOWN_SECONDS * 1000),
+      );
+    } catch { /* ignore */ }
+    setCooldown(COOLDOWN_SECONDS);
     setResent(true);
     toast.success("Nouveau lien envoyé — vérifiez votre boîte mail");
   };
