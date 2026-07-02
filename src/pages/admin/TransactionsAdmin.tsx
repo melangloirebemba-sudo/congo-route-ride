@@ -18,6 +18,8 @@ const TransactionsAdmin = () => {
     fetch();
   }, []);
 
+  const pg = usePagination(transactions);
+
   const statusColor = (s: string) => {
     if (s === "completed") return "bg-accent/20 text-accent";
     if (s === "failed") return "bg-destructive/20 text-destructive";
