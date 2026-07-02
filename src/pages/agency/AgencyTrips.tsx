@@ -145,7 +145,7 @@ const AgencyTrips = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  trips.map(trip => (
+                  pg.paginated.map(trip => (
                     <TableRow key={trip.id}>
                       <TableCell className="font-medium text-sm">{trip.departure} → {trip.destination}</TableCell>
                       <TableCell className="text-sm">{trip.date}</TableCell>
