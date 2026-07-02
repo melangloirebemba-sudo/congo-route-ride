@@ -2,6 +2,13 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
+interface ManagerInfo {
+  id: string;
+  agency_id: string;
+  branch_id: string | null;
+  full_name: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -9,6 +16,8 @@ interface AuthContextType {
   isAdmin: boolean;
   agencyId: string | null;
   agencyStatus: string | null;
+  manager: ManagerInfo | null;
+  isManager: boolean;
   refreshAgency: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -20,6 +29,8 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   agencyId: null,
   agencyStatus: null,
+  manager: null,
+  isManager: false,
   refreshAgency: async () => {},
   signOut: async () => {},
 });
@@ -31,12 +42,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [agencyStatus, setAgencyStatus] = useState<string | null>(null);
+  const [manager, setManager] = useState<ManagerInfo | null>(null);
 
   const checkAdmin = async (userId: string) => {
-    const { data } = await supabase.rpc("has_role", {
-      _user_id: userId,
-      _role: "admin",
-    });
+    const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
     setIsAdmin(!!data);
   };
 
@@ -49,6 +58,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .maybeSingle();
     setAgencyId(data?.id || null);
     setAgencyStatus(data?.status || null);
+  };
+
+  const checkManager = async (userId: string) => {
+    const { data } = await supabase
+      .from("branch_managers" as any)
+      .select("id, agency_id, branch_id, full_name, status")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+    setManager((data as any) || null);
   };
 
   const refreshAgency = async () => {
@@ -64,11 +84,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(() => {
             checkAdmin(session.user.id);
             checkAgency(session.user.id);
+            checkManager(session.user.id);
           }, 0);
         } else {
           setIsAdmin(false);
           setAgencyId(null);
           setAgencyStatus(null);
+          setManager(null);
         }
         setLoading(false);
       }
@@ -80,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         checkAdmin(session.user.id);
         checkAgency(session.user.id);
+        checkManager(session.user.id);
       }
       setLoading(false);
     });
@@ -92,10 +115,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAdmin(false);
     setAgencyId(null);
     setAgencyStatus(null);
+    setManager(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, agencyId, agencyStatus, refreshAgency, signOut }}>
+    <AuthContext.Provider value={{
+      user, session, loading, isAdmin,
+      agencyId, agencyStatus,
+      manager, isManager: !!manager,
+      refreshAgency, signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   );

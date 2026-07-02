@@ -10,9 +10,9 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, requireAdmin = false, requireScanAccess = false }: ProtectedRouteProps) => {
-  const { user, loading, isAdmin, agencyId, agencyStatus } = useAuth();
+  const { user, loading, isAdmin, agencyId, agencyStatus, isManager } = useAuth();
 
-  const canScan = isAdmin || (!!agencyId && agencyStatus === "active");
+  const canScan = isAdmin || (!!agencyId && agencyStatus === "active") || isManager;
 
   useEffect(() => {
     if (loading || !user) return;
@@ -39,6 +39,7 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireScanAccess = fa
   if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
   if (requireScanAccess && !canScan) {
     if (agencyId) return <Navigate to="/agency" replace />;
+    if (isManager) return <Navigate to="/manager" replace />;
     return <Navigate to="/" replace />;
   }
 
