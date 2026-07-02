@@ -225,10 +225,19 @@ const ResetPassword = () => {
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={resending}>
+                  <Button type="submit" className="w-full" disabled={resending || cooldown > 0}>
                     <Mail className="h-4 w-4 mr-2" />
-                    {resending ? "Envoi..." : "Envoyer un nouveau lien"}
+                    {resending
+                      ? "Envoi..."
+                      : cooldown > 0
+                        ? `Renvoi possible dans ${cooldown}s`
+                        : "Envoyer un nouveau lien"}
                   </Button>
+                  {cooldown > 0 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Pour éviter le spam, attendez {cooldown} seconde{cooldown > 1 ? "s" : ""} avant un nouvel envoi.
+                    </p>
+                  )}
                 </form>
               )}
 
