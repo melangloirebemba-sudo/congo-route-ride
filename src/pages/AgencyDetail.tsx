@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, Phone, Mail, Star, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Agency = {
   id: string;
