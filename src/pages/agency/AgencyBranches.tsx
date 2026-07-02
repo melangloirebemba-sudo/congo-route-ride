@@ -73,6 +73,7 @@ const AgencyBranches = () => {
     setForm({
       name: b.name,
       city: b.city || "",
+      district: b.district || "",
       address: b.address || "",
       phone: b.phone || "",
       manager_name: b.manager_name || "",
@@ -89,6 +90,7 @@ const AgencyBranches = () => {
       agency_id: agencyId,
       name: form.name.trim(),
       city: form.city || null,
+      district: form.district || null,
       address: form.address || null,
       phone: form.phone || null,
       manager_name: form.manager_name || null,
