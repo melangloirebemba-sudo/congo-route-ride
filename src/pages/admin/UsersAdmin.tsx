@@ -243,10 +243,16 @@ const UsersAdmin = () => {
             Tous les comptes du système : statut, rôles et actions administrateur.
           </p>
         </div>
-        <Button variant="outline" onClick={fetchUsers} disabled={loading}>
-          <RefreshCcw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-          Actualiser
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={exportCsv} disabled={loading || filtered.length === 0}>
+            <Download className="h-4 w-4 mr-2" />
+            Exporter CSV ({filtered.length})
+          </Button>
+          <Button variant="outline" onClick={fetchUsers} disabled={loading}>
+            <RefreshCcw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Actualiser
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
