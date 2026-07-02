@@ -41,15 +41,25 @@ const Index = () => {
   }, []);
 
   // Filter branches by chosen departure city (when set)
-  const filteredBranches = departure
+  const cityBranches = departure
     ? branches.filter((b) => (b.city || "").toLowerCase() === departure.toLowerCase())
     : branches;
+  const availableDistricts = Array.from(
+    new Set([
+      ...districtsFor(departure),
+      ...cityBranches.map((b) => b.district).filter(Boolean) as string[],
+    ])
+  ).sort();
+  const filteredBranches = district
+    ? cityBranches.filter((b) => (b.district || "").toLowerCase() === district.toLowerCase())
+    : cityBranches;
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (departure) params.set("from", departure);
     if (destination) params.set("to", destination);
     if (date) params.set("date", date);
+    if (district) params.set("district", district);
     if (branchId) params.set("branch", branchId);
     navigate(`/search?${params.toString()}`);
   };
