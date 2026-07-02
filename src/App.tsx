@@ -102,11 +102,21 @@ const App = () => (
               <Route path="settings" element={<AgencySettings />} />
             </Route>
 
+            {/* Manager routes */}
+            <Route path="/manager" element={<ManagerLayout />}>
+              <Route index element={<ManagerDashboard />} />
+              <Route path="trips" element={<ManagerTrips />} />
+              <Route path="bookings" element={<ManagerBookings />} />
+              <Route path="sale" element={<ManagerSale />} />
+              <Route path="scan" element={<ScanAdmin />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Routes>
             <Route path="/admin/*" element={null} />
             <Route path="/agency/*" element={null} />
+            <Route path="/manager/*" element={null} />
             <Route path="*" element={<BottomNav />} />
           </Routes>
         </BrowserRouter>
