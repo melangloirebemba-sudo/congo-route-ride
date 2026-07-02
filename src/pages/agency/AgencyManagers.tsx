@@ -288,6 +288,7 @@ const AgencyManagers = () => {
               ))}
             </TableBody>
           </Table>
+          <div className="p-4 border-t"><ListPagination {...pg} /></div>
         </CardContent>
       </Card>
     </div>
