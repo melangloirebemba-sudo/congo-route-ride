@@ -71,7 +71,7 @@ const BookingHistory = () => {
             <p className="text-muted-foreground">Aucune réservation</p>
           </div>
         ) : (
-          bookings.map((b, i) => (
+          pg.paginated.map((b, i) => (
             <motion.div
               key={b.id}
               initial={{ opacity: 0, y: 10 }}
