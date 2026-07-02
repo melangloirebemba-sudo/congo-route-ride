@@ -27,6 +27,7 @@ import AuditLogAdmin from "./pages/admin/AuditLogAdmin";
 import StatsAdmin from "./pages/admin/StatsAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
 import ScanAdmin from "./pages/admin/ScanAdmin";
+import DistrictsAdmin from "./pages/admin/DistrictsAdmin";
 import AgencyLayout from "./pages/agency/AgencyLayout";
 import AgencyDashboard from "./pages/agency/AgencyDashboard";
 import AgencyTrips from "./pages/agency/AgencyTrips";
@@ -88,6 +89,7 @@ const App = () => (
               <Route path="users" element={<UsersAdmin />} />
               <Route path="audit" element={<AuditLogAdmin />} />
               <Route path="stats" element={<StatsAdmin />} />
+              <Route path="districts" element={<DistrictsAdmin />} />
               <Route path="settings" element={<SettingsAdmin />} />
             </Route>
 
