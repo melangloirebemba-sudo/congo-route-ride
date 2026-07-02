@@ -3,8 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Ticket, TrendingUp, CreditCard, Search } from "lucide-react";
+import { Building2, Ticket, TrendingUp, CreditCard, Search, Copy, Check } from "lucide-react";
+import { toast } from "sonner";
+
+const paymentLabel = (m?: string) => {
+  switch (m) {
+    case "mtn_momo": return "MTN Mobile Money";
+    case "airtel_money": return "Airtel Money";
+    case "card": return "Carte bancaire";
+    case "cash": return "Espèces";
+    default: return m || "—";
+  }
+};
 
 const AgencyBookingsAdmin = () => {
   const [rows, setRows] = useState<any[]>([]);
@@ -15,19 +28,24 @@ const AgencyBookingsAdmin = () => {
   const [dateTo, setDateTo] = useState<string>("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<any | null>(null);
+  const [copied, setCopied] = useState(false);
 
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [ag, bk] = await Promise.all([
+      const [ag, bk, tx] = await Promise.all([
         supabase.from("agencies").select("id, name, commission_rate").order("name"),
         supabase
           .from("bookings")
-          .select("id, passenger_name, phone, total_amount, status, payment_method, seat_number, created_at, trips(departure, destination, date, agencies(id, name, commission_rate))")
+          .select("id, passenger_name, phone, total_amount, status, payment_method, payment_status, seat_number, qr_code, created_at, trips(departure, destination, date, agencies(id, name, commission_rate))")
           .order("created_at", { ascending: false }),
+        supabase.from("transactions").select("id, booking_id, amount, commission, net_amount, payment_method, status, created_at"),
       ]);
       setAgencies((ag.data || []).map((a: any) => ({ id: a.id, name: a.name })));
+      const txByBooking = new Map<string, any>();
+      (tx.data || []).forEach((t: any) => txByBooking.set(t.booking_id, t));
       const enriched = (bk.data || []).map((b: any) => {
         const rate = b.trips?.agencies?.commission_rate ?? 10;
         const commission = Math.round((b.total_amount * rate) / 100);
@@ -37,12 +55,14 @@ const AgencyBookingsAdmin = () => {
           agency_name: b.trips?.agencies?.name || "—",
           commission,
           net: b.total_amount - commission,
+          transaction: txByBooking.get(b.id) || null,
         };
       });
       setRows(enriched);
       setLoading(false);
     };
     load();
+
   }, []);
 
   const filtered = useMemo(() => {
@@ -251,7 +271,7 @@ const AgencyBookingsAdmin = () => {
                 ) : filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Aucune réservation</TableCell></TableRow>
                 ) : filtered.map((r) => (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelected(r)}>
                     <TableCell className="text-xs">{new Date(r.created_at).toLocaleDateString("fr")}</TableCell>
                     <TableCell className="text-sm">{r.agency_name}</TableCell>
                     <TableCell className="text-sm font-medium">{r.passenger_name}</TableCell>
@@ -270,7 +290,89 @@ const AgencyBookingsAdmin = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          {selected && (
+            <>
+              <SheetHeader>
+                <SheetTitle>Détail de la réservation</SheetTitle>
+                <SheetDescription>{selected.agency_name} • {new Date(selected.created_at).toLocaleString("fr")}</SheetDescription>
+              </SheetHeader>
+
+              <div className="mt-6 space-y-6">
+                <section className="space-y-2">
+                  <h3 className="text-xs uppercase tracking-wide text-muted-foreground">Passager</h3>
+                  <div className="text-sm"><span className="text-muted-foreground">Nom : </span><span className="font-medium">{selected.passenger_name}</span></div>
+                  <div className="text-sm"><span className="text-muted-foreground">Téléphone : </span>{selected.phone || "—"}</div>
+                  <div className="text-sm"><span className="text-muted-foreground">Siège : </span>#{selected.seat_number}</div>
+                  <div className="text-sm"><span className="text-muted-foreground">Trajet : </span>{selected.trips?.departure} → {selected.trips?.destination}</div>
+                </section>
+
+                <section className="space-y-3 rounded-lg border p-4 bg-muted/30">
+                  <h3 className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <CreditCard className="h-3.5 w-3.5" /> Paiement
+                  </h3>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Statut</span>
+                    <Badge variant={selected.payment_status === "paid" ? "default" : selected.payment_status === "failed" ? "destructive" : "secondary"}>
+                      {selected.payment_status || "en attente"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Mode</span>
+                    <span className="font-medium">{paymentLabel(selected.payment_method)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Identifiant transaction</span>
+                    {selected.transaction?.id ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selected.transaction.id);
+                          setCopied(true);
+                          toast.success("Identifiant copié");
+                          setTimeout(() => setCopied(false), 1500);
+                        }}
+                        className="flex items-center gap-1.5 font-mono text-xs bg-background border rounded px-2 py-1 hover:bg-muted"
+                      >
+                        {selected.transaction.id.slice(0, 8)}…{selected.transaction.id.slice(-4)}
+                        {copied ? <Check className="h-3 w-3 text-accent" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">Non disponible</span>
+                    )}
+                  </div>
+                  {selected.transaction && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Statut transaction</span>
+                      <Badge variant={selected.transaction.status === "completed" ? "default" : selected.transaction.status === "failed" ? "destructive" : "secondary"}>
+                        {selected.transaction.status}
+                      </Badge>
+                    </div>
+                  )}
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-xs uppercase tracking-wide text-muted-foreground">Montants</h3>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total</span><span className="font-semibold">{selected.total_amount.toLocaleString()} FCFA</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Commission</span><span className="text-warning">{selected.commission.toLocaleString()} FCFA</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Net agence</span><span className="text-accent font-semibold">{selected.net.toLocaleString()} FCFA</span></div>
+                </section>
+
+                {selected.qr_code && (
+                  <section className="space-y-1">
+                    <h3 className="text-xs uppercase tracking-wide text-muted-foreground">Référence billet</h3>
+                    <div className="font-mono text-xs bg-muted p-2 rounded">{selected.qr_code}</div>
+                  </section>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
+
   );
 };
 
