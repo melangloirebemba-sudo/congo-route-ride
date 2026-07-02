@@ -85,7 +85,10 @@ const UsersAdmin = () => {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selfId, setSelfId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const [confirm, setConfirm] = useState<
     | { kind: "disable" | "enable" | "delete" | "reset"; user: AdminUser }
