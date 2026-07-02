@@ -111,6 +111,7 @@ const BookingHistory = () => {
             </motion.div>
           ))
         )}
+        {!loading && bookings.length > 0 && <ListPagination {...pg} className="pt-2" />}
       </div>
     </div>
   );
