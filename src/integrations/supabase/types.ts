@@ -286,6 +286,27 @@ export type Database = {
           },
         ]
       }
+      city_districts: {
+        Row: {
+          city: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           cancellation_alerts: boolean
