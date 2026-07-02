@@ -340,6 +340,41 @@ export type Database = {
         }
         Relationships: []
       }
+      seat_locks: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          locked_by: string
+          seat_number: number
+          trip_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          locked_by: string
+          seat_number: number
+          trip_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          locked_by?: string
+          seat_number?: number
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_locks_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           agency_id: string | null
@@ -501,6 +536,14 @@ export type Database = {
       }
       is_agency_owner: { Args: { _agency_id: string }; Returns: boolean }
       is_branch_manager_of: { Args: { _agency_id: string }; Returns: boolean }
+      lock_seat: {
+        Args: { _seat_number: number; _trip_id: string; _ttl_seconds?: number }
+        Returns: Json
+      }
+      release_seat: {
+        Args: { _seat_number: number; _trip_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
