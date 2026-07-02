@@ -65,7 +65,7 @@ const Agencies = () => {
           <p className="text-center text-muted-foreground py-10">Aucune agence trouvée.</p>
         ) : (
           <div className="space-y-3">
-            {filtered.map((agency, i) => (
+            {pg.paginated.map((agency, i) => (
               <motion.button
                 key={agency.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -87,6 +87,7 @@ const Agencies = () => {
                 </div>
               </motion.button>
             ))}
+            <ListPagination {...pg} className="pt-2" />
           </div>
         )}
       </div>
