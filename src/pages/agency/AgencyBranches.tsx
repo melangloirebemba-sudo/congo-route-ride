@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Building2, MapPin } from "lucide-react";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Branch = {
   id: string;
