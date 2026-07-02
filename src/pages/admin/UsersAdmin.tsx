@@ -409,6 +409,46 @@ const UsersAdmin = () => {
               </TableBody>
             </Table>
           </div>
+
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm">
+            <div className="text-muted-foreground">
+              {filtered.length === 0
+                ? "Aucun résultat"
+                : `Affichage ${pageStart + 1}–${Math.min(pageStart + pageSize, filtered.length)} sur ${filtered.length}`}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Lignes</span>
+              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50, 100].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-1 ml-2">
+                <Button size="icon" variant="outline" className="h-8 w-8"
+                  onClick={() => setPage(1)} disabled={currentPage === 1}>
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="px-2 tabular-nums">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button size="icon" variant="outline" className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" className="h-8 w-8"
+                  onClick={() => setPage(totalPages)} disabled={currentPage === totalPages}>
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
