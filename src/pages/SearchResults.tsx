@@ -76,6 +76,9 @@ const SearchResults = () => {
             {new Date(date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
           </p>
         )}
+        {branchLabel && (
+          <p className="text-primary-foreground/80 text-xs mt-1">Agence régionale : {branchLabel}</p>
+        )}
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-3">
