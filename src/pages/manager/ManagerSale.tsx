@@ -49,12 +49,14 @@ const ManagerSale = () => {
     if (!manager) return;
     (async () => {
       const today = new Date().toISOString().split("T")[0];
-      const { data } = await supabase
+      let q = supabase
         .from("trips")
         .select("id, departure, destination, date, departure_time, price, currency, total_seats, available_seats")
         .eq("agency_id", manager.agency_id)
         .gte("date", today)
         .order("date");
+      if (manager.branch_id) q = q.eq("branch_id", manager.branch_id);
+      const { data } = await q;
       setTrips(data || []);
     })();
   }, [manager]);

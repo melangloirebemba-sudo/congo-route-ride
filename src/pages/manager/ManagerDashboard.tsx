@@ -14,17 +14,25 @@ const ManagerDashboard = () => {
     if (!manager) return;
     (async () => {
       const today = new Date().toISOString().split("T")[0];
+
+      let tripsQ = supabase.from("trips").select("id, date").eq("agency_id", manager.agency_id).eq("date", today);
+      let bkQ = supabase
+        .from("bookings")
+        .select("id, total_amount, status, trips!inner(agency_id, branch_id, date)")
+        .eq("trips.agency_id", manager.agency_id)
+        .eq("trips.date", today);
+      if (manager.branch_id) {
+        tripsQ = tripsQ.eq("branch_id", manager.branch_id);
+        bkQ = bkQ.eq("trips.branch_id", manager.branch_id);
+      }
+
       const [{ data: ag }, { data: br }, { data: trips }, { data: bookings }] = await Promise.all([
         supabase.from("agencies").select("name").eq("id", manager.agency_id).maybeSingle(),
         manager.branch_id
           ? supabase.from("agency_branches" as any).select("name, city").eq("id", manager.branch_id).maybeSingle()
           : Promise.resolve({ data: null }),
-        supabase.from("trips").select("id, date").eq("agency_id", manager.agency_id).eq("date", today),
-        supabase
-          .from("bookings")
-          .select("id, total_amount, status, trips!inner(agency_id, date)")
-          .eq("trips.agency_id", manager.agency_id)
-          .eq("trips.date", today),
+        tripsQ,
+        bkQ,
       ]);
       setAgencyName(ag?.name || "");
       setBranchName(br ? `${(br as any).name}${(br as any).city ? " — " + (br as any).city : ""}` : null);
@@ -50,7 +58,7 @@ const ManagerDashboard = () => {
       <div>
         <h1 className="font-display text-2xl font-bold">Bonjour {manager?.full_name?.split(" ")[0] || ""} 👋</h1>
         <p className="text-sm text-muted-foreground">
-          {agencyName}{branchName ? ` · ${branchName}` : " · Toutes les agences"}
+          {agencyName}{branchName ? ` · ${branchName}` : " · Aucune branche assignée"}
         </p>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -18,11 +18,13 @@ const ManagerTrips = () => {
   useEffect(() => {
     if (!manager) return;
     (async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("trips")
         .select("*")
         .eq("agency_id", manager.agency_id)
         .order("date", { ascending: false });
+      if (manager.branch_id) q = q.eq("branch_id", manager.branch_id);
+      const { data } = await q;
       setTrips(data || []);
     })();
   }, [manager]);
