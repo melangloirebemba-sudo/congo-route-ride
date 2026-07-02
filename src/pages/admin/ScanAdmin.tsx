@@ -378,15 +378,22 @@ const ScanAdmin = () => {
                     {booking.trip && (
                       <>
                         <Separator />
-                        <div>
+                        <div className="space-y-0.5">
                           <div className="font-medium mb-1">Trajet</div>
                           <div className="text-muted-foreground">
-                            {booking.trip.origin} → {booking.trip.destination}
+                            {booking.trip.departure} → {booking.trip.destination}
                           </div>
                           <div className="text-muted-foreground">
-                            {format(new Date(booking.trip.departure_date), "EEEE d MMM yyyy", { locale: fr })}
+                            {format(new Date(booking.trip.date), "EEEE d MMM yyyy", { locale: fr })}
                             {" · "}
                             {booking.trip.departure_time?.slice(0, 5)}
+                            {booking.trip.arrival_time ? ` → ${booking.trip.arrival_time.slice(0,5)}` : ""}
+                          </div>
+                          {booking.trip.bus_type && (
+                            <div className="text-muted-foreground">Bus : {booking.trip.bus_type}</div>
+                          )}
+                          <div className="text-muted-foreground">
+                            Prix : {booking.trip.price.toLocaleString("fr-FR")} {booking.trip.currency}
                           </div>
                           {booking.trip.agency?.name && (
                             <div className="text-muted-foreground">Agence : {booking.trip.agency.name}</div>
