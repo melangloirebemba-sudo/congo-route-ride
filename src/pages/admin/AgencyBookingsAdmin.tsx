@@ -358,7 +358,7 @@ const AgencyBookingsAdmin = () => {
                   <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Chargement…</TableCell></TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Aucune réservation</TableCell></TableRow>
-                ) : filtered.map((r) => (
+                ) : pg.paginated.map((r) => (
                   <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelected(r)}>
                     <TableCell className="text-xs">{new Date(r.created_at).toLocaleDateString("fr")}</TableCell>
                     <TableCell className="text-sm">{r.agency_name}</TableCell>
