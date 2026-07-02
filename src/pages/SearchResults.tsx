@@ -125,6 +125,7 @@ const SearchResults = () => {
                 </div>
               </motion.div>
             ))}
+            {trips.length > 0 && <ListPagination {...pg} className="pt-2" />}
           </>
         )}
       </div>
