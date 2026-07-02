@@ -10,14 +10,17 @@ const Index = () => {
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
   const [date, setDate] = useState("");
+  const [branchId, setBranchId] = useState("");
   const [cities, setCities] = useState<string[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string; city: string | null; agency: { name: string } | null }[]>([]);
   const [agencies, setAgencies] = useState<{ id: string; name: string; logo: string | null; rating: number | null; total_trips: number | null }[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const [citiesRes, agenciesRes] = await Promise.all([
+      const [citiesRes, agenciesRes, branchesRes] = await Promise.all([
         supabase.from("trips").select("departure, destination"),
         supabase.from("agencies").select("id, name, logo, rating, total_trips").eq("status", "active").eq("is_popular", true).order("popularity_rank", { ascending: true, nullsFirst: false }).order("rating", { ascending: false }).limit(5),
+        supabase.from("agency_branches" as any).select("id, name, city, agency:agencies!inner(name, status)").eq("status", "active").eq("agencies.status", "active").order("city"),
       ]);
 
       if (citiesRes.data) {
@@ -30,15 +33,22 @@ const Index = () => {
       }
 
       if (agenciesRes.data) setAgencies(agenciesRes.data);
+      if (branchesRes.data) setBranches((branchesRes.data as any) || []);
     };
     fetchData();
   }, []);
+
+  // Filter branches by chosen departure city (when set)
+  const filteredBranches = departure
+    ? branches.filter((b) => (b.city || "").toLowerCase() === departure.toLowerCase())
+    : branches;
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (departure) params.set("from", departure);
     if (destination) params.set("to", destination);
     if (date) params.set("date", date);
+    if (branchId) params.set("branch", branchId);
     navigate(`/search?${params.toString()}`);
   };
 
