@@ -172,8 +172,10 @@ const AgencyTrips = () => {
               </TableBody>
             </Table>
           </div>
+          <div className="p-4 border-t"><ListPagination {...pg} /></div>
         </CardContent>
       </Card>
+
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
