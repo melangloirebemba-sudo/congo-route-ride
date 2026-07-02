@@ -6,41 +6,78 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { KeyRound, ShieldCheck, AlertCircle } from "lucide-react";
+import { KeyRound, ShieldCheck, AlertCircle, Mail } from "lucide-react";
+
+type InvalidState = {
+  title: string;
+  message: string;
+} | null;
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
-  const [invalid, setInvalid] = useState<string | null>(null);
+  const [invalid, setInvalid] = useState<InvalidState>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [resendEmail, setResendEmail] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   useEffect(() => {
-    // Supabase places the recovery token in the URL hash and auto-consumes it
-    // via detectSessionInUrl. We listen for the PASSWORD_RECOVERY event.
     const hash = window.location.hash || "";
+    // Supabase encodes errors in the hash: #error=access_denied&error_code=otp_expired&error_description=...
+    const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+    const errorCode = hashParams.get("error_code");
+    const errorParam = hashParams.get("error");
+    const errorDesc = hashParams.get("error_description");
+
+    if (errorParam || errorCode) {
+      const decoded = errorDesc ? decodeURIComponent(errorDesc.replace(/\+/g, " ")) : "";
+      if (errorCode === "otp_expired" || /expired/i.test(decoded)) {
+        setInvalid({
+          title: "Lien expiré",
+          message: "Ce lien de réinitialisation a expiré. Demandez un nouveau lien ci-dessous.",
+        });
+      } else if (errorCode === "access_denied" || /invalid|used/i.test(decoded)) {
+        setInvalid({
+          title: "Lien invalide ou déjà utilisé",
+          message: "Ce lien n'est plus valide (déjà utilisé ou incorrect). Demandez-en un nouveau ci-dessous.",
+        });
+      } else {
+        setInvalid({
+          title: "Lien invalide",
+          message: decoded || "Impossible de valider ce lien. Demandez un nouveau lien ci-dessous.",
+        });
+      }
+      return;
+    }
+
     const hasRecovery = hash.includes("type=recovery") || hash.includes("access_token");
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && hasRecovery)) {
         setReady(true);
       }
     });
 
-    // If already have a session (link was consumed on load), enable form
     supabase.auth.getSession().then(({ data }) => {
       if (data.session && hasRecovery) setReady(true);
       else if (!hasRecovery) {
-        setInvalid("Lien invalide ou expiré. Demandez un nouveau lien de réinitialisation.");
+        setInvalid({
+          title: "Lien invalide ou expiré",
+          message: "Aucun jeton de récupération détecté. Demandez un nouveau lien de réinitialisation.",
+        });
       }
     });
 
-    // Fallback: if nothing happens within 3s, show invalid message
     const t = setTimeout(() => {
       if (!ready && !hasRecovery) {
-        setInvalid("Lien invalide ou expiré.");
+        setInvalid({
+          title: "Lien invalide ou expiré",
+          message: "Impossible de valider le lien. Demandez un nouveau lien de réinitialisation.",
+        });
       }
     }, 3000);
 
@@ -67,13 +104,43 @@ const ResetPassword = () => {
       data: { must_change_password: false },
     });
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      // If the session got invalidated (token used/expired between load and submit)
+      if (/session|token|expired|jwt/i.test(error.message)) {
+        setInvalid({
+          title: "Session expirée",
+          message: "Votre session de récupération a expiré. Demandez un nouveau lien ci-dessous.",
+        });
+        return;
+      }
+      toast.error(error.message);
+      return;
+    }
     toast.success("Mot de passe mis à jour");
     setDone(true);
     setTimeout(async () => {
       await supabase.auth.signOut();
       navigate("/auth", { replace: true });
     }, 1500);
+  };
+
+  const resend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resendEmail || !/^\S+@\S+\.\S+$/.test(resendEmail)) {
+      toast.error("Adresse email invalide");
+      return;
+    }
+    setResending(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resendEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setResending(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setResent(true);
+    toast.success("Nouveau lien envoyé — vérifiez votre boîte mail");
   };
 
   return (
@@ -87,14 +154,52 @@ const ResetPassword = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {invalid && !ready ? (
-            <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
-              <AlertCircle className="h-4 w-4 text-destructive mt-0.5" />
-              <div className="space-y-2">
-                <p>{invalid}</p>
-                <Button variant="outline" size="sm" onClick={() => navigate("/auth")}>
-                  Retour à la connexion
-                </Button>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+                <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-medium text-destructive">{invalid.title}</p>
+                  <p className="text-muted-foreground">{invalid.message}</p>
+                </div>
               </div>
+
+              {resent ? (
+                <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+                  <ShieldCheck className="h-4 w-4 text-primary mt-0.5" />
+                  <p>
+                    Si un compte existe pour <strong>{resendEmail}</strong>, un nouveau lien
+                    de réinitialisation vient d'être envoyé. Le lien expire rapidement et est
+                    à usage unique.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={resend} className="space-y-3">
+                  <div>
+                    <Label htmlFor="resend-email">Renvoyer un lien à</Label>
+                    <Input
+                      id="resend-email"
+                      type="email"
+                      placeholder="votre@email.com"
+                      value={resendEmail}
+                      onChange={(e) => setResendEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={resending}>
+                    <Mail className="h-4 w-4 mr-2" />
+                    {resending ? "Envoi..." : "Envoyer un nouveau lien"}
+                  </Button>
+                </form>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => navigate("/auth")}
+              >
+                Retour à la connexion
+              </Button>
             </div>
           ) : done ? (
             <div className="flex items-center gap-2 text-sm text-primary">
