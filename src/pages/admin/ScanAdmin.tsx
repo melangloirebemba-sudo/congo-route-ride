@@ -115,7 +115,7 @@ const ScanAdmin = () => {
     if (b.status === "cancelled") v = "cancelled";
     else if (b.status === "used" || b.status === "checked_in") v = "used";
     else if (b.payment_status !== "paid") v = "unpaid";
-    else if (b.trip?.departure_date && new Date(b.trip.departure_date) < new Date(new Date().toDateString())) v = "expired";
+    else if (b.trip?.date && new Date(b.trip.date) < new Date(new Date().toDateString())) v = "expired";
 
     setVerdict(v);
     if (v === "valid") toast.success("Billet valide");
