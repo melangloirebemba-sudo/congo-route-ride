@@ -10,8 +10,12 @@ const AgencyBookingsAdmin = () => {
   const [rows, setRows] = useState<any[]>([]);
   const [agencies, setAgencies] = useState<{ id: string; name: string }[]>([]);
   const [agencyFilter, setAgencyFilter] = useState<string>("all");
+  const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     const load = async () => {
@@ -44,7 +48,15 @@ const AgencyBookingsAdmin = () => {
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (agencyFilter !== "all" && r.agency_id !== agencyFilter) return false;
+      if (paymentFilter !== "all" && (r.payment_method || "") !== paymentFilter) return false;
+      if (dateFrom && new Date(r.created_at) < new Date(dateFrom)) return false;
+      if (dateTo) {
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59, 999);
+        if (new Date(r.created_at) > end) return false;
+      }
       if (search) {
+
         const s = search.toLowerCase();
         return (
           r.passenger_name?.toLowerCase().includes(s) ||
@@ -54,7 +66,7 @@ const AgencyBookingsAdmin = () => {
       }
       return true;
     });
-  }, [rows, agencyFilter, search]);
+  }, [rows, agencyFilter, paymentFilter, dateFrom, dateTo, search]);
 
   const summary = useMemo(() => {
     const byAgency = new Map<string, { name: string; bookings: number; revenue: number; commission: number }>();
@@ -166,7 +178,7 @@ const AgencyBookingsAdmin = () => {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-3">
           <div className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
             <CardTitle className="text-lg">Détail des réservations</CardTitle>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -183,7 +195,40 @@ const AgencyBookingsAdmin = () => {
               </Select>
             </div>
           </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Du</label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full sm:w-40" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Au</label>
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full sm:w-40" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Paiement</label>
+              <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Mode de paiement" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les paiements</SelectItem>
+                  <SelectItem value="mtn_momo">MTN MoMo</SelectItem>
+                  <SelectItem value="airtel_money">Airtel Money</SelectItem>
+                  <SelectItem value="cash">Espèces</SelectItem>
+                  <SelectItem value="card">Carte</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(dateFrom || dateTo || paymentFilter !== "all" || agencyFilter !== "all") && (
+              <button
+                type="button"
+                onClick={() => { setDateFrom(""); setDateTo(""); setPaymentFilter("all"); setAgencyFilter("all"); }}
+                className="text-xs text-primary underline self-start sm:self-end sm:pb-2"
+              >
+                Réinitialiser les filtres
+              </button>
+            )}
+          </div>
         </CardHeader>
+
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
