@@ -26,6 +26,7 @@ const SearchResults = () => {
   const date = params.get("date") || "";
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const pg = usePagination(trips);
 
   useEffect(() => {
     const fetch = async () => {
