@@ -24,7 +24,9 @@ const SearchResults = () => {
   const from = params.get("from") || "";
   const to = params.get("to") || "";
   const date = params.get("date") || "";
+  const branch = params.get("branch") || "";
   const [trips, setTrips] = useState<TripRow[]>([]);
+  const [branchLabel, setBranchLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const pg = usePagination(trips, 5, [], { paramKey: "" });
 
@@ -41,13 +43,24 @@ const SearchResults = () => {
       if (from) query = query.eq("departure", from);
       if (to) query = query.eq("destination", to);
       if (date) query = query.eq("date", date);
+      if (branch) query = query.eq("branch_id", branch);
 
       const { data } = await query.order("departure_time");
       setTrips((data as unknown as TripRow[]) || []);
+
+      if (branch) {
+        const { data: br } = await supabase
+          .from("agency_branches" as any)
+          .select("name, city, agency:agencies(name)")
+          .eq("id", branch)
+          .maybeSingle();
+        if (br) setBranchLabel(`${(br as any).agency?.name ? (br as any).agency.name + " — " : ""}${(br as any).name}${(br as any).city ? " (" + (br as any).city + ")" : ""}`);
+      } else setBranchLabel("");
+
       setLoading(false);
     };
     fetch();
-  }, [from, to, date]);
+  }, [from, to, date, branch]);
 
   return (
     <div className="min-h-screen pb-24">

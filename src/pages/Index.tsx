@@ -99,6 +99,23 @@ const Index = () => {
               </select>
             </div>
 
+
+            <div className="relative">
+              <Bus className="absolute left-3 top-3 h-4 w-4 text-primary" />
+              <select
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Agence régionale (toutes)</option>
+                {filteredBranches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.agency?.name ? `${b.agency.name} — ` : ""}{b.name}{b.city ? ` (${b.city})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="relative">
               <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <input
