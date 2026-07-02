@@ -330,7 +330,7 @@ const UsersAdmin = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((u) => (
+                  pageRows.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell>
                         <div className="font-medium">{u.email || u.phone || u.id.slice(0, 8)}</div>
