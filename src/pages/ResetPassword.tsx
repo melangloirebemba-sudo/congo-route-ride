@@ -24,6 +24,27 @@ const ResetPassword = () => {
   const [resendEmail, setResendEmail] = useState("");
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  const COOLDOWN_SECONDS = 60;
+  const cooldownKey = (email: string) => `reset-link-cooldown:${email.trim().toLowerCase()}`;
+
+  // Recompute cooldown whenever the email changes (per-address throttle)
+  useEffect(() => {
+    if (!resendEmail) { setCooldown(0); return; }
+    try {
+      const until = Number(localStorage.getItem(cooldownKey(resendEmail)) || 0);
+      const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+      setCooldown(remaining);
+    } catch { setCooldown(0); }
+  }, [resendEmail]);
+
+  // Tick the countdown every second while active
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setInterval(() => setCooldown((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
 
   useEffect(() => {
     const hash = window.location.hash || "";
