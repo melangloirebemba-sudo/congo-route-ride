@@ -259,6 +259,60 @@ const ScanAdmin = () => {
     setRpcError(null);
   };
 
+  const buildTicketPdf = async (): Promise<jsPDF | null> => {
+    if (!booking) return null;
+    const doc = new jsPDF({ format: "a5", unit: "mm" });
+    doc.setFillColor(255, 122, 0);
+    doc.rect(0, 0, 148, 20, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.text("TransCongo — Billet électronique", 10, 13);
+    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(11);
+    let y = 30;
+    const line = (label: string, val: string) => {
+      doc.setFont("helvetica", "bold"); doc.text(label, 10, y);
+      doc.setFont("helvetica", "normal"); doc.text(val, 55, y);
+      y += 7;
+    };
+    line("Passager", booking.passenger_name);
+    line("Téléphone", booking.phone);
+    if (booking.trip) {
+      line("Trajet", `${booking.trip.departure} → ${booking.trip.destination}`);
+      line("Date / Heure", `${booking.trip.date} ${booking.trip.departure_time?.slice(0,5) || ""}`);
+      if (booking.trip.agency?.name) line("Agence", booking.trip.agency.name);
+    }
+    line("Siège", `#${booking.seat_number}`);
+    line("Paiement", `${booking.payment_status}${booking.payment_method ? ` · ${booking.payment_method}` : ""}`);
+    line("Montant", `${booking.total_amount.toLocaleString("fr-FR")} FCFA`);
+    line("Statut", booking.status);
+    line("Code", booking.qr_code);
+    const qrDataUrl = await QRCode.toDataURL(booking.qr_code, { width: 240, margin: 1 });
+    doc.addImage(qrDataUrl, "PNG", 95, 55, 45, 45);
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text("Réimpression — présentez ce billet à l'embarquement", 10, 200);
+    return doc;
+  };
+
+  const downloadTicket = async () => {
+    const doc = await buildTicketPdf();
+    if (!doc || !booking) return;
+    doc.save(`${booking.qr_code}.pdf`);
+  };
+
+  const printTicket = async () => {
+    const doc = await buildTicketPdf();
+    if (!doc) return;
+    const url = doc.output("bloburl") as unknown as string;
+    const w = window.open(url, "_blank");
+    if (w) {
+      w.addEventListener("load", () => { try { w.print(); } catch {} });
+    } else {
+      toast.error("Autorisez les pop-ups pour imprimer");
+    }
+  };
+
   const VerdictIcon = verdict ? verdictMeta[verdict].icon : QrCode;
 
   return (
