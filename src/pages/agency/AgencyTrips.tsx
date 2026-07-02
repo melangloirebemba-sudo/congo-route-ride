@@ -98,6 +98,8 @@ const AgencyTrips = () => {
     setDialogOpen(true);
   };
 
+  const pg = usePagination(trips);
+
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {
       active: "bg-accent/20 text-accent",
