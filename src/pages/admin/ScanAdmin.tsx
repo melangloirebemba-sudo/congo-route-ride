@@ -147,17 +147,73 @@ const ScanAdmin = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [validating, setValidating] = useState(false);
+
   const markAsUsed = async () => {
     if (!booking) return;
-    const { error } = await supabase
+    if (verdict !== "valid") {
+      toast.error("Ce billet ne peut pas être validé");
+      return;
+    }
+    setValidating(true);
+
+    // Re-check the current state in DB to prevent double check-in / race conditions
+    const { data: fresh, error: fetchErr } = await supabase
+      .from("bookings")
+      .select("status, payment_status")
+      .eq("id", booking.id)
+      .maybeSingle();
+
+    if (fetchErr || !fresh) {
+      setValidating(false);
+      toast.error("Impossible de vérifier l'état du billet");
+      return;
+    }
+
+    if (fresh.status === "used" || fresh.status === "checked_in") {
+      setValidating(false);
+      setBooking({ ...booking, status: fresh.status });
+      setVerdict("used");
+      toast.error("Ce billet a déjà été utilisé — embarquement refusé");
+      return;
+    }
+    if (fresh.status === "cancelled") {
+      setValidating(false);
+      setBooking({ ...booking, status: "cancelled" });
+      setVerdict("cancelled");
+      toast.error("Billet annulé — embarquement refusé");
+      return;
+    }
+    if (fresh.payment_status !== "paid") {
+      setValidating(false);
+      setBooking({ ...booking, payment_status: fresh.payment_status });
+      setVerdict("unpaid");
+      toast.error("Billet non payé — embarquement refusé");
+      return;
+    }
+
+    // Conditional update: only flip to "used" if still not used/cancelled
+    const { data: updated, error } = await supabase
       .from("bookings")
       .update({ status: "used" })
-      .eq("id", booking.id);
+      .eq("id", booking.id)
+      .not("status", "in", '("used","checked_in","cancelled")')
+      .select("id")
+      .maybeSingle();
+
+    setValidating(false);
     if (error) return toast.error("Impossible de marquer comme utilisé");
-    toast.success("Billet marqué comme utilisé");
+    if (!updated) {
+      toast.error("Le billet vient d'être utilisé par un autre agent");
+      setBooking({ ...booking, status: "used" });
+      setVerdict("used");
+      return;
+    }
+    toast.success("Embarquement validé");
     setBooking({ ...booking, status: "used" });
     setVerdict("used");
   };
+
 
   const resetCheck = () => {
     setBooking(null);
@@ -305,16 +361,40 @@ const ScanAdmin = () => {
                     )}
 
                     <Separator />
+                    {verdict !== "valid" && (
+                      <div className="rounded-md border border-red-500/30 bg-red-500/10 text-red-700 text-xs p-3 flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <div>
+                          <div className="font-semibold">Embarquement impossible</div>
+                          <div className="opacity-90">
+                            {verdict === "used" && "Ce billet a déjà été utilisé. Le passager est déjà embarqué."}
+                            {verdict === "cancelled" && "Cette réservation a été annulée."}
+                            {verdict === "unpaid" && "Le paiement n'a pas été confirmé pour ce billet."}
+                            {verdict === "expired" && "Le trajet associé à ce billet est déjà passé."}
+                            {verdict === "notfound" && "Aucun billet ne correspond à ce code."}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-2">
-                      {verdict === "valid" && (
-                        <Button onClick={markAsUsed} className="flex-1">
-                          <CheckCircle2 className="h-4 w-4 mr-2" /> Valider l'embarquement
+                      {verdict === "valid" ? (
+                        <Button onClick={markAsUsed} disabled={validating} className="flex-1">
+                          {validating ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Validation…</>
+                          ) : (
+                            <><CheckCircle2 className="h-4 w-4 mr-2" /> Valider l'embarquement</>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button disabled className="flex-1" variant="secondary">
+                          <XCircle className="h-4 w-4 mr-2" /> Validation bloquée
                         </Button>
                       )}
                       <Button variant="outline" onClick={resetCheck} className="flex-1">
                         Nouveau scan
                       </Button>
                     </div>
+
                   </div>
                 )}
               </div>
