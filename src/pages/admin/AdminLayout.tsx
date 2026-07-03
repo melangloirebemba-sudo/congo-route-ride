@@ -54,7 +54,7 @@ const AdminLayout = () => {
       </aside>
 
       {/* Mobile header */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card">
           <h1 className="font-display text-lg font-bold text-gradient">Admin</h1>
           <Button variant="ghost" size="icon" onClick={signOut}>
