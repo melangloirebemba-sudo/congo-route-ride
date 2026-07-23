@@ -3,10 +3,15 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Bell, CheckCheck, ExternalLink, ArrowUpDown, Archive, ArchiveRestore } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +32,7 @@ const PAGE_SIZE = 20;
 
 const KIND_OPTIONS: { value: string; label: string; match: (k: string) => boolean }[] = [
   { value: "all", label: "Tous les types", match: () => true },
+  { value: "broadcast", label: "Direction générale", match: (k) => k.startsWith("broadcast") },
   { value: "booking", label: "Réservations", match: (k) => k.startsWith("booking") },
   { value: "payment", label: "Paiements", match: (k) => k.includes("payment") },
   { value: "cancellation", label: "Annulations", match: (k) => k.includes("cancel") || k.includes("refus") },
@@ -43,6 +49,8 @@ const ManagerNotifications = () => {
   const [tab, setTab] = useState<"unread" | "all" | "archived">("all");
   const [sortDesc, setSortDesc] = useState(true);
   const [kindFilter, setKindFilter] = useState<string>("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [restoreTarget, setRestoreTarget] = useState<Notif | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const loadPage = useCallback(async (from: number, replace: boolean) => {
@@ -65,6 +73,7 @@ const ManagerNotifications = () => {
   const load = useCallback(async () => {
     if (!manager?.branch_id) return;
     setLoading(true);
+    setSelected(new Set());
     await loadPage(0, true);
     setLoading(false);
   }, [manager?.branch_id, loadPage]);
@@ -101,7 +110,6 @@ const ManagerNotifications = () => {
     return () => { supabase.removeChannel(channel); };
   }, [manager?.branch_id, load]);
 
-  // Infinite scroll via IntersectionObserver
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -138,26 +146,60 @@ const ManagerNotifications = () => {
     else toast.success("Toutes les notifications marquées comme lues");
   };
 
-  const archiveOne = async (id: string) => {
-    const prev = items;
-    setItems((list) => list.filter((n) => n.id !== id));
+  // Optimistic archive/restore with UNDO
+  const setArchivedBulk = async (ids: string[], to: string | null) => {
+    if (ids.length === 0) return;
     const { error } = await supabase
       .from("branch_notifications" as any)
-      .update({ archived_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) { toast.error("Impossible d'archiver"); setItems(prev); }
-    else toast.success("Notification archivée");
+      .update({ archived_at: to })
+      .in("id", ids);
+    if (error) throw error;
   };
 
-  const restoreOne = async (id: string) => {
-    const prev = items;
-    setItems((list) => list.filter((n) => n.id !== id));
-    const { error } = await supabase
-      .from("branch_notifications" as any)
-      .update({ archived_at: null })
-      .eq("id", id);
-    if (error) { toast.error("Impossible de restaurer"); setItems(prev); }
-    else toast.success("Notification restaurée");
+  const archiveIds = async (ids: string[], label?: string) => {
+    if (ids.length === 0) return;
+    const snapshot = items;
+    setItems((list) => list.filter((n) => !ids.includes(n.id)));
+    setSelected(new Set());
+    try {
+      await setArchivedBulk(ids, new Date().toISOString());
+      toast.success(label || (ids.length === 1 ? "Notification archivée" : `${ids.length} notifications archivées`), {
+        duration: 6000,
+        action: {
+          label: "Annuler",
+          onClick: async () => {
+            try {
+              await setArchivedBulk(ids, null);
+              toast.success("Archivage annulé");
+              load();
+            } catch { toast.error("Annulation impossible"); }
+          },
+        },
+      });
+    } catch { toast.error("Impossible d'archiver"); setItems(snapshot); }
+  };
+
+  const restoreIds = async (ids: string[], label?: string) => {
+    if (ids.length === 0) return;
+    const snapshot = items;
+    setItems((list) => list.filter((n) => !ids.includes(n.id)));
+    setSelected(new Set());
+    try {
+      await setArchivedBulk(ids, null);
+      toast.success(label || (ids.length === 1 ? "Notification restaurée" : `${ids.length} notifications restaurées`), {
+        duration: 6000,
+        action: {
+          label: "Annuler",
+          onClick: async () => {
+            try {
+              await setArchivedBulk(ids, new Date().toISOString());
+              toast.success("Restauration annulée");
+              load();
+            } catch { toast.error("Annulation impossible"); }
+          },
+        },
+      });
+    } catch { toast.error("Impossible de restaurer"); setItems(snapshot); }
   };
 
   const kindMatcher = useMemo(
@@ -165,7 +207,7 @@ const ManagerNotifications = () => {
     [kindFilter],
   );
 
-  const unreadCount = items.filter((n) => !n.read_at).length;
+  const unreadCount = items.filter((n) => !n.read_at && !n.archived_at).length;
   const filtered = items.filter((n) =>
     (tab === "unread" ? !n.read_at : true) && kindMatcher(n.kind || "")
   );
@@ -177,6 +219,24 @@ const ManagerNotifications = () => {
 
   const detailLink = (n: Notif) => (n.booking_id ? "/manager/bookings" : null);
 
+  const selectedList = sorted.filter((n) => selected.has(n.id));
+  const allVisibleSelected = sorted.length > 0 && sorted.every((n) => selected.has(n.id));
+  const toggleAllVisible = (v: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (v) sorted.forEach((n) => next.add(n.id));
+      else sorted.forEach((n) => next.delete(n.id));
+      return next;
+    });
+  };
+  const toggleOne = (id: string, v: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (v) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -186,7 +246,7 @@ const ManagerNotifications = () => {
             {unreadCount > 0 && <Badge variant="destructive" className="ml-1">{unreadCount}</Badge>}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Réservations assignées à votre sous-agence pour embarquement.
+            Réservations, alertes et messages de la direction.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -200,7 +260,7 @@ const ManagerNotifications = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "unread" | "all" | "archived")}>
+        <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelected(new Set()); }}>
           <TabsList>
             <TabsTrigger value="all">Actives</TabsTrigger>
             <TabsTrigger value="unread">Non lues ({unreadCount})</TabsTrigger>
@@ -219,8 +279,38 @@ const ManagerNotifications = () => {
         </Select>
       </div>
 
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-md border bg-secondary/40 px-3 py-2 sticky top-0 z-10">
+          <p className="text-sm font-medium">{selected.size} sélectionnée{selected.size > 1 ? "s" : ""}</p>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Effacer</Button>
+            {tab === "archived" ? (
+              <Button size="sm" onClick={() => restoreIds(Array.from(selected))}>
+                <ArchiveRestore className="h-3.5 w-3.5 mr-1" /> Restaurer
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => archiveIds(Array.from(selected))}>
+                <Archive className="h-3.5 w-3.5 mr-1" /> Archiver
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       <Card>
-        <CardHeader><CardTitle className="text-base">Historique</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardTitle className="text-base">Historique</CardTitle>
+          {sorted.length > 0 && (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <Checkbox
+                checked={allVisibleSelected}
+                onCheckedChange={(v) => toggleAllVisible(!!v)}
+                aria-label="Tout sélectionner"
+              />
+              Tout sélectionner
+            </label>
+          )}
+        </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-8">
@@ -235,52 +325,61 @@ const ManagerNotifications = () => {
               <ul className="divide-y divide-border">
                 {sorted.map((n) => {
                   const link = detailLink(n);
+                  const isBroadcast = n.kind?.startsWith("broadcast");
                   return (
                     <li
                       key={n.id}
-                      className={`py-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 ${
+                      className={`py-3 flex items-start gap-3 ${
                         !n.read_at ? "bg-primary/5 -mx-2 sm:-mx-4 px-2 sm:px-4 rounded" : ""
-                      }`}
+                      } ${isBroadcast ? "border-l-2 border-primary pl-2" : ""}`}
                     >
-                      <button
-                        type="button"
-                        onClick={() => { if (!n.read_at) markOne(n.id); }}
-                        className="min-w-0 flex-1 text-left"
-                      >
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium text-sm">{n.title}</p>
-                          {n.kind && <Badge variant="outline" className="text-[10px] px-1 py-0">{n.kind}</Badge>}
-                          {!n.read_at && <span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />}
+                      <Checkbox
+                        className="mt-1"
+                        checked={selected.has(n.id)}
+                        onCheckedChange={(v) => toggleOne(n.id, !!v)}
+                        aria-label="Sélectionner"
+                      />
+                      <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { if (!n.read_at) markOne(n.id); }}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-sm">{n.title}</p>
+                            {n.kind && <Badge variant="outline" className="text-[10px] px-1 py-0">{n.kind}</Badge>}
+                            {!n.read_at && <span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />}
+                          </div>
+                          {n.message && (
+                            <p className="text-xs text-muted-foreground mt-0.5 break-words">{n.message}</p>
+                          )}
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {new Date(n.created_at).toLocaleString("fr-FR")}
+                          </p>
+                        </button>
+                        <div className="flex gap-2 shrink-0 flex-wrap">
+                          {link && (
+                            <Button asChild size="sm" variant="outline">
+                              <Link to={link}>
+                                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Voir le détail
+                              </Link>
+                            </Button>
+                          )}
+                          {!n.read_at && !n.archived_at && (
+                            <Button size="sm" variant="ghost" onClick={() => markOne(n.id)} aria-label="Marquer comme lue">
+                              <CheckCheck className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {n.archived_at ? (
+                            <Button size="sm" variant="ghost" onClick={() => setRestoreTarget(n)} aria-label="Restaurer">
+                              <ArchiveRestore className="h-3.5 w-3.5 mr-1" /> Restaurer
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="ghost" onClick={() => archiveIds([n.id])} aria-label="Archiver">
+                              <Archive className="h-3.5 w-3.5 mr-1" /> Archiver
+                            </Button>
+                          )}
                         </div>
-                        {n.message && (
-                          <p className="text-xs text-muted-foreground mt-0.5 break-words">{n.message}</p>
-                        )}
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          {new Date(n.created_at).toLocaleString("fr-FR")}
-                        </p>
-                      </button>
-                      <div className="flex gap-2 shrink-0 flex-wrap">
-                        {link && (
-                          <Button asChild size="sm" variant="outline">
-                            <Link to={link}>
-                              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Voir le détail
-                            </Link>
-                          </Button>
-                        )}
-                        {!n.read_at && !n.archived_at && (
-                          <Button size="sm" variant="ghost" onClick={() => markOne(n.id)} aria-label="Marquer comme lue">
-                            <CheckCheck className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {n.archived_at ? (
-                          <Button size="sm" variant="ghost" onClick={() => restoreOne(n.id)} aria-label="Restaurer">
-                            <ArchiveRestore className="h-3.5 w-3.5 mr-1" /> Restaurer
-                          </Button>
-                        ) : (
-                          <Button size="sm" variant="ghost" onClick={() => archiveOne(n.id)} aria-label="Archiver">
-                            <Archive className="h-3.5 w-3.5 mr-1" /> Archiver
-                          </Button>
-                        )}
                       </div>
                     </li>
                   );
@@ -300,6 +399,29 @@ const ManagerNotifications = () => {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!restoreTarget} onOpenChange={(v) => !v && setRestoreTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restaurer cette notification&nbsp;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Elle sera retirée des « Archivées » et remise dans votre liste active «&nbsp;{restoreTarget?.title}&nbsp;».
+              Vous pourrez ré-archiver à tout moment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (restoreTarget) restoreIds([restoreTarget.id]);
+                setRestoreTarget(null);
+              }}
+            >
+              Oui, restaurer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
