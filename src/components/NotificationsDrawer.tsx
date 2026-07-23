@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, ReactNode } from "react";
+import { useCallback, useEffect, useState, ReactNode, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -9,11 +9,14 @@ import {
   SheetDescription,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, CheckCheck, Ticket, ArrowUpDown } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Bell, CheckCheck, ArrowUpDown, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 type Notif = {
@@ -32,25 +35,55 @@ interface Props {
   bookingsPath?: string;
 }
 
+const PAGE_SIZE = 15;
+
+const KIND_OPTIONS: { value: string; label: string; match: (k: string) => boolean }[] = [
+  { value: "all", label: "Tous les types", match: () => true },
+  { value: "booking", label: "Réservations", match: (k) => k.startsWith("booking") },
+  { value: "payment", label: "Paiements", match: (k) => k.includes("payment") },
+  { value: "cancellation", label: "Annulations", match: (k) => k.includes("cancel") || k.includes("refus") },
+  { value: "reminder", label: "Rappels", match: (k) => k.includes("remind") || k.includes("reminder") },
+  { value: "system", label: "Système", match: (k) => k.includes("system") || k.includes("info") },
+];
+
 export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manager/bookings" }: Props) => {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notif[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [tab, setTab] = useState<"unread" | "all">("unread");
   const [sortDesc, setSortDesc] = useState(true);
+  const [kindFilter, setKindFilter] = useState<string>("all");
 
-  const load = useCallback(async () => {
+  const loadPage = useCallback(async (from: number, replace: boolean) => {
     if (!branchId) return;
-    setLoading(true);
-    const { data } = await supabase
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
       .from("branch_notifications" as any)
       .select("id, title, message, kind, read_at, created_at, booking_id")
       .eq("branch_id", branchId)
       .order("created_at", { ascending: false })
-      .limit(100);
-    setItems(((data as any) || []) as Notif[]);
-    setLoading(false);
+      .range(from, to);
+    if (error) return;
+    const rows = ((data as any) || []) as Notif[];
+    setHasMore(rows.length === PAGE_SIZE);
+    setItems((prev) => (replace ? rows : [...prev, ...rows]));
   }, [branchId]);
+
+  const load = useCallback(async () => {
+    if (!branchId) return;
+    setLoading(true);
+    await loadPage(0, true);
+    setLoading(false);
+  }, [branchId, loadPage]);
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    await loadPage(items.length, false);
+    setLoadingMore(false);
+  };
 
   useEffect(() => { if (open) load(); }, [open, load]);
 
@@ -68,41 +101,45 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
   }, [branchId, open, load]);
 
   const markOne = async (id: string) => {
-    // Optimistic
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)));
     const { error } = await supabase
       .from("branch_notifications" as any)
       .update({ read_at: new Date().toISOString() })
       .eq("id", id);
-    if (error) {
-      toast.error("Impossible de marquer comme lue");
-      load();
-    }
+    if (error) { toast.error("Impossible de marquer comme lue"); load(); }
   };
 
   const markAll = async () => {
     const unread = items.filter((n) => !n.read_at).map((n) => n.id);
-    if (unread.length === 0) return;
-    setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })));
+    if (unread.length === 0 || !branchId) return;
+    const now = new Date().toISOString();
+    setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: now })));
+    // Cover all unread in DB, not just what's loaded
     const { error } = await supabase
       .from("branch_notifications" as any)
-      .update({ read_at: new Date().toISOString() })
-      .in("id", unread);
-    if (error) {
-      toast.error("Erreur lors de la mise à jour");
-      load();
-    } else {
-      toast.success("Toutes marquées comme lues");
-    }
+      .update({ read_at: now })
+      .eq("branch_id", branchId)
+      .is("read_at", null);
+    if (error) { toast.error("Erreur lors de la mise à jour"); load(); }
+    else toast.success("Toutes marquées comme lues");
   };
 
+  const kindMatcher = useMemo(
+    () => KIND_OPTIONS.find((k) => k.value === kindFilter)?.match ?? (() => true),
+    [kindFilter],
+  );
+
   const unreadCount = items.filter((n) => !n.read_at).length;
-  const filtered = tab === "unread" ? items.filter((n) => !n.read_at) : items;
+  const filtered = items.filter((n) =>
+    (tab === "unread" ? !n.read_at : true) && kindMatcher(n.kind || "")
+  );
   const sorted = [...filtered].sort((a, b) => {
     const da = new Date(a.created_at).getTime();
     const db = new Date(b.created_at).getTime();
     return sortDesc ? db - da : da - db;
   });
+
+  const detailLink = (n: Notif) => (n.booking_id ? bookingsPath : null);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -119,31 +156,40 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
           </SheetDescription>
         </SheetHeader>
 
-        <div className="px-5 py-3 flex items-center justify-between gap-2 border-b">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as "unread" | "all")}>
-            <TabsList className="h-8">
-              <TabsTrigger value="unread" className="text-xs h-6">
-                Non lues {unreadCount > 0 && <span className="ml-1 opacity-70">({unreadCount})</span>}
-              </TabsTrigger>
-              <TabsTrigger value="all" className="text-xs h-6">Toutes</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8"
-              aria-label={sortDesc ? "Plus récentes d'abord" : "Plus anciennes d'abord"}
-              onClick={() => setSortDesc((s) => !s)}
-            >
+        <div className="px-5 py-3 flex flex-col gap-2 border-b">
+          <div className="flex items-center justify-between gap-2">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as "unread" | "all")}>
+              <TabsList className="h-8">
+                <TabsTrigger value="unread" className="text-xs h-6">
+                  Non lues {unreadCount > 0 && <span className="ml-1 opacity-70">({unreadCount})</span>}
+                </TabsTrigger>
+                <TabsTrigger value="all" className="text-xs h-6">Toutes</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button variant="ghost" size="sm" className="h-8" onClick={() => setSortDesc((s) => !s)}>
               <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
               {sortDesc ? "Récent" : "Ancien"}
             </Button>
-            {unreadCount > 0 && (
-              <Button variant="outline" size="sm" className="h-8" onClick={markAll}>
-                <CheckCheck className="h-3.5 w-3.5 mr-1" /> Tout lire
-              </Button>
-            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={kindFilter} onValueChange={setKindFilter}>
+              <SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {KIND_OPTIONS.map((k) => (
+                  <SelectItem key={k.value} value={k.value} className="text-xs">{k.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={markAll}
+              disabled={unreadCount === 0}
+              aria-label="Marquer tout comme lu"
+            >
+              <CheckCheck className="h-3.5 w-3.5 mr-1" /> Tout lire
+            </Button>
           </div>
         </div>
 
@@ -159,40 +205,48 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
               </p>
             ) : (
               <ul className="divide-y divide-border">
-                {sorted.map((n) => (
-                  <li
-                    key={n.id}
-                    className={`py-3 ${!n.read_at ? "bg-primary/5 -mx-2 px-2 rounded" : ""}`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => { if (!n.read_at) markOne(n.id); }}
-                      className="w-full text-left"
-                      aria-label={n.read_at ? n.title : `${n.title} — marquer comme lue`}
-                    >
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {!n.read_at && <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-hidden="true" />}
-                        <p className="font-medium text-sm">{n.title}</p>
-                      </div>
-                      {n.message && (
-                        <p className="text-xs text-muted-foreground mt-0.5 break-words">{n.message}</p>
+                {sorted.map((n) => {
+                  const link = detailLink(n);
+                  return (
+                    <li key={n.id} className={`py-3 ${!n.read_at ? "bg-primary/5 -mx-2 px-2 rounded" : ""}`}>
+                      <button
+                        type="button"
+                        onClick={() => { if (!n.read_at) markOne(n.id); }}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {!n.read_at && <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-hidden="true" />}
+                          <p className="font-medium text-sm">{n.title}</p>
+                          {n.kind && <Badge variant="outline" className="text-[10px] px-1 py-0">{n.kind}</Badge>}
+                        </div>
+                        {n.message && (
+                          <p className="text-xs text-muted-foreground mt-0.5 break-words">{n.message}</p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {new Date(n.created_at).toLocaleString("fr-FR")}
+                        </p>
+                      </button>
+                      {link && (
+                        <div className="mt-2">
+                          <Button asChild size="sm" variant="outline" className="h-7 text-xs" onClick={() => setOpen(false)}>
+                            <Link to={link}>
+                              <ExternalLink className="h-3 w-3 mr-1" /> Voir le détail
+                            </Link>
+                          </Button>
+                        </div>
                       )}
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        {new Date(n.created_at).toLocaleString("fr-FR")}
-                      </p>
-                    </button>
-                    {n.booking_id && (
-                      <div className="mt-2">
-                        <Button asChild size="sm" variant="outline" className="h-7 text-xs" onClick={() => setOpen(false)}>
-                          <Link to={bookingsPath}>
-                            <Ticket className="h-3 w-3 mr-1" /> Voir la réservation
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
+            )}
+
+            {hasMore && !loading && (
+              <div className="py-3 flex justify-center">
+                <Button variant="ghost" size="sm" onClick={loadMore} disabled={loadingMore}>
+                  {loadingMore ? "Chargement…" : "Charger plus"}
+                </Button>
+              </div>
             )}
           </div>
         </ScrollArea>
