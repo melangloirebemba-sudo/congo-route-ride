@@ -156,6 +156,15 @@ const Auth = () => {
           <ArrowLeft className="h-4 w-4" /> Retour
         </button>
 
+        {claimQr && (
+          <div className="mb-4 rounded-xl border-2 border-primary/40 bg-primary/5 p-4 text-sm space-y-1">
+            <p className="font-display font-semibold">Récupérez votre billet invité</p>
+            <p className="text-xs text-muted-foreground">
+              Connectez-vous avec votre compte pour rattacher automatiquement le billet <span className="font-mono">{claimQr}</span>.
+              Le numéro de téléphone doit correspondre à celui utilisé lors de la réservation.
+            </p>
+          </div>
+        )}
         <div className="glass rounded-2xl p-6 space-y-6">
           <div className="text-center">
             <h1 className="font-display text-2xl font-bold">
