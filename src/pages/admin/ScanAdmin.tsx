@@ -36,6 +36,8 @@ type BookingResult = {
   payment_method: string | null;
   total_amount: number;
   booking_date: string;
+  boarding_status?: string | null;
+  boarding_notes?: string | null;
   trip: {
     id: string;
     departure: string;
@@ -50,16 +52,28 @@ type BookingResult = {
   } | null;
 };
 
-type Verdict = "valid" | "used" | "unpaid" | "cancelled" | "expired" | "notfound";
+type Verdict = "valid" | "used" | "unpaid" | "cancelled" | "expired" | "notfound" | "refused";
 
 const verdictMeta: Record<Verdict, { label: string; tone: string; icon: any }> = {
   valid: { label: "Billet valide", tone: "bg-green-500/15 text-green-600 border-green-500/30", icon: CheckCircle2 },
-  used: { label: "Déjà utilisé", tone: "bg-amber-500/15 text-amber-600 border-amber-500/30", icon: AlertTriangle },
+  used: { label: "Déjà embarqué", tone: "bg-amber-500/15 text-amber-600 border-amber-500/30", icon: AlertTriangle },
+  refused: { label: "Refusé à l'embarquement", tone: "bg-red-500/15 text-red-600 border-red-500/30", icon: XCircle },
   unpaid: { label: "Non payé", tone: "bg-red-500/15 text-red-600 border-red-500/30", icon: XCircle },
   cancelled: { label: "Annulé", tone: "bg-red-500/15 text-red-600 border-red-500/30", icon: XCircle },
   expired: { label: "Voyage passé", tone: "bg-amber-500/15 text-amber-600 border-amber-500/30", icon: AlertTriangle },
   notfound: { label: "Billet introuvable", tone: "bg-red-500/15 text-red-600 border-red-500/30", icon: XCircle },
 };
+
+const boardingBadgeTone = (s?: string | null) =>
+  s === "boarded"
+    ? "bg-green-500/15 text-green-700 border-green-500/30"
+    : s === "refused"
+    ? "bg-red-500/15 text-red-700 border-red-500/30"
+    : "bg-amber-500/15 text-amber-700 border-amber-500/30";
+
+const boardingLabel = (s?: string | null) =>
+  s === "boarded" ? "Embarqué" : s === "refused" ? "Refusé" : "Non scanné";
+
 
 const ScanAdmin = () => {
   const { isAdmin, agencyId } = useAuth();
