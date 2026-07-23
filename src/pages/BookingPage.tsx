@@ -176,8 +176,29 @@ const BookingPage = () => {
 
     setBookingRef(qrCode);
     setPendingRef(isReservation);
+    setIsAnonymous(anonUsed || !!session?.session?.user?.is_anonymous);
     setStep("confirmed");
     setSubmitting(false);
+  };
+
+  const handleCreateAccount = async () => {
+    if (!signupEmail || signupPassword.length < 6) {
+      toast.error("Email et mot de passe (6+ caractères) requis");
+      return;
+    }
+    setSignupLoading(true);
+    const { error } = await supabase.auth.updateUser({
+      email: signupEmail,
+      password: signupPassword,
+      data: { full_name: name, phone },
+    });
+    setSignupLoading(false);
+    if (error) {
+      toast.error(error.message || "Impossible de créer le compte");
+      return;
+    }
+    setSignupDone(true);
+    toast.success("Compte créé ! Vos réservations sont conservées.");
   };
 
   if (step === "confirmed") {
