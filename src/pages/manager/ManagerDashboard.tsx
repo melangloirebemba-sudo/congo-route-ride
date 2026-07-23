@@ -76,15 +76,17 @@ const ManagerDashboard = () => {
           {agencyName}{branchName ? ` · ${branchName}` : " · Aucune branche assignée"}
         </p>
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map(({ label, value, icon: Icon, color }) => (
-          <Card key={label}>
-            <CardContent className="p-4">
-              <Icon className={`h-5 w-5 mb-2 ${color}`} />
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="font-display text-xl font-bold">{value}</p>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {cards.map(({ label, value, icon: Icon, color, to }) => (
+          <Link to={to} key={label}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardContent className="p-4">
+                <Icon className={`h-5 w-5 mb-2 ${color}`} />
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="font-display text-xl font-bold">{value}</p>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>
