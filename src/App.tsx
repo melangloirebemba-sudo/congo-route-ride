@@ -136,6 +136,7 @@ const App = () => (
               <Route path="report" element={<ManagerReport />} />
               <Route path="scan" element={<ScanAdmin />} />
               <Route path="boarding" element={<ManagerBoarding />} />
+              <Route path="online-sales" element={<ManagerOnlineSales />} />
 
             </Route>
 
