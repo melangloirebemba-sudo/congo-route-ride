@@ -128,7 +128,7 @@ const ManagerBoarding = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Actualiser
           </Button>
           <Button asChild size="sm">
-            <Link to="/manager/scan"><QrCode className="h-4 w-4 mr-2" /> Scanner</Link>
+            <Link to={scanHref}><QrCode className="h-4 w-4 mr-2" /> Scanner</Link>
           </Button>
         </div>
       </div>
