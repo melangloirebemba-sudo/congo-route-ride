@@ -126,6 +126,17 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
     else toast.success("Toutes marquées comme lues");
   };
 
+  const archiveOne = async (id: string) => {
+    const prev = items;
+    setItems((list) => list.filter((n) => n.id !== id));
+    const { error } = await supabase
+      .from("branch_notifications" as any)
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) { toast.error("Impossible d'archiver"); setItems(prev); }
+    else toast.success("Notification archivée");
+  };
+
   const kindMatcher = useMemo(
     () => KIND_OPTIONS.find((k) => k.value === kindFilter)?.match ?? (() => true),
     [kindFilter],
