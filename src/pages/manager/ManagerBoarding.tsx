@@ -146,9 +146,20 @@ const ManagerBoarding = () => {
           <h1 className="font-display text-2xl font-bold">Tableau d'embarquement</h1>
           <p className="text-sm text-muted-foreground">Suivi des billets à embarquer dans votre sous-agence</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Actualiser
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setBroadcastTrip(tripId !== "all" ? tripId : (trips[0]?.id ?? ""));
+              setBroadcastOpen(true);
+            }}
+            disabled={trips.length === 0}
+          >
+            <Megaphone className="h-4 w-4 mr-2" /> Diffuser embarquement
           </Button>
           <Button asChild size="sm">
             <Link to={scanHref}><QrCode className="h-4 w-4 mr-2" /> Scanner</Link>
