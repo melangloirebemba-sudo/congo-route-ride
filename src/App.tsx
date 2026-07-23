@@ -38,6 +38,9 @@ import AgencySubAgencies from "./pages/agency/AgencySubAgencies";
 import AgencyManagers from "./pages/agency/AgencyManagers";
 import AgencySettings from "./pages/agency/AgencySettings";
 import AgencyAudit from "./pages/agency/AgencyAudit";
+import AgencyBroadcast from "./pages/agency/AgencyBroadcast";
+import AgencyReports from "./pages/agency/AgencyReports";
+import ManagerReport from "./pages/manager/ManagerReport";
 
 import ManagerLayout from "./pages/manager/ManagerLayout";
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
@@ -113,6 +116,8 @@ const App = () => (
               <Route path="trips" element={<AgencyTrips />} />
               <Route path="bookings" element={<AgencyBookings />} />
               <Route path="counter-sale" element={<AgencyCounterSale />} />
+              <Route path="broadcast" element={<AgencyBroadcast />} />
+              <Route path="reports" element={<AgencyReports />} />
               <Route path="audit" element={<AgencyAudit />} />
               <Route path="settings" element={<AgencySettings />} />
 
@@ -125,6 +130,7 @@ const App = () => (
               <Route path="bookings" element={<ManagerBookings />} />
               <Route path="sale" element={<ManagerSale />} />
               <Route path="notifications" element={<ManagerNotifications />} />
+              <Route path="report" element={<ManagerReport />} />
               <Route path="scan" element={<ScanAdmin />} />
               <Route path="boarding" element={<ManagerBoarding />} />
 
