@@ -1,19 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, MessageSquare, Bell, BellOff, Smartphone } from "lucide-react";
+import { ArrowLeft, MessageSquare, Bell, BellOff, Smartphone, MonitorSmartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWebPushToggle } from "@/hooks/useWebPush";
 
 type Channel = "sms" | "whatsapp";
 
 const Preferences = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const push = useWebPushToggle();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [channel, setChannel] = useState<Channel>("sms");
@@ -208,6 +210,56 @@ const Preferences = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* Web Push (browser notifications) */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="glass rounded-2xl p-5 space-y-4"
+        >
+          <div>
+            <h2 className="font-display font-semibold">Notifications push (navigateur)</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Recevez une notification instantanée dans ce navigateur pour les paiements, annulations et embarquements.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <MonitorSmartphone className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="web-push" className="font-medium text-sm">
+                Activer les notifications push
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {!push.supported
+                  ? "Non pris en charge par ce navigateur."
+                  : push.permission === "denied"
+                  ? "Autorisation refusée — activez-la dans les réglages du navigateur."
+                  : push.enabled
+                  ? "Activées sur cet appareil."
+                  : "Cliquez pour autoriser les notifications."}
+              </p>
+            </div>
+            <Switch
+              id="web-push"
+              checked={push.enabled}
+              disabled={!push.supported || push.permission === "denied"}
+              onCheckedChange={async (v) => {
+                if (v) {
+                  const ok = await push.enable();
+                  if (!ok) toast.error("Autorisation refusée");
+                } else {
+                  push.disable();
+                  toast("Notifications push désactivées");
+                }
+              }}
+            />
+          </div>
+        </motion.div>
+
+
 
         <Button
           onClick={handleSave}

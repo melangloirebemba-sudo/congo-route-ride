@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, Loader2, MapPin, Calendar, CreditCard, Download, Printer,
   QrCode as QrIcon, Clock, CheckCircle2, XCircle, Ticket, User, Building2,
-  AlertTriangle, Share2, Ban, RefreshCw, Wifi, Mail, MessageSquare, Copy, Link2,
+  AlertTriangle, Share2, Ban, RefreshCw, Wifi, Mail, MessageSquare, Copy, Link2, CalendarPlus,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import QRCode from "qrcode";
@@ -17,6 +17,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { googleCalendarUrl, outlookCalendarUrl, yahooCalendarUrl, downloadIcs, type CalendarEvent } from "@/lib/calendar";
 
 interface BookingRow {
   id: string;
@@ -394,6 +398,29 @@ const BookingDetail = () => {
 
   const refund = useMemo(() => refundPolicy(booking?.trips?.date, booking?.trips?.departure_time, booking?.total_amount ?? 0), [booking]);
 
+  /** Calendar event derived from the booking — used by the "Ajouter au calendrier" menu. */
+  const calEvent: CalendarEvent | null = useMemo(() => {
+    if (!booking?.trips?.date || !booking?.trips?.departure_time) return null;
+    const locParts = [
+      branch?.name,
+      branch?.city,
+      !branch ? booking.trips.departure : null,
+    ].filter(Boolean);
+    return {
+      title: `TransCongo · ${booking.trips.departure} → ${booking.trips.destination}`,
+      description: [
+        `Passager : ${booking.passenger_name}`,
+        `Siège : #${booking.seat_number}`,
+        `Code : ${booking.qr_code}`,
+        booking.trips.agencies?.name ? `Agence : ${booking.trips.agencies.name}` : "",
+      ].filter(Boolean).join("\n"),
+      location: locParts.join(", "),
+      date: booking.trips.date,
+      time: booking.trips.departure_time,
+      durationMinutes: 240,
+    };
+  }, [booking, branch]);
+
   const handleCancel = async () => {
     if (!booking) return;
     setCancelling(true);
@@ -574,6 +601,30 @@ const BookingDetail = () => {
             <Button size="sm" variant="outline" onClick={shareOnWhatsApp} className="w-full border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10">
               <MessageSquare className="h-4 w-4 mr-2" /> Envoyer par WhatsApp
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="w-full">
+                  <CalendarPlus className="h-4 w-4 mr-2" /> Ajouter au calendrier
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Choisir un calendrier</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => window.open(googleCalendarUrl(calEvent!), "_blank")}>
+                  Google Agenda
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open(outlookCalendarUrl(calEvent!), "_blank")}>
+                  Outlook / Microsoft 365
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open(yahooCalendarUrl(calEvent!), "_blank")}>
+                  Yahoo Calendrier
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => downloadIcs(calEvent!, `voyage-${booking.qr_code}.ics`)}>
+                  Apple Calendrier (.ics)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ) : !isCancelled ? (
           <div className="bg-card rounded-2xl p-4 border border-border/50 space-y-3">

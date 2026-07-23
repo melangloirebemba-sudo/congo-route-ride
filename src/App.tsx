@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { useWebPushListener } from "@/hooks/useWebPush";
 import BottomNav from "@/components/BottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ClientOnlyRoute from "@/components/ClientOnlyRoute";
@@ -59,10 +60,13 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const PushBridge = () => { useWebPushListener(); return null; };
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
+        <PushBridge />
         <Toaster />
         <Sonner />
         <BrowserRouter>
