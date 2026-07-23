@@ -33,10 +33,11 @@ const daysAgoISO = (n: number) => {
 };
 
 const AgencyDashboard = () => {
-  const { agencyId } = useAuth();
+  const { agencyId, isManager } = useAuth();
   const [stats, setStats] = useState({ trips: 0, bookings: 0, revenue: 0, todayBookings: 0, branches: 0 });
   const [allBookings, setAllBookings] = useState<SaleRow[]>([]);
   const [recentBookings, setRecentBookings] = useState<SaleRow[]>([]);
+  const [branches, setBranches] = useState<BranchInfo[]>([]);
   const [agencyName, setAgencyName] = useState("");
   const [from, setFrom] = useState(daysAgoISO(30));
   const [to, setTo] = useState(todayISO());
@@ -50,15 +51,16 @@ const AgencyDashboard = () => {
         supabase.from("trips").select("id").eq("agency_id", agencyId),
         supabase
           .from("bookings")
-          .select("total_amount, booking_date, passenger_name, status, trips!inner(agency_id, departure, destination)")
+          .select("total_amount, booking_date, passenger_name, status, trips!inner(agency_id, departure, destination, branch_id)")
           .eq("trips.agency_id", agencyId)
           .order("booking_date", { ascending: false }),
-        supabase.from("agency_branches" as any).select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
+        supabase.from("agency_branches" as any).select("id, name, city").eq("agency_id", agencyId),
       ]);
 
       setAgencyName(agencyRes.data?.name || "");
       const trips = tripsRes.data || [];
       const bookings = (bookingsRes.data || []) as unknown as SaleRow[];
+      const branchList = ((branchesRes.data as any) || []) as BranchInfo[];
       const today = todayISO();
 
       setStats({
@@ -66,15 +68,17 @@ const AgencyDashboard = () => {
         bookings: bookings.length,
         revenue: bookings.filter((b) => b.status !== "cancelled").reduce((s, b) => s + Number(b.total_amount || 0), 0),
         todayBookings: bookings.filter((b) => b.booking_date === today).length,
-        branches: (branchesRes as any).count || 0,
+        branches: branchList.length,
       });
 
       setAllBookings(bookings);
       setRecentBookings(bookings.slice(0, 5));
+      setBranches(branchList);
     };
 
     fetchData();
   }, [agencyId]);
+
 
   const cards = [
     { label: "Sous-agences", value: stats.branches, icon: Building2, color: "text-primary", to: "/agency/sub-agencies" },
