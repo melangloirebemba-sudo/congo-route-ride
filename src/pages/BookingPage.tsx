@@ -119,8 +119,21 @@ const BookingPage = () => {
     setSubmitting(true);
 
     const qrCode = await generateUniqueTicketCode();
-    const { data: session } = await supabase.auth.getSession();
-    const userId = session?.session?.user?.id || null;
+    let { data: session } = await supabase.auth.getSession();
+    let userId = session?.session?.user?.id || null;
+    let anonUsed = false;
+
+    // Guest checkout: sign in anonymously to satisfy RLS and preserve history
+    if (!userId) {
+      const { data: anon, error: anonErr } = await supabase.auth.signInAnonymously();
+      if (anonErr || !anon?.user?.id) {
+        toast.error("Impossible de créer une session invité. Réessayez.");
+        setSubmitting(false);
+        return;
+      }
+      userId = anon.user.id;
+      anonUsed = true;
+    }
 
     const isReservation = payMode === "later";
     // deadline: 2h before departure OR now+30min if <2h, cap 24h before if trip far
