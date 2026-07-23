@@ -54,6 +54,11 @@ const BookingPage = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [allowedBranchIds, setAllowedBranchIds] = useState<string[]>([]);
   const [boardingBranchId, setBoardingBranchId] = useState<string>("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [signupDone, setSignupDone] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
