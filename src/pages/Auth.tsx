@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Phone, Lock, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Mail, Phone, Lock, ArrowLeft, Eye, EyeOff, User, Building2, Briefcase, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 type AuthMode = "login" | "signup" | "otp-request" | "otp-verify";
+type RoleTab = "client" | "agency" | "manager" | "admin";
+
 
 const Auth = () => {
   const navigate = useNavigate();
