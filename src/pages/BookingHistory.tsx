@@ -77,7 +77,8 @@ const BookingHistory = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
-              className="bg-card rounded-2xl p-4 border border-border/50"
+              onClick={() => navigate(`/bookings/${b.id}`)}
+              className="bg-card rounded-2xl p-4 border border-border/50 cursor-pointer hover:border-primary/40 transition-colors"
             >
               <div className="flex items-center justify-between mb-3">
                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[b.status] || ""}`}>
