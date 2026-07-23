@@ -43,6 +43,9 @@ import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import ManagerTrips from "./pages/manager/ManagerTrips";
 import ManagerBookings from "./pages/manager/ManagerBookings";
 import ManagerSale from "./pages/manager/ManagerSale";
+import ManagerNotifications from "./pages/manager/ManagerNotifications";
+import AgencyCounterSale from "./pages/agency/AgencyCounterSale";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -105,6 +108,7 @@ const App = () => (
               <Route path="managers" element={<AgencyManagers />} />
               <Route path="trips" element={<AgencyTrips />} />
               <Route path="bookings" element={<AgencyBookings />} />
+              <Route path="counter-sale" element={<AgencyCounterSale />} />
               <Route path="audit" element={<AgencyAudit />} />
               <Route path="settings" element={<AgencySettings />} />
 
@@ -116,8 +120,10 @@ const App = () => (
               <Route path="trips" element={<ManagerTrips />} />
               <Route path="bookings" element={<ManagerBookings />} />
               <Route path="sale" element={<ManagerSale />} />
+              <Route path="notifications" element={<ManagerNotifications />} />
               <Route path="scan" element={<ScanAdmin />} />
             </Route>
+
 
             <Route path="*" element={<NotFound />} />
           </Routes>

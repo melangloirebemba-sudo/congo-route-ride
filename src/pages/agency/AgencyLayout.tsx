@@ -1,30 +1,36 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, Navigate } from "react-router-dom";
-import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText, Menu } from "lucide-react";
+import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText, Menu, PlusCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 
-const navItems = [
+const ownerNavItems = [
   { to: "/agency", icon: LayoutDashboard, label: "Tableau de bord", end: true },
   { to: "/agency/branches", icon: Building2, label: "Mes agences" },
   { to: "/agency/managers", icon: UserCog, label: "Gestionnaires" },
   { to: "/agency/trips", icon: Bus, label: "Trajets" },
   { to: "/agency/bookings", icon: Ticket, label: "Réservations" },
+  { to: "/agency/counter-sale", icon: PlusCircle, label: "Nouvelle réservation" },
   { to: "/admin/scan", icon: QrCode, label: "Scan billets" },
   { to: "/agency/audit", icon: ScrollText, label: "Journal d'audit" },
   { to: "/agency/settings", icon: Settings, label: "Paramètres" },
 ];
 
+const managerNavItems = ownerNavItems.filter((i) => i.to !== "/agency/counter-sale");
+
+
 const SidebarContent = ({
   agencyName,
   roleLabel,
+  items,
   onNavigate,
   onSignOut,
 }: {
   agencyName: string;
   roleLabel: string;
+  items: typeof ownerNavItems;
   onNavigate?: () => void;
   onSignOut: () => void;
 }) => (
@@ -36,7 +42,8 @@ const SidebarContent = ({
       <p className="text-xs text-muted-foreground truncate">{roleLabel}</p>
     </div>
     <nav className="p-3 space-y-1 overflow-y-auto flex-1">
-      {navItems.map(({ to, icon: Icon, label, end }) => (
+      {items.map(({ to, icon: Icon, label, end }) => (
+
         <NavLink
           key={to}
           to={to}
@@ -108,11 +115,12 @@ const AgencyLayout = () => {
   const roleLabel = isManager
     ? `Gestionnaire${branchName ? ` · ${branchName}` : ""}`
     : "Propriétaire d'agence";
+  const items = isManager ? managerNavItems : ownerNavItems;
 
   return (
     <div className="min-h-screen flex bg-background">
       <aside className="w-60 bg-card border-r border-border hidden md:flex flex-col sticky top-0 h-screen shrink-0">
-        <SidebarContent agencyName={agencyName} roleLabel={roleLabel} onSignOut={signOut} />
+        <SidebarContent agencyName={agencyName} roleLabel={roleLabel} items={items} onSignOut={signOut} />
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -127,10 +135,12 @@ const AgencyLayout = () => {
               <SidebarContent
                 agencyName={agencyName}
                 roleLabel={roleLabel}
+                items={items}
                 onNavigate={() => setMobileOpen(false)}
                 onSignOut={signOut}
               />
             </SheetContent>
+
           </Sheet>
           <div className="text-right min-w-0">
             <p className="font-display text-sm font-bold text-gradient truncate">{agencyName || "Agence"}</p>
