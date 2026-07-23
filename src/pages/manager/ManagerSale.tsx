@@ -565,9 +565,17 @@ const ManagerSale = () => {
           <h2 className="font-display text-xl font-bold">Ventes récentes</h2>
           <p className="text-sm text-muted-foreground">Suivi des billets vendus par votre sous-agence</p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadSales} disabled={salesLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${salesLoading ? "animate-spin" : ""}`} /> Actualiser
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportCSV} disabled={filteredSales.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportPDF} disabled={filteredSales.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={loadSales} disabled={salesLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${salesLoading ? "animate-spin" : ""}`} /> Actualiser
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
