@@ -220,7 +220,7 @@ const AgencySubAgencies = () => {
               );
             })}
           </div>
-          <ListPagination pg={pg} />
+          <ListPagination {...pg} />
         </>
       )}
     </div>
