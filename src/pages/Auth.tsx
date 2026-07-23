@@ -145,9 +145,33 @@ const Auth = () => {
             <p className="text-muted-foreground text-sm mt-1">
               {mode === "otp-verify"
                 ? `Code envoyé au ${phone}`
-                : "Accédez à votre compte TransCongo"}
+                : role === "client"
+                ? "Accédez à votre compte TransCongo"
+                : role === "agency"
+                ? "Espace propriétaire d'agence"
+                : role === "manager"
+                ? "Espace gestionnaire de sous-agence"
+                : "Espace Super Admin"}
             </p>
           </div>
+
+          <Tabs value={role} onValueChange={(v) => { setRole(v as RoleTab); setMode("login"); }}>
+            <TabsList className="grid grid-cols-4 w-full h-auto">
+              <TabsTrigger value="client" className="flex-col gap-1 py-2 text-[11px]"><User className="h-3.5 w-3.5" />Client</TabsTrigger>
+              <TabsTrigger value="agency" className="flex-col gap-1 py-2 text-[11px]"><Building2 className="h-3.5 w-3.5" />Agence</TabsTrigger>
+              <TabsTrigger value="manager" className="flex-col gap-1 py-2 text-[11px]"><Briefcase className="h-3.5 w-3.5" />Guichet</TabsTrigger>
+              <TabsTrigger value="admin" className="flex-col gap-1 py-2 text-[11px]"><ShieldCheck className="h-3.5 w-3.5" />Admin</TabsTrigger>
+            </TabsList>
+            <TabsContent value={role} className="mt-0" />
+          </Tabs>
+
+          {role !== "client" && (
+            <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+              {role === "agency" && "Les comptes agence sont créés par l'administrateur. Utilisez les identifiants qui vous ont été communiqués."}
+              {role === "manager" && "Les comptes gestionnaire sont créés par votre agence principale. Contactez-la si vous avez perdu votre accès."}
+              {role === "admin" && "Accès réservé aux administrateurs de la plateforme."}
+            </div>
+          )}
 
           {(mode === "login" || mode === "signup") && (
             <div className="space-y-4">
@@ -186,40 +210,64 @@ const Auth = () => {
                 {loading ? "Chargement..." : mode === "login" ? "Se connecter" : "Créer le compte"}
               </Button>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">ou</span>
-                </div>
-              </div>
+              {role === "client" && (
+                <>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">ou</span>
+                    </div>
+                  </div>
 
-              <Button
-                variant="outline"
-                onClick={() => setMode("otp-request")}
-                className="w-full h-12"
-              >
-                <Phone className="mr-2 h-4 w-4" /> Connexion par téléphone
-              </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setMode("otp-request")}
+                    className="w-full h-12"
+                  >
+                    <Phone className="mr-2 h-4 w-4" /> Connexion par téléphone
+                  </Button>
 
-              <p className="text-center text-sm text-muted-foreground">
-                {mode === "login" ? (
-                  <>Pas de compte ?{" "}
-                    <button onClick={() => setMode("signup")} className="text-primary font-medium">
-                      Créer un compte
-                    </button>
-                  </>
-                ) : (
-                  <>Déjà un compte ?{" "}
-                    <button onClick={() => setMode("login")} className="text-primary font-medium">
-                      Se connecter
-                    </button>
-                  </>
-                )}
-              </p>
+                  <p className="text-center text-sm text-muted-foreground">
+                    {mode === "login" ? (
+                      <>Pas de compte ?{" "}
+                        <button onClick={() => setMode("signup")} className="text-primary font-medium">
+                          Créer un compte
+                        </button>
+                      </>
+                    ) : (
+                      <>Déjà un compte ?{" "}
+                        <button onClick={() => setMode("login")} className="text-primary font-medium">
+                          Se connecter
+                        </button>
+                      </>
+                    )}
+                  </p>
+                </>
+              )}
+
+              {role !== "client" && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Mot de passe oublié ?{" "}
+                  <button
+                    onClick={async () => {
+                      if (!email) { toast.error("Entrez d'abord votre email"); return; }
+                      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                        redirectTo: `${window.location.origin}/reset-password`,
+                      });
+                      if (error) toast.error(error.message);
+                      else toast.success("Email de réinitialisation envoyé");
+                    }}
+                    className="text-primary font-medium"
+                  >
+                    Réinitialiser
+                  </button>
+                </p>
+              )}
             </div>
           )}
+
 
           {mode === "otp-request" && (
             <div className="space-y-4">
