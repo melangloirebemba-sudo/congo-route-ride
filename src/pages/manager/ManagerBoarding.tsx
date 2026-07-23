@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ListPagination, usePagination } from "@/components/ListPagination";
-import { CheckCircle2, Clock, XCircle, QrCode, RefreshCw, Megaphone } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, QrCode, RefreshCw, Megaphone, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
