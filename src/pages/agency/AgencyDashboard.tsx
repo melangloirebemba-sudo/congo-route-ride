@@ -19,8 +19,11 @@ type SaleRow = {
   total_amount: number;
   status: string;
   passenger_name: string;
-  trips: { agency_id: string; departure: string; destination: string } | null;
+  trips: { agency_id: string; departure: string; destination: string; branch_id: string | null } | null;
 };
+
+type BranchInfo = { id: string; name: string; city: string | null };
+
 
 const todayISO = () => new Date().toISOString().split("T")[0];
 const daysAgoISO = (n: number) => {
