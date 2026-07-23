@@ -1,7 +1,7 @@
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Phone, User, CreditCard, CheckCircle2, Loader2, MapPin, Clock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Phone, User, CreditCard, CheckCircle2, Loader2, MapPin, Clock, AlertTriangle, UserPlus, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
