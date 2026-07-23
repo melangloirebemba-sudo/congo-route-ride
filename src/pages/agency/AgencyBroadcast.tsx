@@ -100,7 +100,21 @@ const AgencyBroadcast = () => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "scheduled_broadcasts", filter: `agency_id=eq.${agencyId}` },
-        () => loadItems()
+        (payload: any) => {
+          const oldRow = payload.old as Scheduled | null;
+          const newRow = payload.new as Scheduled | null;
+          if (newRow && !oldRow?.fully_read_at && newRow.fully_read_at) {
+            toast.success("Broadcast lu par toutes les sous-agences", {
+              description: newRow.subject,
+            });
+          }
+          if (newRow && oldRow?.status !== "failed" && newRow.status === "failed") {
+            toast.error("Échec d'un broadcast planifié", {
+              description: newRow.failure_reason || newRow.subject,
+            });
+          }
+          loadItems();
+        }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
