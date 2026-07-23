@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Bell, CheckCheck, ExternalLink, ArrowUpDown } from "lucide-react";
+import { Bell, CheckCheck, ExternalLink, ArrowUpDown, Archive, ArchiveRestore } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ type Notif = {
   message: string | null;
   kind: string;
   read_at: string | null;
+  archived_at: string | null;
   created_at: string;
   booking_id: string | null;
 };
