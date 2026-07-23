@@ -4,6 +4,7 @@ import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, User
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { SignOutConfirm } from "@/components/SignOutConfirm";
 import {
   Sidebar,
   SidebarContent,
