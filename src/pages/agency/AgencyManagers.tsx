@@ -241,6 +241,7 @@ const AgencyManagers = () => {
 
       <Card>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -288,6 +289,8 @@ const AgencyManagers = () => {
               ))}
             </TableBody>
           </Table>
+          </div>
+
           <div className="p-4 border-t"><ListPagination {...pg} /></div>
         </CardContent>
       </Card>
