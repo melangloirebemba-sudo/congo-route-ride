@@ -146,7 +146,7 @@ const MyReservations = () => {
               <Countdown deadline={r.payment_deadline} />
               <div className="flex items-center justify-between pt-2 border-t border-border/50">
                 <span className="font-display font-bold text-primary">{r.total_amount.toLocaleString()} FCFA</span>
-                <Button size="sm" onClick={() => setPayFor(r)} className="gradient-primary text-primary-foreground">
+                <Button size="sm" onClick={(e) => { e.stopPropagation(); setPayFor(r); }} className="gradient-primary text-primary-foreground">
                   <CreditCard className="h-3 w-3 mr-1" /> Payer maintenant
                 </Button>
               </div>
