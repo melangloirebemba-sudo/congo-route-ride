@@ -12,7 +12,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Megaphone, Info, AlertTriangle, Siren, Send, Clock, CheckCircle2, Eye, CalendarClock, Trash2, Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Megaphone, Info, AlertTriangle, Siren, Send, Clock, CheckCircle2, Eye, CalendarClock, Trash2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -468,55 +469,154 @@ const AgencyBroadcast = () => {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!readOpen} onOpenChange={(v) => !v && setReadOpen(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Suivi de lecture</DialogTitle>
-            <DialogDescription>{readOpen?.subject}</DialogDescription>
-          </DialogHeader>
-          {readLoading ? (
-            <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-          ) : readRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Aucune donnée de lecture disponible.</p>
-          ) : (
-            <>
-              {(() => {
-                const s = readStats(readRows);
-                return (
-                  <div className="rounded border p-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Lu par</p>
-                      <p className="text-lg font-bold">{s.read} / {s.total}</p>
-                    </div>
-                    <Badge variant="outline">{s.pct}%</Badge>
-                  </div>
-                );
-              })()}
-              <ul className="divide-y divide-border max-h-[50vh] overflow-auto -mx-1">
-                {readRows
-                  .slice()
-                  .sort((a, b) => Number(!!b.read_at) - Number(!!a.read_at))
-                  .map((r) => (
-                    <li key={r.id} className="py-2 px-1 flex items-center justify-between gap-2">
-                      <span className="text-sm truncate">{branchName(r.branch_id)}</span>
+      <ReadTrackingDialog
+        open={!!readOpen}
+        onClose={() => setReadOpen(null)}
+        subject={readOpen?.subject}
+        rows={readRows}
+        loading={readLoading}
+        branchName={branchName}
+        stats={readStats(readRows)}
+      />
+    </div>
+  );
+};
+
+type ReadDialogProps = {
+  open: boolean;
+  onClose: () => void;
+  subject?: string;
+  rows: ReadRow[];
+  loading: boolean;
+  branchName: (id: string) => string;
+  stats: { total: number; read: number; pct: number };
+};
+
+const PAGE_SIZE = 20;
+
+const ReadTrackingDialog = ({ open, onClose, subject, rows, loading, branchName, stats }: ReadDialogProps) => {
+  const [filter, setFilter] = useState<"unread" | "read" | "all">("unread");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => { setPage(1); }, [filter, rows.length, open]);
+
+  const unread = stats.total - stats.read;
+  const filtered = rows.filter((r) =>
+    filter === "all" ? true : filter === "unread" ? !r.read_at : !!r.read_at
+  );
+  const sorted = filtered.slice().sort((a, b) => {
+    if (!a.read_at && b.read_at) return -1;
+    if (a.read_at && !b.read_at) return 1;
+    return (b.read_at || "").localeCompare(a.read_at || "");
+  });
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-lg p-0 gap-0 max-h-[92dvh] flex flex-col">
+        <DialogHeader className="px-4 pt-4 pb-2 border-b shrink-0">
+          <DialogTitle className="text-base">Suivi de lecture</DialogTitle>
+          {subject && (
+            <DialogDescription className="text-xs line-clamp-2">{subject}</DialogDescription>
+          )}
+        </DialogHeader>
+
+        {loading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6 px-4">Aucune donnée de lecture disponible.</p>
+        ) : (
+          <>
+            <div className="px-4 py-3 border-b space-y-3 shrink-0">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-md bg-muted/50 py-2">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Lus</p>
+                  <p className="text-base font-bold text-green-700 dark:text-green-400">{stats.read}</p>
+                </div>
+                <div className="rounded-md bg-muted/50 py-2">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Non lus</p>
+                  <p className="text-base font-bold text-destructive">{unread}</p>
+                </div>
+                <div className="rounded-md bg-muted/50 py-2">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Taux</p>
+                  <p className="text-base font-bold">{stats.pct}%</p>
+                </div>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className="h-full bg-primary transition-all" style={{ width: `${stats.pct}%` }} />
+              </div>
+              <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
+                <TabsList className="w-full grid grid-cols-3 h-8">
+                  <TabsTrigger value="unread" className="text-xs h-6">Non lus ({unread})</TabsTrigger>
+                  <TabsTrigger value="read" className="text-xs h-6">Lus ({stats.read})</TabsTrigger>
+                  <TabsTrigger value="all" className="text-xs h-6">Tous ({stats.total})</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            <ScrollArea className="flex-1 min-h-0">
+              {pageRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8 px-4">
+                  {filter === "unread" ? "Tout le monde a lu 🎉" : "Aucun élément."}
+                </p>
+              ) : (
+                <ul className="divide-y divide-border px-4">
+                  {pageRows.map((r) => (
+                    <li key={r.id} className="py-2.5 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className={`h-2 w-2 rounded-full shrink-0 ${r.read_at ? "bg-green-500" : "bg-destructive"}`}
+                          aria-hidden="true"
+                        />
+                        <span className="text-sm truncate">{branchName(r.branch_id)}</span>
+                      </div>
                       {r.read_at ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-green-700 dark:text-green-400">
+                        <span className="inline-flex items-center gap-1 text-[11px] text-green-700 dark:text-green-400 shrink-0">
                           <CheckCircle2 className="h-3.5 w-3.5" />
-                          {new Date(r.read_at).toLocaleString("fr-FR")}
+                          {new Date(r.read_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
                           <Clock className="h-3.5 w-3.5" /> Non lu
                         </span>
                       )}
                     </li>
                   ))}
-              </ul>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+                </ul>
+              )}
+            </ScrollArea>
+
+            {totalPages > 1 && (
+              <div className="border-t px-4 py-2 flex items-center justify-between shrink-0">
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  Page {currentPage} / {totalPages}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon" variant="outline" className="h-8 w-8"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    aria-label="Page précédente"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon" variant="outline" className="h-8 w-8"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    aria-label="Page suivante"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
 
