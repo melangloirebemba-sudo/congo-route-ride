@@ -98,7 +98,11 @@ const ManagerBookings = () => {
                     <TableCell>
                       <p className="font-medium text-sm">{b.passenger_name}</p>
                       <p className="text-xs text-muted-foreground">{b.phone}</p>
+                      {manager?.branch_id && b.boarding_branch_id === manager.branch_id && b.trips?.branch_id !== manager.branch_id && (
+                        <Badge variant="secondary" className="mt-1 text-[10px]">Embarquement ici</Badge>
+                      )}
                     </TableCell>
+
                     <TableCell className="text-sm">{b.trips?.departure} → {b.trips?.destination}</TableCell>
                     <TableCell className="text-sm">{b.trips?.date}</TableCell>
                     <TableCell className="text-sm">N°{b.seat_number}</TableCell>
