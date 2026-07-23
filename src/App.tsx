@@ -101,6 +101,7 @@ const App = () => (
             <Route path="/agency" element={<AgencyLayout />}>
               <Route index element={<AgencyDashboard />} />
               <Route path="branches" element={<AgencyBranches />} />
+              <Route path="sub-agencies" element={<AgencySubAgencies />} />
               <Route path="managers" element={<AgencyManagers />} />
               <Route path="trips" element={<AgencyTrips />} />
               <Route path="bookings" element={<AgencyBookings />} />
