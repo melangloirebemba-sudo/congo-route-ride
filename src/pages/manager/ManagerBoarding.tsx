@@ -267,6 +267,48 @@ const ManagerBoarding = () => {
           <div className="p-4 border-t"><ListPagination {...pg} /></div>
         </CardContent>
       </Card>
+
+      <Dialog open={broadcastOpen} onOpenChange={setBroadcastOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Diffuser les infos d'embarquement</DialogTitle>
+            <DialogDescription>
+              Un message avec la date, l'heure et le lieu d'embarquement (votre sous-agence) sera envoyé à tous les passagers ayant payé leur billet pour ce trajet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Trajet</label>
+              <Select value={broadcastTrip} onValueChange={setBroadcastTrip}>
+                <SelectTrigger><SelectValue placeholder="Sélectionnez un trajet" /></SelectTrigger>
+                <SelectContent>
+                  {trips.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.departure} → {t.destination} — {t.date} {t.departure_time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Message additionnel (facultatif)</label>
+              <Textarea
+                rows={3}
+                value={broadcastMsg}
+                onChange={(e) => setBroadcastMsg(e.target.value)}
+                placeholder="Ex: Merci de vous présenter 30 minutes avant le départ."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBroadcastOpen(false)}>Annuler</Button>
+            <Button onClick={sendBroadcast} disabled={broadcasting || !broadcastTrip}>
+              <Megaphone className="h-4 w-4 mr-2" />
+              {broadcasting ? "Envoi..." : "Envoyer la diffusion"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
