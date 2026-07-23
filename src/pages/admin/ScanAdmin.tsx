@@ -99,11 +99,12 @@ const ScanAdmin = () => {
       .from("bookings")
       .select(`
         id, qr_code, passenger_name, phone, seat_number, status, payment_status,
-        payment_method, total_amount, booking_date,
+        payment_method, total_amount, booking_date, boarding_status, boarding_notes,
         trip:trips ( id, departure, destination, date, departure_time, arrival_time, bus_type, price, currency, agency:agencies ( id, name ) )
       `)
       .eq("qr_code", trimmed)
       .maybeSingle();
+
 
     setLoading(false);
     if (error) {
@@ -129,7 +130,8 @@ const ScanAdmin = () => {
 
     let v: Verdict = "valid";
     if (b.status === "cancelled") v = "cancelled";
-    else if (b.status === "used" || b.status === "checked_in") v = "used";
+    else if (b.boarding_status === "refused") v = "refused";
+    else if (b.status === "used" || b.status === "checked_in" || b.boarding_status === "boarded") v = "used";
     else if (b.payment_status !== "paid") v = "unpaid";
     else if (b.trip?.date && new Date(b.trip.date) < new Date(new Date().toDateString())) v = "expired";
 
@@ -137,6 +139,7 @@ const ScanAdmin = () => {
     if (v === "valid") toast.success("Billet valide");
     else toast.warning(verdictMeta[v].label);
   };
+
 
 
   const startScanner = async () => {
