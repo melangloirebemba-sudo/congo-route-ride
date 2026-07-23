@@ -89,6 +89,10 @@ const AgencyBranches = () => {
       manager_name: b.manager_name || "",
       parent_branch_id: b.parent_branch_id || "none",
       status: b.status,
+      can_create_trips: b.can_create_trips ?? true,
+      can_sell_counter: b.can_sell_counter ?? true,
+      can_scan: b.can_scan ?? true,
+      can_view_stats: b.can_view_stats ?? true,
     });
     setDialogOpen(true);
   };
@@ -106,7 +110,12 @@ const AgencyBranches = () => {
       manager_name: form.manager_name || null,
       parent_branch_id: form.parent_branch_id === "none" ? null : form.parent_branch_id,
       status: form.status,
+      can_create_trips: form.can_create_trips,
+      can_sell_counter: form.can_sell_counter,
+      can_scan: form.can_scan,
+      can_view_stats: form.can_view_stats,
     };
+
     const q = editing
       ? supabase.from("agency_branches" as any).update(payload).eq("id", editing.id)
       : supabase.from("agency_branches" as any).insert(payload);
