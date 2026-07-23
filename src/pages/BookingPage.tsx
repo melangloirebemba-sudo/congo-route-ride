@@ -241,6 +241,44 @@ const BookingPage = () => {
               <Button variant="outline" onClick={() => navigate("/")} className="rounded-xl h-12">Retour à l'accueil</Button>
             </div>
           </motion.div>
+
+          {isAnonymous && !signupDone && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              className="mt-4 bg-card rounded-2xl p-5 border-2 border-primary/40 space-y-3">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-primary" />
+                <h3 className="font-display font-semibold">Créez un compte pour conserver vos billets</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Votre réservation reste liée à ce compte : retrouvez votre historique, vos billets et vos rappels sur tous vos appareils.
+              </p>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <input type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)}
+                  placeholder="Votre email" autoComplete="email"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <input type="password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)}
+                  placeholder="Mot de passe (6+ caractères)" autoComplete="new-password"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+              <Button onClick={handleCreateAccount} disabled={signupLoading}
+                className="w-full gradient-primary text-primary-foreground rounded-xl h-11 font-display">
+                {signupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Créer mon compte"}
+              </Button>
+              <button onClick={() => setSignupDone(true)} className="text-xs text-muted-foreground underline w-full text-center">
+                Non merci, continuer sans compte
+              </button>
+            </motion.div>
+          )}
+          {isAnonymous && signupDone && (
+            <div className="mt-4 bg-accent/10 border border-accent rounded-2xl p-4 text-sm text-center">
+              <CheckCircle2 className="h-5 w-5 mx-auto text-accent mb-1" />
+              Compte créé. Vos réservations sont conservées.
+            </div>
+          )}
         </div>
       </div>
     );
