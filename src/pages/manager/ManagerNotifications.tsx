@@ -258,7 +258,7 @@ const ManagerNotifications = () => {
                           {new Date(n.created_at).toLocaleString("fr-FR")}
                         </p>
                       </button>
-                      <div className="flex gap-2 shrink-0">
+                      <div className="flex gap-2 shrink-0 flex-wrap">
                         {link && (
                           <Button asChild size="sm" variant="outline">
                             <Link to={link}>
@@ -266,9 +266,18 @@ const ManagerNotifications = () => {
                             </Link>
                           </Button>
                         )}
-                        {!n.read_at && (
+                        {!n.read_at && !n.archived_at && (
                           <Button size="sm" variant="ghost" onClick={() => markOne(n.id)} aria-label="Marquer comme lue">
                             <CheckCheck className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {n.archived_at ? (
+                          <Button size="sm" variant="ghost" onClick={() => restoreOne(n.id)} aria-label="Restaurer">
+                            <ArchiveRestore className="h-3.5 w-3.5 mr-1" /> Restaurer
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="ghost" onClick={() => archiveOne(n.id)} aria-label="Archiver">
+                            <Archive className="h-3.5 w-3.5 mr-1" /> Archiver
                           </Button>
                         )}
                       </div>
