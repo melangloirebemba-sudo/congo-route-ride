@@ -121,7 +121,8 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
       .from("branch_notifications" as any)
       .update({ read_at: now })
       .eq("branch_id", branchId)
-      .is("read_at", null);
+      .is("read_at", null)
+      .is("archived_at", null);
     if (error) { toast.error("Erreur lors de la mise à jour"); load(); }
     else toast.success("Toutes marquées comme lues");
   };
