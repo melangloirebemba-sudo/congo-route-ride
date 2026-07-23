@@ -29,7 +29,15 @@ const SearchResults = () => {
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [branchLabel, setBranchLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const pg = usePagination(trips, 5, [], { paramKey: "" });
+  const [when, setWhen] = useState<"all" | "today" | "tomorrow">("all");
+  const filteredTrips = trips.filter((t) => {
+    if (when === "all") return true;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const td = new Date(t.date); td.setHours(0, 0, 0, 0);
+    if (when === "today") return td.getTime() === today.getTime();
+    return td.getTime() > today.getTime();
+  });
+  const pg = usePagination(filteredTrips, 5, [when], { paramKey: "" });
 
   useEffect(() => {
     const fetch = async () => {
