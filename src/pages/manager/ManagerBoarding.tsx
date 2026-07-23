@@ -613,6 +613,70 @@ const ManagerBoarding = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!editItem} onOpenChange={(o) => { if (!o) { setEditItem(null); setEditConfirmOpen(false); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editMode === "edit" ? "Modifier la diffusion planifiée" : "Dupliquer la diffusion"}</DialogTitle>
+            <DialogDescription>
+              {editMode === "edit"
+                ? "Modifiez la date/heure et le message avant l'envoi."
+                : "Créez une nouvelle diffusion planifiée basée sur celle-ci."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {editItem?.trips && (
+              <div className="text-xs text-muted-foreground">
+                Trajet : <strong>{editItem.trips.departure} → {editItem.trips.destination}</strong>
+                {" · "}{editItem.trips.date} · {editItem.trips.departure_time}
+              </div>
+            )}
+            <div>
+              <label className="text-xs text-muted-foreground">Date et heure d'envoi</label>
+              <input
+                type="datetime-local"
+                value={editAt}
+                onChange={(e) => setEditAt(e.target.value)}
+                className="w-full rounded-xl bg-secondary text-secondary-foreground px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Message additionnel (optionnel)</label>
+              <textarea
+                value={editMsg}
+                onChange={(e) => setEditMsg(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl bg-secondary text-secondary-foreground px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)} disabled={editSaving}>Annuler</Button>
+            <Button onClick={() => setEditConfirmOpen(true)} disabled={editSaving || !editAt}>
+              {editMode === "edit" ? "Enregistrer" : "Planifier la copie"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editConfirmOpen} onOpenChange={setEditConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer</DialogTitle>
+            <DialogDescription>
+              {editMode === "edit"
+                ? <>La diffusion sera envoyée le <strong>{editAt ? new Date(editAt).toLocaleString("fr-FR") : ""}</strong>. Confirmer les modifications ?</>
+                : <>Une nouvelle diffusion sera planifiée pour le <strong>{editAt ? new Date(editAt).toLocaleString("fr-FR") : ""}</strong>. Confirmer ?</>}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditConfirmOpen(false)} disabled={editSaving}>Retour</Button>
+            <Button onClick={submitEditScheduled} disabled={editSaving}>
+              {editSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
