@@ -102,6 +102,29 @@ const BookingPage = () => {
     if (!canReserveLater && payMode === "later") setPayMode("now");
   }, [canReserveLater, payMode]);
 
+  // Listen for MoMo confirmation
+  useEffect(() => {
+    if (!awaitingConfirm || !awaitingBookingId) return;
+    const ch = supabase
+      .channel(`await-pay-${awaitingBookingId}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${awaitingBookingId}` }, (payload: any) => {
+        const st = payload?.new?.payment_status;
+        if (st === "paid") {
+          setAwaitingConfirm(false);
+          setPendingRef(false);
+          setStep("confirmed");
+          toast.success("Paiement confirmé ! Votre billet est prêt.");
+        } else if (st === "pending" && payload?.new?.payment_method?.toLowerCase().includes("agence")) {
+          setAwaitingConfirm(false);
+          setPendingRef(true);
+          setStep("confirmed");
+          toast.info("Paiement refusé. Réservation enregistrée, à régler plus tard.");
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [awaitingConfirm, awaitingBookingId]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
