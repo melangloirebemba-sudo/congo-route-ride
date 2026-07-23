@@ -12,6 +12,7 @@ import SearchResults from "./pages/SearchResults";
 import TripDetails from "./pages/TripDetails";
 import BookingPage from "./pages/BookingPage";
 import BookingHistory from "./pages/BookingHistory";
+import MyReservations from "./pages/MyReservations";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
@@ -49,6 +50,7 @@ import ManagerBookings from "./pages/manager/ManagerBookings";
 import ManagerSale from "./pages/manager/ManagerSale";
 import ManagerNotifications from "./pages/manager/ManagerNotifications";
 import ManagerBoarding from "./pages/manager/ManagerBoarding";
+import ManagerOnlineSales from "./pages/manager/ManagerOnlineSales";
 
 import AgencyCounterSale from "./pages/agency/AgencyCounterSale";
 
@@ -71,6 +73,7 @@ const App = () => (
             <Route path="/trip/:id" element={<ClientOnlyRoute><TripDetails /></ClientOnlyRoute>} />
             <Route path="/booking/:id" element={<ClientOnlyRoute><BookingPage /></ClientOnlyRoute>} />
             <Route path="/bookings" element={<ClientOnlyRoute><BookingHistory /></ClientOnlyRoute>} />
+            <Route path="/reservations" element={<ClientOnlyRoute><MyReservations /></ClientOnlyRoute>} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/preferences" element={<Preferences />} />
             <Route path="/agencies" element={<ClientOnlyRoute><Agencies /></ClientOnlyRoute>} />
@@ -133,6 +136,7 @@ const App = () => (
               <Route path="report" element={<ManagerReport />} />
               <Route path="scan" element={<ScanAdmin />} />
               <Route path="boarding" element={<ManagerBoarding />} />
+              <Route path="online-sales" element={<ManagerOnlineSales />} />
 
             </Route>
 
