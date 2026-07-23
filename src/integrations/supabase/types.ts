@@ -577,6 +577,8 @@ export type Database = {
           created_at: string
           created_by: string
           error: string | null
+          failure_reason: string | null
+          fully_read_at: string | null
           id: string
           kind: string
           message: string
@@ -593,6 +595,8 @@ export type Database = {
           created_at?: string
           created_by: string
           error?: string | null
+          failure_reason?: string | null
+          fully_read_at?: string | null
           id?: string
           kind: string
           message: string
@@ -609,6 +613,8 @@ export type Database = {
           created_at?: string
           created_by?: string
           error?: string | null
+          failure_reason?: string | null
+          fully_read_at?: string | null
           id?: string
           kind?: string
           message?: string
