@@ -305,6 +305,25 @@ const ManagerSale = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="sm:col-span-2">
+              <Label>Lieu d'embarquement</Label>
+              <Select value={boardingBranchId} onValueChange={setBoardingBranchId}>
+                <SelectTrigger><SelectValue placeholder="Sélectionner une sous-agence d'embarquement" /></SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}{b.city ? ` — ${b.city}` : ""}{manager?.branch_id === b.id ? " (ici)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {boardingBranchId && manager?.branch_id && boardingBranchId !== manager.branch_id && (
+                <p className="text-xs text-amber-700 mt-1">
+                  ⚠️ Le passager embarquera dans une autre sous-agence. Elle sera notifiée automatiquement.
+                </p>
+              )}
+            </div>
+
           </div>
 
           <Button onClick={submit} disabled={submitting || !trip || !seat} className="w-full">
