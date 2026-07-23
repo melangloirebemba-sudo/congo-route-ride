@@ -298,6 +298,54 @@ const AgencyDashboard = () => {
         </CardContent>
       </Card>
 
+      {!isManager && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-lg">Ventes par sous-agence</CardTitle>
+              <Link to="/agency/sub-agencies" className="text-xs text-primary hover:underline">
+                Voir les sous-agences
+              </Link>
+            </div>
+            <p className="text-xs text-muted-foreground">Période : {from} → {to}</p>
+          </CardHeader>
+          <CardContent>
+            {branchSales.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune vente sur la période.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground border-b">
+                      <th className="py-2">Sous-agence</th>
+                      <th className="py-2">Ville</th>
+                      <th className="py-2 text-right">Ventes</th>
+                      <th className="py-2 text-right">Total</th>
+                      <th className="py-2 text-right">Part</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {branchSales.map((r) => (
+                      <tr key={r.name} className="border-b last:border-0">
+                        <td className="py-2 font-medium">{r.name}</td>
+                        <td className="py-2 text-muted-foreground">{r.city || "—"}</td>
+                        <td className="py-2 text-right">{r.count}</td>
+                        <td className="py-2 text-right font-medium">{r.total.toLocaleString()} FCFA</td>
+                        <td className="py-2 text-right text-muted-foreground">
+                          {periodSales.total > 0 ? Math.round((r.total / periodSales.total) * 100) : 0}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+
+
       <Card>
         <CardHeader><CardTitle className="text-lg">Dernières réservations</CardTitle></CardHeader>
         <CardContent>
