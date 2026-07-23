@@ -48,9 +48,11 @@ const AdminLayout = () => {
           ))}
         </nav>
         <div className="p-4 border-t border-border">
-          <Button variant="ghost" onClick={signOut} className="w-full justify-start text-muted-foreground">
-            <LogOut className="h-4 w-4 mr-2" /> Déconnexion
-          </Button>
+          <SignOutConfirm onConfirm={signOut}>
+            <Button variant="ghost" aria-label="Déconnexion" className="w-full justify-start text-muted-foreground">
+              <LogOut className="h-4 w-4 mr-2" aria-hidden="true" /> Déconnexion
+            </Button>
+          </SignOutConfirm>
         </div>
       </aside>
 
