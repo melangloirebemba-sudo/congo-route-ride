@@ -50,6 +50,37 @@ const Auth = () => {
       supabase.from("branch_managers" as any).select("id").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle(),
     ]);
 
+    const actual: RoleTab = isAdmin ? "admin" : agency ? "agency" : mgr ? "manager" : "client";
+    if (role !== "client" && role !== actual) {
+      await supabase.auth.signOut();
+      const labels: Record<RoleTab, string> = {
+        client: "Client",
+        agency: "Propriétaire d'agence",
+        manager: "Gestionnaire de sous-agence",
+        admin: "Super Admin",
+      };
+      toast.error(`Ce compte n'est pas un compte ${labels[role]}. Utilisez l'onglet ${labels[actual]}.`);
+      return;
+    }
+
+    if (actual === "client" && claimQr && claimPhone) {
+      const claimed = await tryClaim();
+      if (claimed) return;
+    }
+
+    if (actual === "admin") return navigate("/admin");
+    if (actual === "agency") return navigate("/agency");
+    if (actual === "manager") return navigate("/manager");
+    navigate("/");
+  };
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return navigate("/");
+    const [{ data: isAdmin }, { data: agency }, { data: mgr }] = await Promise.all([
+      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+      supabase.from("agencies").select("id").eq("owner_id", user.id).limit(1).maybeSingle(),
+      supabase.from("branch_managers" as any).select("id").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle(),
+    ]);
+
     // Enforce that the account matches the selected role tab.
     const actual: RoleTab = isAdmin ? "admin" : agency ? "agency" : mgr ? "manager" : "client";
     if (role !== "client" && role !== actual) {
