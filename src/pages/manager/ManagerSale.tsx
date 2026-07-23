@@ -358,6 +358,87 @@ const ManagerSale = () => {
   const fmt = (n: number) => n.toLocaleString("fr-FR");
   const currency = salesTripOptions[0]?.currency || "FCFA";
 
+  const filterSummary = () => {
+    const parts: string[] = [];
+    parts.push(`Du ${dateFrom || "—"} au ${dateTo || "—"}`);
+    if (filterTrip !== "all") {
+      const t = salesTripOptions.find((x) => x.id === filterTrip);
+      if (t) parts.push(`Trajet: ${t.origin_city} → ${t.destination_city}`);
+    }
+    if (filterPayment !== "all") parts.push(`Paiement: ${paymentLabel(filterPayment)}`);
+    if (search.trim()) parts.push(`Recherche: ${search.trim()}`);
+    return parts.join(" · ");
+  };
+
+  const exportCSV = () => {
+    if (filteredSales.length === 0) { toast.error("Aucune vente à exporter"); return; }
+    const headers = ["Code","Date","Passager","Téléphone","Trajet","Départ","Siège","Paiement","Montant","Embarquement","Statut"];
+    const rows = filteredSales.map((r) => [
+      r.qr_code || "",
+      new Date(r.created_at).toLocaleString("fr-FR"),
+      r.passenger_name || "",
+      r.passenger_phone || "",
+      r.trips ? `${r.trips.origin_city} → ${r.trips.destination_city}` : "",
+      r.trips?.departure_time ? new Date(r.trips.departure_time).toLocaleString("fr-FR") : "",
+      String(r.seat_number ?? ""),
+      paymentLabel(r.payment_method || ""),
+      String(r.total_price ?? 0),
+      r.boarding_status || "pending",
+      r.status || "",
+    ]);
+    const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = "\uFEFF" + [headers, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `ventes_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success("Export CSV téléchargé");
+  };
+
+  const exportPDF = () => {
+    if (filteredSales.length === 0) { toast.error("Aucune vente à exporter"); return; }
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    let y = 14;
+    doc.setFontSize(14); doc.setFont("helvetica","bold");
+    doc.text("Ventes récentes", 10, y); y += 6;
+    doc.setFontSize(9); doc.setFont("helvetica","normal");
+    doc.text(filterSummary(), 10, y); y += 5;
+    doc.text(`Billets: ${salesStats.count}  ·  Total: ${fmt(salesStats.total)} ${currency}  ·  Espèces: ${fmt(salesStats.cash)}  ·  Mobile/Carte: ${fmt(salesStats.digital)}`, 10, y);
+    y += 6;
+    doc.setFont("helvetica","bold"); doc.setFontSize(8);
+    const cols = [
+      { h: "Code", w: 30 }, { h: "Date", w: 32 }, { h: "Passager", w: 36 },
+      { h: "Trajet", w: 55 }, { h: "Siège", w: 12 }, { h: "Paiement", w: 28 },
+      { h: "Montant", w: 22 }, { h: "Emb.", w: 20 }, { h: "Statut", w: 22 },
+    ];
+    let x = 10;
+    cols.forEach((c) => { doc.text(c.h, x, y); x += c.w; });
+    y += 2; doc.line(10, y, pageW - 10, y); y += 4;
+    doc.setFont("helvetica","normal");
+    filteredSales.forEach((r) => {
+      if (y > pageH - 10) { doc.addPage(); y = 14; }
+      const row = [
+        r.qr_code || "",
+        new Date(r.created_at).toLocaleString("fr-FR"),
+        (r.passenger_name || "").slice(0, 22),
+        r.trips ? `${r.trips.origin_city} → ${r.trips.destination_city}`.slice(0, 32) : "",
+        String(r.seat_number ?? ""),
+        paymentLabel(r.payment_method || "").slice(0, 16),
+        `${fmt(Number(r.total_price ?? 0))} ${currency}`,
+        r.boarding_status || "pending",
+        r.status || "",
+      ];
+      x = 10;
+      row.forEach((v, i) => { doc.text(String(v), x, y); x += cols[i].w; });
+      y += 5;
+    });
+    doc.save(`ventes_${new Date().toISOString().slice(0,10)}.pdf`);
+    toast.success("Export PDF téléchargé");
+  };
+
   return (
     <div className="space-y-6">
       <div>
