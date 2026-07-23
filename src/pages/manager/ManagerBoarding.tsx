@@ -470,9 +470,10 @@ const ManagerBoarding = () => {
             <Button variant="outline" onClick={() => setBroadcastOpen(false)}>Annuler</Button>
             <Button
               onClick={() => setConfirmOpen(true)}
-              disabled={!broadcastTrip || targetCount === 0 || targetCount === null}
+              disabled={!broadcastTrip || targetCount === 0 || targetCount === null || (sendMode === "later" && !scheduledAt)}
             >
-              <Megaphone className="h-4 w-4 mr-2" /> Prévisualiser et envoyer
+              <Megaphone className="h-4 w-4 mr-2" />
+              {sendMode === "later" ? "Prévisualiser et planifier" : "Prévisualiser et envoyer"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -481,9 +482,11 @@ const ManagerBoarding = () => {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmer la diffusion</DialogTitle>
+            <DialogTitle>{sendMode === "later" ? "Confirmer la planification" : "Confirmer la diffusion"}</DialogTitle>
             <DialogDescription>
-              Ce message sera envoyé immédiatement à <strong>{targetCount ?? 0}</strong> passager{(targetCount ?? 0) > 1 ? "s" : ""} ayant payé leur billet. Cette action est irréversible.
+              {sendMode === "later"
+                ? <>Ce message sera envoyé automatiquement le <strong>{scheduledAt ? new Date(scheduledAt).toLocaleString("fr-FR") : ""}</strong> à environ <strong>{targetCount ?? 0}</strong> passager(s) payés (le compte final est recalculé à l'envoi).</>
+                : <>Ce message sera envoyé immédiatement à <strong>{targetCount ?? 0}</strong> passager{(targetCount ?? 0) > 1 ? "s" : ""} ayant payé leur billet. Cette action est irréversible.</>}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-lg bg-muted/40 border p-3 text-sm">
@@ -498,8 +501,56 @@ const ManagerBoarding = () => {
             </Button>
             <Button onClick={sendBroadcast} disabled={broadcasting}>
               <Megaphone className="h-4 w-4 mr-2" />
-              {broadcasting ? "Envoi..." : `Confirmer l'envoi à ${targetCount ?? 0}`}
+              {broadcasting
+                ? (sendMode === "later" ? "Planification..." : "Envoi...")
+                : (sendMode === "later" ? "Confirmer la planification" : `Confirmer l'envoi à ${targetCount ?? 0}`)}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={scheduledOpen} onOpenChange={setScheduledOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Diffusions planifiées</DialogTitle>
+            <DialogDescription>Historique des envois planifiés pour votre sous-agence.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {scheduled.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Aucune diffusion planifiée</p>
+            ) : scheduled.map((s: any) => {
+              const when = new Date(s.scheduled_at);
+              const badge = s.status === "scheduled" ? "secondary" : s.status === "sent" ? "default" : "destructive";
+              const label = s.status === "scheduled" ? "Planifié" : s.status === "sent" ? "Envoyé" : s.status === "cancelled" ? "Annulé" : "Échec";
+              return (
+                <div key={s.id} className="rounded-xl border p-3 space-y-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="text-sm font-medium">
+                      {s.trips?.departure} → {s.trips?.destination}
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {s.trips?.date} {s.trips?.departure_time}
+                      </span>
+                    </div>
+                    <Badge variant={badge as any}>{label}</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Prévu : {when.toLocaleString("fr-FR")}
+                    {s.sent_at && ` · Envoyé : ${new Date(s.sent_at).toLocaleString("fr-FR")} · ${s.recipients_count ?? 0} destinataire(s)`}
+                  </div>
+                  {s.extra_message && <div className="text-xs italic text-muted-foreground">« {s.extra_message} »</div>}
+                  {s.failure_reason && <div className="text-xs text-destructive">{s.failure_reason}</div>}
+                  {s.status === "scheduled" && (
+                    <div className="pt-1">
+                      <Button variant="outline" size="sm" onClick={() => cancelScheduled(s.id)}>Annuler l'envoi</Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={loadScheduled}>Actualiser</Button>
+            <Button size="sm" onClick={() => setScheduledOpen(false)}>Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
