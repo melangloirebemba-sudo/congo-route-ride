@@ -152,6 +152,17 @@ const MyReservations = () => {
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-3">
+        <div className="bg-card rounded-2xl p-4 border border-border/50 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Récupérer un billet invité</p>
+            <p className="text-xs text-muted-foreground">
+              {isAnon
+                ? "Vous êtes en session invitée. Créez un compte ou connectez-vous pour rattacher vos billets à un compte permanent."
+                : "Rattachez à votre compte un billet réservé sans compte."}
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setClaimOpen(true)}>Récupérer</Button>
+        </div>
         {loading ? (
           <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
         ) : items.length === 0 ? (
