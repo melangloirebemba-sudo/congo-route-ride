@@ -23,6 +23,17 @@ const Preferences = () => {
   const [channel, setChannel] = useState<Channel>("sms");
   const [tripReminders, setTripReminders] = useState(true);
   const [cancellationAlerts, setCancellationAlerts] = useState(true);
+  const [offsets, setOffsets] = useState<number[]>(getReminderOffsets());
+
+  const toggleOffset = (val: number, on: boolean) => {
+    setOffsets((prev) => {
+      const next = on ? [...prev, val] : prev.filter((v) => v !== val);
+      const sorted = Array.from(new Set(next)).sort((a, b) => a - b);
+      setReminderOffsets(sorted);
+      return sorted;
+    });
+  };
+
 
   useEffect(() => {
     if (!authLoading && !user) {
