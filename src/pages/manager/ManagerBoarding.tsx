@@ -419,6 +419,30 @@ const ManagerBoarding = () => {
                 placeholder="Ex: Merci de vous présenter 30 minutes avant le départ."
               />
             </div>
+            <div className="rounded-xl border p-3 space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase">Envoi</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setSendMode("now")}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm ${sendMode === "now" ? "border-primary bg-primary/10 font-medium" : ""}`}>
+                  Immédiat
+                </button>
+                <button type="button" onClick={() => setSendMode("later")}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm ${sendMode === "later" ? "border-primary bg-primary/10 font-medium" : ""}`}>
+                  Planifié
+                </button>
+              </div>
+              {sendMode === "later" && (
+                <div>
+                  <label className="text-xs text-muted-foreground">Date et heure d'envoi</label>
+                  <Input
+                    type="datetime-local"
+                    value={scheduledAt}
+                    min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
 
             {broadcastTrip && (
               <div className="rounded-xl border bg-muted/40 p-3 space-y-2">
