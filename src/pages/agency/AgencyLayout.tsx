@@ -24,11 +24,13 @@ const managerNavItems = ownerNavItems.filter((i) => i.to !== "/agency/counter-sa
 const SidebarContent = ({
   agencyName,
   roleLabel,
+  items,
   onNavigate,
   onSignOut,
 }: {
   agencyName: string;
   roleLabel: string;
+  items: typeof ownerNavItems;
   onNavigate?: () => void;
   onSignOut: () => void;
 }) => (
@@ -40,7 +42,8 @@ const SidebarContent = ({
       <p className="text-xs text-muted-foreground truncate">{roleLabel}</p>
     </div>
     <nav className="p-3 space-y-1 overflow-y-auto flex-1">
-      {navItems.map(({ to, icon: Icon, label, end }) => (
+      {items.map(({ to, icon: Icon, label, end }) => (
+
         <NavLink
           key={to}
           to={to}
