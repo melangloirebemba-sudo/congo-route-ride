@@ -5,9 +5,20 @@ import { MapPin, Calendar, Search, ArrowRight, Star, Bus, Shield, Clock } from "
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useDistricts } from "@/hooks/useDistricts";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { loading: authLoading, isAdmin, agencyId, isManager } = useAuth();
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (isAdmin) navigate("/admin", { replace: true });
+    else if (agencyId) navigate("/agency", { replace: true });
+    else if (isManager) navigate("/manager", { replace: true });
+  }, [authLoading, isAdmin, agencyId, isManager, navigate]);
+
+
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
   const [date, setDate] = useState("");
