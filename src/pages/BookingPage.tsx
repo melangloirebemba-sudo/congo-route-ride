@@ -139,17 +139,19 @@ const BookingPage = () => {
     }
 
     const isReservation = payMode === "later";
-    // deadline: 2h before departure OR now+30min if <2h, cap 24h before if trip far
+    const isMomo = !isReservation && (paymentMethod === "mtn" || paymentMethod === "airtel");
+    // deadline: 2h before departure
     const departDate = new Date(`${trip.date}T${trip.departure_time || "00:00"}`);
     const deadline = new Date(departDate.getTime() - 2 * 3600000);
 
-    const { error } = await (supabase as any).from("bookings").insert({
+    const initialPaid = !isReservation && !isMomo; // card = simulated success; momo waits for confirm
+    const { data: inserted, error } = await (supabase as any).from("bookings").insert({
       trip_id: trip.id,
       passenger_name: name,
       phone,
       seat_number: Number(seat),
       payment_method: isReservation ? paymentLabels.agency : (paymentLabels[paymentMethod] || paymentMethod),
-      payment_status: isReservation ? "pending" : "paid",
+      payment_status: initialPaid ? "paid" : "pending",
       status: "confirmed",
       total_amount: trip.price,
       qr_code: qrCode,
@@ -157,15 +159,15 @@ const BookingPage = () => {
       boarding_branch_id: boardingBranchId,
       sale_channel: "online",
       payment_deadline: isReservation ? deadline.toISOString() : null,
-    });
+    }).select("id").single();
 
-    if (error) {
+    if (error || !inserted) {
       toast.error("Erreur lors de la réservation. Veuillez réessayer.");
       setSubmitting(false);
       return;
     }
 
-    if (!isReservation) {
+    if (initialPaid) {
       const commission = Math.round(trip.price * 0.1);
       await supabase.from("transactions").insert({
         agency_id: trip.agency_id,
@@ -175,6 +177,26 @@ const BookingPage = () => {
         payment_method: paymentLabels[paymentMethod] || paymentMethod,
         status: "completed",
       });
+    }
+
+    if (isMomo) {
+      const { data: sim, error: simErr } = await (supabase as any).rpc("init_payment_simulation", {
+        _booking_id: inserted.id,
+        _momo_phone: (momoPhone || phone).trim(),
+        _provider: paymentMethod === "mtn" ? "MTN MoMo" : "Airtel Money",
+      });
+      if (simErr || (sim && sim.ok === false)) {
+        toast.error(sim?.message || "Impossible d'initier le paiement Mobile Money");
+        setSubmitting(false);
+        return;
+      }
+      setBookingRef(qrCode);
+      setAwaitingBookingId(inserted.id);
+      setIsAnonymous(anonUsed || !!session?.session?.user?.is_anonymous);
+      setAwaitingConfirm(true);
+      setSubmitting(false);
+      toast.success("Demande envoyée. Confirmez le paiement dans vos notifications.");
+      return;
     }
 
     setBookingRef(qrCode);
