@@ -31,6 +31,10 @@ const ManagerBoarding = () => {
   const [targetCount, setTargetCount] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [branchInfo, setBranchInfo] = useState<any>(null);
+  const [sendMode, setSendMode] = useState<"now" | "later">("now");
+  const [scheduledAt, setScheduledAt] = useState<string>("");
+  const [scheduled, setScheduled] = useState<any[]>([]);
+  const [scheduledOpen, setScheduledOpen] = useState(false);
 
   useEffect(() => {
     if (!manager?.branch_id) return;
