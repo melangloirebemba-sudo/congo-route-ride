@@ -545,11 +545,18 @@ const ManagerBoarding = () => {
                   </div>
                   {s.extra_message && <div className="text-xs italic text-muted-foreground">« {s.extra_message} »</div>}
                   {s.failure_reason && <div className="text-xs text-destructive">{s.failure_reason}</div>}
-                  {s.status === "scheduled" && (
-                    <div className="pt-1">
-                      <Button variant="outline" size="sm" onClick={() => cancelScheduled(s.id)}>Annuler l'envoi</Button>
-                    </div>
-                  )}
+                  <div className="pt-1 flex flex-wrap gap-2">
+                    {s.status === "scheduled" && (
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => openEditScheduled(s, "edit")}>Modifier</Button>
+                        <Button variant="outline" size="sm" onClick={() => openEditScheduled(s, "duplicate")}>Dupliquer</Button>
+                        <Button variant="outline" size="sm" onClick={() => cancelScheduled(s.id)}>Annuler l'envoi</Button>
+                      </>
+                    )}
+                    {s.status !== "scheduled" && (
+                      <Button variant="outline" size="sm" onClick={() => openEditScheduled(s, "duplicate")}>Dupliquer</Button>
+                    )}
+                  </div>
                 </div>
               );
             })}
