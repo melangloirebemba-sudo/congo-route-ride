@@ -126,6 +126,18 @@ const ManagerBookings = () => {
                     <TableCell className="font-semibold text-sm">{b.total_amount.toLocaleString()} FCFA</TableCell>
                     <TableCell className="text-xs">{b.payment_method}</TableCell>
                     <TableCell><Badge variant="outline">{b.status}</Badge></TableCell>
+                    <TableCell>
+                      {(() => {
+                        const bs = b.boarding_status || (b.status === "used" ? "boarded" : "pending");
+                        const cls =
+                          bs === "boarded" ? "text-green-700 border-green-500/40 bg-green-500/10"
+                          : bs === "refused" ? "text-red-700 border-red-500/40 bg-red-500/10"
+                          : "text-amber-700 border-amber-500/40 bg-amber-500/10";
+                        const label = bs === "boarded" ? "Embarqué" : bs === "refused" ? "Refusé" : "Non scanné";
+                        return <Badge variant="outline" className={cls + " text-[11px]"}>{label}</Badge>;
+                      })()}
+                    </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
