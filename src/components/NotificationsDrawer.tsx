@@ -134,8 +134,21 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
       .from("branch_notifications" as any)
       .update({ archived_at: new Date().toISOString() })
       .eq("id", id);
-    if (error) { toast.error("Impossible d'archiver"); setItems(prev); }
-    else toast.success("Notification archivée");
+    if (error) { toast.error("Impossible d'archiver"); setItems(prev); return; }
+    toast.success("Notification archivée", {
+      duration: 6000,
+      action: {
+        label: "Annuler",
+        onClick: async () => {
+          const { error: e2 } = await supabase
+            .from("branch_notifications" as any)
+            .update({ archived_at: null })
+            .eq("id", id);
+          if (e2) toast.error("Annulation impossible");
+          else { toast.success("Archivage annulé"); load(); }
+        },
+      },
+    });
   };
 
   const kindMatcher = useMemo(
