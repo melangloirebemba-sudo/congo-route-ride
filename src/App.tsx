@@ -61,7 +61,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const PushBridge = () => { useWebPushListener(); return null; };
+const PushBridge = () => { useWebPushListener(); useTripReminders(); return null; };
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
