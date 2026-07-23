@@ -544,15 +544,31 @@ const ScanAdmin = () => {
                         </div>
                       </div>
                     )}
+                    <div className="rounded-md border p-3 flex items-center justify-between text-xs">
+                      <span className="font-medium">Statut d'embarquement</span>
+                      <Badge variant="outline" className={boardingBadgeTone(booking.boarding_status)}>
+                        {boardingLabel(booking.boarding_status)}
+                      </Badge>
+                    </div>
+                    {booking.boarding_status === "refused" && booking.boarding_notes && (
+                      <div className="text-xs text-muted-foreground italic">
+                        Motif du refus : {booking.boarding_notes}
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       {verdict === "valid" ? (
-                        <Button onClick={() => setConfirmOpen(true)} disabled={validating} className="flex-1">
-                          {validating ? (
-                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Validation…</>
-                          ) : (
-                            <><CheckCircle2 className="h-4 w-4 mr-2" /> Valider l'embarquement</>
-                          )}
-                        </Button>
+                        <>
+                          <Button onClick={() => setConfirmOpen(true)} disabled={validating} className="flex-1">
+                            {validating ? (
+                              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Validation…</>
+                            ) : (
+                              <><CheckCircle2 className="h-4 w-4 mr-2" /> Valider</>
+                            )}
+                          </Button>
+                          <Button variant="destructive" onClick={() => setRefuseOpen(true)} className="flex-1">
+                            <XCircle className="h-4 w-4 mr-2" /> Refuser
+                          </Button>
+                        </>
                       ) : (
                         <Button disabled className="flex-1" variant="secondary">
                           <XCircle className="h-4 w-4 mr-2" /> Validation bloquée
@@ -562,6 +578,7 @@ const ScanAdmin = () => {
                         Nouveau scan
                       </Button>
                     </div>
+
                     <div className="flex gap-2">
                       <Button variant="secondary" onClick={downloadTicket} className="flex-1">
                         <Download className="h-4 w-4 mr-2" /> Télécharger PDF
