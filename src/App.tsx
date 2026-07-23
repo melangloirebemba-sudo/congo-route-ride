@@ -12,6 +12,7 @@ import SearchResults from "./pages/SearchResults";
 import TripDetails from "./pages/TripDetails";
 import BookingPage from "./pages/BookingPage";
 import BookingHistory from "./pages/BookingHistory";
+import BookingDetail from "./pages/BookingDetail";
 import MyReservations from "./pages/MyReservations";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
