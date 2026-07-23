@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText, PlusCircle } from "lucide-react";
+import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText, PlusCircle, Megaphone, AlertOctagon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,12 +27,16 @@ const ownerNavItems = [
   { to: "/agency/trips", icon: Bus, label: "Trajets" },
   { to: "/agency/bookings", icon: Ticket, label: "Réservations" },
   { to: "/agency/counter-sale", icon: PlusCircle, label: "Nouvelle réservation" },
+  { to: "/agency/broadcast", icon: Megaphone, label: "Communication" },
+  { to: "/agency/reports", icon: AlertOctagon, label: "Signalements" },
   { to: "/admin/scan", icon: QrCode, label: "Scan billets" },
   { to: "/agency/audit", icon: ScrollText, label: "Journal d'audit" },
   { to: "/agency/settings", icon: Settings, label: "Paramètres" },
 ];
 
-const managerNavItems = ownerNavItems.filter((i) => i.to !== "/agency/counter-sale");
+const managerNavItems = ownerNavItems.filter((i) =>
+  i.to !== "/agency/counter-sale" && i.to !== "/agency/broadcast" && i.to !== "/agency/reports"
+);
 
 const AgencySidebar = ({
   agencyName,
