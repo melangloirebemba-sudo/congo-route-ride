@@ -15,6 +15,7 @@ type Channel = "sms" | "whatsapp";
 const Preferences = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const push = useWebPushToggle();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [channel, setChannel] = useState<Channel>("sms");
