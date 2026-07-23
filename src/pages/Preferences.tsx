@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, MessageSquare, Bell, BellOff, Smartphone, MonitorSmartphone } from "lucide-react";
+import { ArrowLeft, MessageSquare, Bell, BellOff, Smartphone, MonitorSmartphone, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWebPushToggle } from "@/hooks/useWebPush";
+import { REMINDER_OPTIONS, getReminderOffsets, setReminderOffsets } from "@/hooks/useTripReminders";
 
 type Channel = "sms" | "whatsapp";
 
