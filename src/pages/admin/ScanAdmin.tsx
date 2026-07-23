@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -85,6 +86,41 @@ const ScanAdmin = () => {
   const [booking, setBooking] = useState<BookingResult | null>(null);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [lastCode, setLastCode] = useState<string>("");
+
+  // Filters propagated from the Boarding dashboard so scanning stays in-context.
+  const [searchParams] = useSearchParams();
+  const filterDateFrom = searchParams.get("date_from") || "";
+  const filterDateTo = searchParams.get("date_to") || "";
+  const filterTripId = searchParams.get("trip_id") || "";
+  const filterStatus = searchParams.get("status") || "";
+  const hasFilters = !!(filterDateFrom || filterDateTo || filterTripId || filterStatus);
+  const [filterTrip, setFilterTrip] = useState<{ departure: string; destination: string; date: string; departure_time: string } | null>(null);
+
+  useEffect(() => {
+    if (!filterTripId) { setFilterTrip(null); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("trips")
+        .select("departure, destination, date, departure_time")
+        .eq("id", filterTripId)
+        .maybeSingle();
+      setFilterTrip((data as any) || null);
+    })();
+  }, [filterTripId]);
+
+  const filterMismatch = useMemo(() => {
+    if (!booking || !hasFilters) return null;
+    const issues: string[] = [];
+    if (filterTripId && booking.trip?.id !== filterTripId) issues.push("trajet différent de celui filtré");
+    const d = booking.trip?.date;
+    if (filterDateFrom && d && d < filterDateFrom) issues.push(`date avant ${filterDateFrom}`);
+    if (filterDateTo && d && d > filterDateTo) issues.push(`date après ${filterDateTo}`);
+    if (filterStatus) {
+      const bs = booking.boarding_status || "pending";
+      if (bs !== filterStatus) issues.push(`statut « ${bs} » ≠ « ${filterStatus} »`);
+    }
+    return issues.length ? issues : null;
+  }, [booking, hasFilters, filterTripId, filterDateFrom, filterDateTo, filterStatus]);
 
   const verify = async (code: string) => {
     const trimmed = code.trim();
@@ -381,6 +417,23 @@ const ScanAdmin = () => {
         </Badge>
       </div>
 
+      {hasFilters && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm flex items-start gap-2 flex-wrap">
+          <Search className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-primary">Filtres actifs depuis l'embarquement</div>
+            <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 mt-1">
+              {filterTrip && <span>Trajet : {filterTrip.departure} → {filterTrip.destination} · {filterTrip.date} {filterTrip.departure_time?.slice(0,5)}</span>}
+              {filterDateFrom && <span>Du : {filterDateFrom}</span>}
+              {filterDateTo && <span>Au : {filterDateTo}</span>}
+              {filterStatus && <span>Statut : {filterStatus}</span>}
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -508,6 +561,15 @@ const ScanAdmin = () => {
                     )}
 
                     <Separator />
+                    {filterMismatch && (
+                      <div className="rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 text-xs p-3 flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <div>
+                          <div className="font-semibold">Ce billet est hors des filtres actifs</div>
+                          <div className="opacity-90">{filterMismatch.join(" · ")}</div>
+                        </div>
+                      </div>
+                    )}
                     {verdict !== "valid" && (
                       <div className="rounded-md border border-red-500/30 bg-red-500/10 text-red-700 text-xs p-3 flex items-start gap-2">
                         <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
