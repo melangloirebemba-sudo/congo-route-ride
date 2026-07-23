@@ -60,10 +60,13 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const PushBridge = () => { useWebPushListener(); return null; };
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
+        <PushBridge />
         <Toaster />
         <Sonner />
         <BrowserRouter>
