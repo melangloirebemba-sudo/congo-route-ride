@@ -82,16 +82,22 @@ const ManagerLayout = () => {
           <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="h-4 w-4" /></Button>
         </header>
         <nav className="md:hidden flex overflow-x-auto border-b border-border bg-card px-2">
-          {navItems.map(({ to, icon: Icon, label, end }) => (
+          {navItems.map(({ to, icon: Icon, label, end, badge }) => (
             <NavLink key={to} to={to} end={end}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-1 px-3 py-2 text-[10px] font-medium whitespace-nowrap ${
+                `relative flex flex-col items-center gap-1 px-3 py-2 text-[10px] font-medium whitespace-nowrap ${
                   isActive ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
                 }`}>
               <Icon className="h-4 w-4" />
               {label}
+              {badge > 0 && (
+                <span className="absolute top-1 right-1 h-4 min-w-[16px] px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
+                  {badge > 9 ? "9+" : badge}
+                </span>
+              )}
             </NavLink>
           ))}
+
         </nav>
         <main className="flex-1 p-4 md:p-8 overflow-auto">
           <Outlet />
