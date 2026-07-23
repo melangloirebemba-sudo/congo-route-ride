@@ -422,18 +422,38 @@ const AgencyBroadcast = () => {
                 <ul className="divide-y divide-border">
                   {sentList.map((s) => {
                     const M = KIND_META[s.kind];
+                    const statusBadge =
+                      s.status === "sent"
+                        ? { cls: "bg-green-500/15 text-green-700 dark:text-green-400", label: "Envoyé" }
+                        : s.status === "failed"
+                          ? { cls: "bg-destructive/15 text-destructive", label: "Échec" }
+                          : { cls: "bg-muted text-foreground", label: s.status };
                     return (
                       <li key={s.id} className="py-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge className={M.badge}>{M.label}</Badge>
+                            <Badge className={statusBadge.cls}>{statusBadge.label}</Badge>
+                            {s.fully_read_at && (
+                              <Badge className="bg-primary/15 text-primary">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />Lu par tous
+                              </Badge>
+                            )}
                             <p className="font-medium text-sm truncate">{s.subject}</p>
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5 break-words">{s.message}</p>
                           <p className="text-[11px] text-muted-foreground mt-1">
-                            Envoyé le {new Date(s.sent_at || s.scheduled_at).toLocaleString("fr-FR")}
+                            {s.status === "failed"
+                              ? <>Tentative le {new Date(s.scheduled_at).toLocaleString("fr-FR")}</>
+                              : <>Envoyé le {new Date(s.sent_at || s.scheduled_at).toLocaleString("fr-FR")}</>}
                             {" · "}{s.target_branch_ids.length} destinataire(s)
+                            {s.fully_read_at && <> · Lu par tous le {new Date(s.fully_read_at).toLocaleString("fr-FR")}</>}
                           </p>
+                          {s.status === "failed" && s.failure_reason && (
+                            <p className="text-[11px] text-destructive mt-1 rounded bg-destructive/10 px-2 py-1">
+                              Raison : {s.failure_reason}
+                            </p>
+                          )}
                         </div>
                         <Button variant="outline" size="sm" onClick={() => openRead(s)} disabled={!s.broadcast_id}>
                           <Eye className="h-4 w-4 mr-1" /> Suivi de lecture
