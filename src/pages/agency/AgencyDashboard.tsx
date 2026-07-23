@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bus, Ticket, TrendingUp, Calendar } from "lucide-react";
+import { Bus, Ticket, TrendingUp, Calendar, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 const AgencyDashboard = () => {
   const { agencyId } = useAuth();
-  const [stats, setStats] = useState({ trips: 0, bookings: 0, revenue: 0, todayBookings: 0 });
+  const [stats, setStats] = useState({ trips: 0, bookings: 0, revenue: 0, todayBookings: 0, branches: 0 });
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [agencyName, setAgencyName] = useState("");
 
@@ -14,10 +15,11 @@ const AgencyDashboard = () => {
     if (!agencyId) return;
 
     const fetchData = async () => {
-      const [agencyRes, tripsRes, bookingsRes] = await Promise.all([
+      const [agencyRes, tripsRes, bookingsRes, branchesRes] = await Promise.all([
         supabase.from("agencies").select("name").eq("id", agencyId).single(),
         supabase.from("trips").select("id").eq("agency_id", agencyId),
         supabase.from("bookings").select("total_amount, booking_date, passenger_name, status, trips!inner(agency_id, departure, destination)").eq("trips.agency_id", agencyId),
+        supabase.from("agency_branches" as any).select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
       ]);
 
       setAgencyName(agencyRes.data?.name || "");
@@ -30,6 +32,7 @@ const AgencyDashboard = () => {
         bookings: bookings.length,
         revenue: bookings.filter((b: any) => b.status !== "cancelled").reduce((s: number, b: any) => s + b.total_amount, 0),
         todayBookings: bookings.filter((b: any) => b.booking_date === today).length,
+        branches: (branchesRes as any).count || 0,
       });
 
       setRecentBookings(bookings.slice(0, 5));
@@ -39,10 +42,11 @@ const AgencyDashboard = () => {
   }, [agencyId]);
 
   const cards = [
-    { label: "Trajets actifs", value: stats.trips, icon: Bus, color: "text-primary" },
-    { label: "Réservations", value: stats.bookings, icon: Ticket, color: "text-accent" },
-    { label: "Revenus", value: `${stats.revenue.toLocaleString()} FCFA`, icon: TrendingUp, color: "text-accent" },
-    { label: "Aujourd'hui", value: stats.todayBookings, icon: Calendar, color: "text-primary" },
+    { label: "Sous-agences", value: stats.branches, icon: Building2, color: "text-primary", to: "/agency/branches" },
+    { label: "Trajets actifs", value: stats.trips, icon: Bus, color: "text-primary", to: "/agency/trips" },
+    { label: "Réservations", value: stats.bookings, icon: Ticket, color: "text-accent", to: "/agency/bookings" },
+    { label: "Revenus", value: `${stats.revenue.toLocaleString()} FCFA`, icon: TrendingUp, color: "text-accent", to: "/agency/bookings" },
+    { label: "Aujourd'hui", value: stats.todayBookings, icon: Calendar, color: "text-primary", to: "/agency/bookings" },
   ];
 
   return (
@@ -52,21 +56,24 @@ const AgencyDashboard = () => {
         <p className="text-sm text-muted-foreground">Vue d'ensemble de votre activité</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map(({ label, value, icon: Icon, color }) => (
-          <Card key={label}>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-medium text-muted-foreground">{label}</CardTitle>
-                <Icon className={`h-4 w-4 ${color}`} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold font-display">{value}</div>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {cards.map(({ label, value, icon: Icon, color, to }) => (
+          <Link key={label} to={to} className="block">
+            <Card className="transition-all hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 cursor-pointer h-full">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">{label}</CardTitle>
+                  <Icon className={`h-4 w-4 ${color}`} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold font-display">{value}</div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
+
 
       <Card>
         <CardHeader><CardTitle className="text-lg">Dernières réservations</CardTitle></CardHeader>
