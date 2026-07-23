@@ -27,15 +27,14 @@ const ManagerBookings = () => {
         .order("created_at", { ascending: false });
       const q1 = manager.branch_id ? tripBranchQuery.eq("trips.branch_id", manager.branch_id) : tripBranchQuery;
 
-      // Bookings assigned to this branch for boarding (created by the agency owner)
+      const sb: any = supabase;
       const q2 = manager.branch_id
-        ? (supabase
-            .from("bookings")
+        ? sb.from("bookings")
             .select(select)
-            .eq("boarding_branch_id" as any, manager.branch_id)
-            .order("created_at", { ascending: false }) as any)
-
+            .eq("boarding_branch_id", manager.branch_id)
+            .order("created_at", { ascending: false })
         : null;
+
 
       const [{ data: d1 }, r2] = await Promise.all([q1, q2 ?? Promise.resolve({ data: [] as any[] })]);
       const map = new Map<string, any>();
