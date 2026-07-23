@@ -561,6 +561,15 @@ const ScanAdmin = () => {
                     )}
 
                     <Separator />
+                    {filterMismatch && (
+                      <div className="rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 text-xs p-3 flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <div>
+                          <div className="font-semibold">Ce billet est hors des filtres actifs</div>
+                          <div className="opacity-90">{filterMismatch.join(" · ")}</div>
+                        </div>
+                      </div>
+                    )}
                     {verdict !== "valid" && (
                       <div className="rounded-md border border-red-500/30 bg-red-500/10 text-red-700 text-xs p-3 flex items-start gap-2">
                         <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
