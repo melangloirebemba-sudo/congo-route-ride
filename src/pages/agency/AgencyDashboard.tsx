@@ -115,6 +115,22 @@ const AgencyDashboard = () => {
     return { rows, byTrip: [...byTrip.values()].sort((a, b) => b.total - a.total), total, count };
   }, [allBookings, from, to]);
 
+  // Sales per branch (sub-agency) — main agency = rows without branch_id
+  const branchSales = useMemo(() => {
+    const map = new Map<string, { name: string; city: string | null; count: number; total: number }>();
+    map.set("__main__", { name: "Agence principale (siège)", city: null, count: 0, total: 0 });
+    branches.forEach((b) => map.set(b.id, { name: b.name, city: b.city, count: 0, total: 0 }));
+    periodSales.rows.forEach((b) => {
+      const key = b.trips?.branch_id || "__main__";
+      const cur = map.get(key) || { name: "Sous-agence supprimée", city: null, count: 0, total: 0 };
+      cur.count++;
+      cur.total += Number(b.total_amount || 0);
+      map.set(key, cur);
+    });
+    return [...map.values()].filter((r) => r.count > 0).sort((a, b) => b.total - a.total);
+  }, [periodSales.rows, branches]);
+
+
   const exportCSV = () => {
     if (periodSales.byTrip.length === 0) {
       toast.info("Aucune vente sur la période sélectionnée");
