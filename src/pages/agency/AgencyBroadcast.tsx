@@ -28,9 +28,11 @@ type Scheduled = {
   target_branch_ids: string[];
   scheduled_at: string;
   sent_at: string | null;
-  status: "scheduled" | "sent" | "cancelled";
+  status: "scheduled" | "sent" | "cancelled" | "failed";
   broadcast_id: string | null;
   created_at: string;
+  failure_reason: string | null;
+  fully_read_at: string | null;
 };
 
 type ReadRow = {
