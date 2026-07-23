@@ -568,8 +568,11 @@ const BookingDetail = () => {
               <Button variant="outline" size="sm" onClick={downloadQr}><QrIcon className="h-3 w-3 mr-1" /> QR PNG</Button>
               <Button variant="outline" size="sm" onClick={printTicket}><Printer className="h-3 w-3 mr-1" /> Imprimer</Button>
             </div>
-            <Button size="sm" onClick={shareOnWhatsApp} className="w-full bg-[#25D366] hover:bg-[#1ebe57] text-white">
-              <Share2 className="h-4 w-4 mr-2" /> Envoyer reçu + QR par WhatsApp
+            <Button size="sm" onClick={shareSystem} className="w-full gradient-primary text-primary-foreground">
+              <Share2 className="h-4 w-4 mr-2" /> Partager (WhatsApp, Messages, Email…)
+            </Button>
+            <Button size="sm" variant="outline" onClick={shareOnWhatsApp} className="w-full border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10">
+              <MessageSquare className="h-4 w-4 mr-2" /> Envoyer par WhatsApp
             </Button>
           </div>
         ) : !isCancelled ? (
