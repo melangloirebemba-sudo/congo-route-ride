@@ -88,6 +88,24 @@ const ManagerLayout = () => {
               <h1 className="font-display text-sm md:text-base font-bold text-gradient truncate">Guichet</h1>
               <p className="text-[10px] md:text-xs text-muted-foreground truncate">Espace gestionnaire</p>
             </div>
+            <NotificationsDrawer branchId={manager?.branch_id}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                aria-label={`Notifications${unread > 0 ? `, ${unread} non lues` : ""}`}
+              >
+                <Bell className="h-4 w-4" aria-hidden="true" />
+                {unread > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center leading-none ring-2 ring-card"
+                  >
+                    {unread > 99 ? "99+" : unread}
+                  </span>
+                )}
+              </Button>
+            </NotificationsDrawer>
             <SignOutConfirm onConfirm={signOut}>
               <Button variant="ghost" size="icon" aria-label="Déconnexion">
                 <LogOut className="h-4 w-4" aria-hidden="true" />
