@@ -174,7 +174,9 @@ const ManagerSale = () => {
       booking_date: new Date().toISOString().split("T")[0],
       qr_code: qr,
       total_amount: trip.price,
+      boarding_branch_id: boardingBranchId || manager?.branch_id || null,
     });
+
 
     if (error) {
       setSubmitting(false);
