@@ -134,7 +134,7 @@ const AgencySubAgencies = () => {
         </Card>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
             {pg.paginated.map((b: Branch) => {
               const mgrs = managerByBranch[b.id] || [];
               const c = counts[b.id] || { trips: 0, bookings: 0 };
