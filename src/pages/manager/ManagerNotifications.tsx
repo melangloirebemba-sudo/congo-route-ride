@@ -199,10 +199,11 @@ const ManagerNotifications = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "unread" | "all")}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "unread" | "all" | "archived")}>
           <TabsList>
-            <TabsTrigger value="all">Toutes ({items.length})</TabsTrigger>
+            <TabsTrigger value="all">Actives</TabsTrigger>
             <TabsTrigger value="unread">Non lues ({unreadCount})</TabsTrigger>
+            <TabsTrigger value="archived">Archivées</TabsTrigger>
           </TabsList>
         </Tabs>
         <Select value={kindFilter} onValueChange={setKindFilter}>
