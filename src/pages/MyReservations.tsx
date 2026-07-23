@@ -60,16 +60,57 @@ const MyReservations = () => {
   const [loading, setLoading] = useState(true);
   const [payFor, setPayFor] = useState<Reservation | null>(null);
   const [method, setMethod] = useState("mtn");
+  const [momoPhone, setMomoPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
   const [claimQr, setClaimQr] = useState("");
   const [claimPhone, setClaimPhone] = useState("");
   const [claiming, setClaiming] = useState(false);
   const [isAnon, setIsAnon] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [processingReq, setProcessingReq] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setIsAnon(!!data.user?.is_anonymous));
   }, []);
+
+  const loadPendingRequests = async () => {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u?.user?.id) return;
+    const { data } = await (supabase as any)
+      .from("passenger_notifications")
+      .select("id, title, message, created_at, booking_id, kind, read_at")
+      .eq("user_id", u.user.id)
+      .eq("kind", "payment_request")
+      .is("read_at", null)
+      .order("created_at", { ascending: false });
+    setPendingRequests((data as any) || []);
+  };
+
+  const confirmRequest = async (id: string) => {
+    setProcessingReq(id);
+    const { data, error } = await (supabase as any).rpc("confirm_payment_simulation", { _notification_id: id });
+    setProcessingReq(null);
+    if (error || (data && data.ok === false)) {
+      toast.error(data?.message || error?.message || "Échec de la confirmation");
+      return;
+    }
+    toast.success("Paiement confirmé");
+    await Promise.all([loadPendingRequests(), load()]);
+  };
+
+  const refuseRequest = async (id: string) => {
+    setProcessingReq(id);
+    const { data, error } = await (supabase as any).rpc("refuse_payment_simulation", { _notification_id: id });
+    setProcessingReq(null);
+    if (error || (data && data.ok === false)) {
+      toast.error(data?.message || error?.message || "Échec du refus");
+      return;
+    }
+    toast.info("Transaction refusée");
+    await Promise.all([loadPendingRequests(), load()]);
+  };
+
 
   const handleClaim = async () => {
     if (!claimQr.trim() || !claimPhone.trim()) {
@@ -110,13 +151,47 @@ const MyReservations = () => {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadPendingRequests(); }, []);
+
+  useEffect(() => {
+    let ch: any;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u?.user?.id;
+      if (!uid) return;
+      ch = supabase
+        .channel(`passenger-notifs-${uid}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "passenger_notifications", filter: `user_id=eq.${uid}` }, () => { loadPendingRequests(); load(); })
+        .subscribe();
+    })();
+    return () => { if (ch) supabase.removeChannel(ch); };
+  }, []);
 
   const paymentLabels: Record<string, string> = { mtn: "MTN MoMo", airtel: "Airtel Money", card: "Carte bancaire" };
 
   const handlePay = async () => {
     if (!payFor) return;
     setSubmitting(true);
+    const isMomo = method === "mtn" || method === "airtel";
+
+    if (isMomo) {
+      const { data, error } = await (supabase as any).rpc("init_payment_simulation", {
+        _booking_id: payFor.id,
+        _momo_phone: (momoPhone || payFor.passenger_name || "").trim() || "unknown",
+        _provider: method === "mtn" ? "MTN MoMo" : "Airtel Money",
+      });
+      setSubmitting(false);
+      if (error || (data && data.ok === false)) {
+        toast.error(data?.message || error?.message || "Erreur lors de l'initialisation du paiement");
+        return;
+      }
+      toast.success("Demande envoyée. Confirmez la transaction ci-dessous.");
+      setPayFor(null);
+      await loadPendingRequests();
+      return;
+    }
+
+    // Card = simulated instant success
     const { error } = await supabase
       .from("bookings")
       .update({ payment_status: "paid", payment_method: paymentLabels[method] || method })
@@ -163,6 +238,41 @@ const MyReservations = () => {
           </div>
           <Button size="sm" variant="outline" onClick={() => setClaimOpen(true)}>Récupérer</Button>
         </div>
+
+        {pendingRequests.length > 0 && (
+          <div className="bg-warning/10 border-2 border-warning rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-warning-foreground" />
+              <p className="text-sm font-semibold">Demande(s) de paiement Mobile Money</p>
+            </div>
+            {pendingRequests.map((req) => (
+              <div key={req.id} className="bg-card rounded-xl p-3 border border-border/50 space-y-2">
+                <p className="text-sm font-medium">{req.title}</p>
+                {req.message && <p className="text-xs text-muted-foreground whitespace-pre-line">{req.message}</p>}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => confirmRequest(req.id)}
+                    disabled={processingReq === req.id}
+                    className="flex-1 gradient-primary text-primary-foreground"
+                  >
+                    {processingReq === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Confirmer"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => refuseRequest(req.id)}
+                    disabled={processingReq === req.id}
+                    className="flex-1"
+                  >
+                    Refuser
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
         ) : items.length === 0 ? (
@@ -218,6 +328,21 @@ const MyReservations = () => {
                 </button>
               ))}
             </div>
+            {(method === "mtn" || method === "airtel") && (
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Numéro Mobile Money</label>
+                <input
+                  value={momoPhone}
+                  onChange={(e) => setMomoPhone(e.target.value)}
+                  placeholder="Ex: 06 000 00 00"
+                  inputMode="tel"
+                  className="w-full rounded-xl bg-secondary text-secondary-foreground px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Une demande apparaîtra ci-dessus à confirmer ou refuser.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPayFor(null)}>Annuler</Button>

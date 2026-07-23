@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ListPagination, usePagination } from "@/components/ListPagination";
-import { CheckCircle2, Clock, XCircle, QrCode, RefreshCw, Megaphone } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, QrCode, RefreshCw, Megaphone, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +35,12 @@ const ManagerBoarding = () => {
   const [scheduledAt, setScheduledAt] = useState<string>("");
   const [scheduled, setScheduled] = useState<any[]>([]);
   const [scheduledOpen, setScheduledOpen] = useState(false);
+  const [editItem, setEditItem] = useState<any>(null);
+  const [editAt, setEditAt] = useState<string>("");
+  const [editMsg, setEditMsg] = useState<string>("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editConfirmOpen, setEditConfirmOpen] = useState(false);
+  const [editMode, setEditMode] = useState<"edit" | "duplicate">("edit");
 
   useEffect(() => {
     if (!manager?.branch_id) return;
@@ -155,6 +161,52 @@ const ManagerBoarding = () => {
     if (error) { toast.error(error.message); return; }
     toast.success("Diffusion annulée");
     loadScheduled();
+  };
+
+  const openEditScheduled = (row: any, mode: "edit" | "duplicate") => {
+    setEditItem(row);
+    setEditMode(mode);
+    const iso = row.scheduled_at ? new Date(row.scheduled_at) : new Date(Date.now() + 60 * 60 * 1000);
+    // Convert to yyyy-MM-ddTHH:mm local
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setEditAt(`${iso.getFullYear()}-${pad(iso.getMonth() + 1)}-${pad(iso.getDate())}T${pad(iso.getHours())}:${pad(iso.getMinutes())}`);
+    setEditMsg(row.extra_message || "");
+    setScheduledOpen(false);
+  };
+
+  const submitEditScheduled = async () => {
+    if (!editItem) return;
+    if (!editAt) { toast.error("Choisissez une date/heure"); return; }
+    const when = new Date(editAt);
+    if (when.getTime() <= Date.now()) { toast.error("La date doit être dans le futur"); return; }
+    setEditSaving(true);
+    if (editMode === "edit") {
+      const { error } = await (supabase as any)
+        .from("scheduled_boarding_broadcasts")
+        .update({ scheduled_at: when.toISOString(), extra_message: editMsg?.trim() || null })
+        .eq("id", editItem.id)
+        .eq("status", "scheduled");
+      setEditSaving(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Diffusion mise à jour");
+    } else {
+      const { error } = await (supabase as any).from("scheduled_boarding_broadcasts").insert({
+        trip_id: editItem.trip_id,
+        branch_id: editItem.branch_id ?? manager?.branch_id,
+        agency_id: editItem.agency_id ?? manager?.agency_id,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        extra_message: editMsg?.trim() || null,
+        scheduled_at: when.toISOString(),
+        status: "scheduled",
+      });
+      setEditSaving(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Diffusion dupliquée et planifiée");
+    }
+    setEditItem(null);
+    setEditConfirmOpen(false);
+    loadScheduled();
+    setScheduledOpen(true);
   };
 
   const load = async () => {
@@ -539,11 +591,18 @@ const ManagerBoarding = () => {
                   </div>
                   {s.extra_message && <div className="text-xs italic text-muted-foreground">« {s.extra_message} »</div>}
                   {s.failure_reason && <div className="text-xs text-destructive">{s.failure_reason}</div>}
-                  {s.status === "scheduled" && (
-                    <div className="pt-1">
-                      <Button variant="outline" size="sm" onClick={() => cancelScheduled(s.id)}>Annuler l'envoi</Button>
-                    </div>
-                  )}
+                  <div className="pt-1 flex flex-wrap gap-2">
+                    {s.status === "scheduled" && (
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => openEditScheduled(s, "edit")}>Modifier</Button>
+                        <Button variant="outline" size="sm" onClick={() => openEditScheduled(s, "duplicate")}>Dupliquer</Button>
+                        <Button variant="outline" size="sm" onClick={() => cancelScheduled(s.id)}>Annuler l'envoi</Button>
+                      </>
+                    )}
+                    {s.status !== "scheduled" && (
+                      <Button variant="outline" size="sm" onClick={() => openEditScheduled(s, "duplicate")}>Dupliquer</Button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -551,6 +610,70 @@ const ManagerBoarding = () => {
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={loadScheduled}>Actualiser</Button>
             <Button size="sm" onClick={() => setScheduledOpen(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editItem} onOpenChange={(o) => { if (!o) { setEditItem(null); setEditConfirmOpen(false); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editMode === "edit" ? "Modifier la diffusion planifiée" : "Dupliquer la diffusion"}</DialogTitle>
+            <DialogDescription>
+              {editMode === "edit"
+                ? "Modifiez la date/heure et le message avant l'envoi."
+                : "Créez une nouvelle diffusion planifiée basée sur celle-ci."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {editItem?.trips && (
+              <div className="text-xs text-muted-foreground">
+                Trajet : <strong>{editItem.trips.departure} → {editItem.trips.destination}</strong>
+                {" · "}{editItem.trips.date} · {editItem.trips.departure_time}
+              </div>
+            )}
+            <div>
+              <label className="text-xs text-muted-foreground">Date et heure d'envoi</label>
+              <input
+                type="datetime-local"
+                value={editAt}
+                onChange={(e) => setEditAt(e.target.value)}
+                className="w-full rounded-xl bg-secondary text-secondary-foreground px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Message additionnel (optionnel)</label>
+              <textarea
+                value={editMsg}
+                onChange={(e) => setEditMsg(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl bg-secondary text-secondary-foreground px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)} disabled={editSaving}>Annuler</Button>
+            <Button onClick={() => setEditConfirmOpen(true)} disabled={editSaving || !editAt}>
+              {editMode === "edit" ? "Enregistrer" : "Planifier la copie"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editConfirmOpen} onOpenChange={setEditConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer</DialogTitle>
+            <DialogDescription>
+              {editMode === "edit"
+                ? <>La diffusion sera envoyée le <strong>{editAt ? new Date(editAt).toLocaleString("fr-FR") : ""}</strong>. Confirmer les modifications ?</>
+                : <>Une nouvelle diffusion sera planifiée pour le <strong>{editAt ? new Date(editAt).toLocaleString("fr-FR") : ""}</strong>. Confirmer ?</>}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditConfirmOpen(false)} disabled={editSaving}>Retour</Button>
+            <Button onClick={submitEditScheduled} disabled={editSaving}>
+              {editSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmer"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

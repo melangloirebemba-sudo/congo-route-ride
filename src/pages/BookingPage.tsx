@@ -59,6 +59,9 @@ const BookingPage = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
   const [signupDone, setSignupDone] = useState(false);
+  const [momoPhone, setMomoPhone] = useState("");
+  const [awaitingConfirm, setAwaitingConfirm] = useState(false);
+  const [awaitingBookingId, setAwaitingBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -99,6 +102,29 @@ const BookingPage = () => {
     if (!canReserveLater && payMode === "later") setPayMode("now");
   }, [canReserveLater, payMode]);
 
+  // Listen for MoMo confirmation
+  useEffect(() => {
+    if (!awaitingConfirm || !awaitingBookingId) return;
+    const ch = supabase
+      .channel(`await-pay-${awaitingBookingId}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${awaitingBookingId}` }, (payload: any) => {
+        const st = payload?.new?.payment_status;
+        if (st === "paid") {
+          setAwaitingConfirm(false);
+          setPendingRef(false);
+          setStep("confirmed");
+          toast.success("Paiement confirmé ! Votre billet est prêt.");
+        } else if (st === "pending" && payload?.new?.payment_method?.toLowerCase().includes("agence")) {
+          setAwaitingConfirm(false);
+          setPendingRef(true);
+          setStep("confirmed");
+          toast.info("Paiement refusé. Réservation enregistrée, à régler plus tard.");
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [awaitingConfirm, awaitingBookingId]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
@@ -136,17 +162,19 @@ const BookingPage = () => {
     }
 
     const isReservation = payMode === "later";
-    // deadline: 2h before departure OR now+30min if <2h, cap 24h before if trip far
+    const isMomo = !isReservation && (paymentMethod === "mtn" || paymentMethod === "airtel");
+    // deadline: 2h before departure
     const departDate = new Date(`${trip.date}T${trip.departure_time || "00:00"}`);
     const deadline = new Date(departDate.getTime() - 2 * 3600000);
 
-    const { error } = await (supabase as any).from("bookings").insert({
+    const initialPaid = !isReservation && !isMomo; // card = simulated success; momo waits for confirm
+    const { data: inserted, error } = await (supabase as any).from("bookings").insert({
       trip_id: trip.id,
       passenger_name: name,
       phone,
       seat_number: Number(seat),
       payment_method: isReservation ? paymentLabels.agency : (paymentLabels[paymentMethod] || paymentMethod),
-      payment_status: isReservation ? "pending" : "paid",
+      payment_status: initialPaid ? "paid" : "pending",
       status: "confirmed",
       total_amount: trip.price,
       qr_code: qrCode,
@@ -154,15 +182,15 @@ const BookingPage = () => {
       boarding_branch_id: boardingBranchId,
       sale_channel: "online",
       payment_deadline: isReservation ? deadline.toISOString() : null,
-    });
+    }).select("id").single();
 
-    if (error) {
+    if (error || !inserted) {
       toast.error("Erreur lors de la réservation. Veuillez réessayer.");
       setSubmitting(false);
       return;
     }
 
-    if (!isReservation) {
+    if (initialPaid) {
       const commission = Math.round(trip.price * 0.1);
       await supabase.from("transactions").insert({
         agency_id: trip.agency_id,
@@ -172,6 +200,26 @@ const BookingPage = () => {
         payment_method: paymentLabels[paymentMethod] || paymentMethod,
         status: "completed",
       });
+    }
+
+    if (isMomo) {
+      const { data: sim, error: simErr } = await (supabase as any).rpc("init_payment_simulation", {
+        _booking_id: inserted.id,
+        _momo_phone: (momoPhone || phone).trim(),
+        _provider: paymentMethod === "mtn" ? "MTN MoMo" : "Airtel Money",
+      });
+      if (simErr || (sim && sim.ok === false)) {
+        toast.error(sim?.message || "Impossible d'initier le paiement Mobile Money");
+        setSubmitting(false);
+        return;
+      }
+      setBookingRef(qrCode);
+      setAwaitingBookingId(inserted.id);
+      setIsAnonymous(anonUsed || !!session?.session?.user?.is_anonymous);
+      setAwaitingConfirm(true);
+      setSubmitting(false);
+      toast.success("Demande envoyée. Confirmez le paiement dans vos notifications.");
+      return;
     }
 
     setBookingRef(qrCode);
@@ -206,6 +254,27 @@ const BookingPage = () => {
     setSignupDone(true);
     toast.success("Compte créé ! Vos réservations sont conservées.");
   };
+
+  if (awaitingConfirm) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-md w-full text-center space-y-4">
+          <Loader2 className="h-12 w-12 mx-auto animate-spin text-primary" />
+          <h1 className="font-display text-xl font-bold">Paiement en attente</h1>
+          <p className="text-sm text-muted-foreground">
+            Une demande de paiement a été envoyée à votre numéro <strong>{momoPhone || phone}</strong>.
+            Ouvrez vos notifications pour <strong>confirmer</strong> ou <strong>refuser</strong> la transaction.
+          </p>
+          <div className="text-xs text-muted-foreground">
+            Réf : <span className="font-mono">{bookingRef}</span>
+          </div>
+          <Button variant="outline" onClick={() => navigate("/reservations")} className="rounded-xl w-full h-11">
+            Voir mes réservations
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "confirmed") {
     return (
@@ -423,6 +492,24 @@ const BookingPage = () => {
                 {paymentMethod === m.id && <CheckCircle2 className="ml-auto h-5 w-5 text-primary" />}
               </button>
             ))}
+            {(paymentMethod === "mtn" || paymentMethod === "airtel") && (
+              <div className="pt-2 space-y-1">
+                <label className="text-xs text-muted-foreground">Numéro Mobile Money à débiter</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <input
+                    value={momoPhone || phone}
+                    onChange={(e) => setMomoPhone(e.target.value)}
+                    placeholder="Ex: 06 000 00 00"
+                    inputMode="tel"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Vous recevrez une notification pour confirmer ou refuser la transaction.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
