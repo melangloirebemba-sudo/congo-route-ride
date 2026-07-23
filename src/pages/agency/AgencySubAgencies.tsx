@@ -204,18 +204,19 @@ const AgencySubAgencies = () => {
                       </div>
                     </div>
 
-                    <div className="flex gap-2 pt-2 mt-auto">
-                      <Button asChild size="sm" variant="outline" className="flex-1">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2 mt-auto">
+                      <Button asChild size="sm" variant="outline" className="flex-1 w-full">
                         <Link to={`/agency/bookings?branch=${b.id}`}>
                           <Ticket className="h-3.5 w-3.5 mr-1" /> Réservations
                         </Link>
                       </Button>
-                      <Button asChild size="sm" className="flex-1">
+                      <Button asChild size="sm" className="flex-1 w-full">
                         <Link to={`/agency/trips?branch=${b.id}`}>
                           <CalendarClock className="h-3.5 w-3.5 mr-1" /> Disponibilités
                         </Link>
                       </Button>
                     </div>
+
                   </CardContent>
                 </Card>
               );
