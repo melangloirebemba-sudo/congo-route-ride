@@ -132,7 +132,7 @@ const MyReservations = () => {
           </div>
         ) : (
           items.map((r) => (
-            <div key={r.id} className="bg-card rounded-2xl p-4 border border-border/50 space-y-3">
+            <div key={r.id} onClick={() => navigate(`/bookings/${r.id}`)} className="bg-card rounded-2xl p-4 border border-border/50 space-y-3 cursor-pointer hover:border-primary/40 transition-colors" role="button">
               <div className="flex items-center gap-2">
                 <MapPin className="h-3 w-3 text-primary" />
                 <span className="text-sm font-semibold">{r.trips?.departure} → {r.trips?.destination}</span>
@@ -146,7 +146,7 @@ const MyReservations = () => {
               <Countdown deadline={r.payment_deadline} />
               <div className="flex items-center justify-between pt-2 border-t border-border/50">
                 <span className="font-display font-bold text-primary">{r.total_amount.toLocaleString()} FCFA</span>
-                <Button size="sm" onClick={() => setPayFor(r)} className="gradient-primary text-primary-foreground">
+                <Button size="sm" onClick={(e) => { e.stopPropagation(); setPayFor(r); }} className="gradient-primary text-primary-foreground">
                   <CreditCard className="h-3 w-3 mr-1" /> Payer maintenant
                 </Button>
               </div>

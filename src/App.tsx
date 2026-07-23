@@ -12,6 +12,7 @@ import SearchResults from "./pages/SearchResults";
 import TripDetails from "./pages/TripDetails";
 import BookingPage from "./pages/BookingPage";
 import BookingHistory from "./pages/BookingHistory";
+import BookingDetail from "./pages/BookingDetail";
 import MyReservations from "./pages/MyReservations";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/trip/:id" element={<ClientOnlyRoute><TripDetails /></ClientOnlyRoute>} />
             <Route path="/booking/:id" element={<ClientOnlyRoute><BookingPage /></ClientOnlyRoute>} />
             <Route path="/bookings" element={<ClientOnlyRoute><BookingHistory /></ClientOnlyRoute>} />
+            <Route path="/bookings/:id" element={<ClientOnlyRoute><BookingDetail /></ClientOnlyRoute>} />
             <Route path="/reservations" element={<ClientOnlyRoute><MyReservations /></ClientOnlyRoute>} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/preferences" element={<Preferences />} />
