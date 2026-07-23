@@ -87,6 +87,41 @@ const ScanAdmin = () => {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [lastCode, setLastCode] = useState<string>("");
 
+  // Filters propagated from the Boarding dashboard so scanning stays in-context.
+  const [searchParams] = useSearchParams();
+  const filterDateFrom = searchParams.get("date_from") || "";
+  const filterDateTo = searchParams.get("date_to") || "";
+  const filterTripId = searchParams.get("trip_id") || "";
+  const filterStatus = searchParams.get("status") || "";
+  const hasFilters = !!(filterDateFrom || filterDateTo || filterTripId || filterStatus);
+  const [filterTrip, setFilterTrip] = useState<{ departure: string; destination: string; date: string; departure_time: string } | null>(null);
+
+  useEffect(() => {
+    if (!filterTripId) { setFilterTrip(null); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("trips")
+        .select("departure, destination, date, departure_time")
+        .eq("id", filterTripId)
+        .maybeSingle();
+      setFilterTrip((data as any) || null);
+    })();
+  }, [filterTripId]);
+
+  const filterMismatch = useMemo(() => {
+    if (!booking || !hasFilters) return null;
+    const issues: string[] = [];
+    if (filterTripId && booking.trip?.id !== filterTripId) issues.push("trajet différent de celui filtré");
+    const d = booking.trip?.date;
+    if (filterDateFrom && d && d < filterDateFrom) issues.push(`date avant ${filterDateFrom}`);
+    if (filterDateTo && d && d > filterDateTo) issues.push(`date après ${filterDateTo}`);
+    if (filterStatus) {
+      const bs = booking.boarding_status || "pending";
+      if (bs !== filterStatus) issues.push(`statut « ${bs} » ≠ « ${filterStatus} »`);
+    }
+    return issues.length ? issues : null;
+  }, [booking, hasFilters, filterTripId, filterDateFrom, filterDateTo, filterStatus]);
+
   const verify = async (code: string) => {
     const trimmed = code.trim();
     if (!trimmed || trimmed === lastCode) return;
