@@ -1,0 +1,193 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Clock, MapPin, Loader2, CreditCard, AlertTriangle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+interface Reservation {
+  id: string;
+  qr_code: string;
+  seat_number: number;
+  total_amount: number;
+  payment_status: string;
+  payment_deadline: string | null;
+  passenger_name: string;
+  boarding_branch_id: string | null;
+  trips: {
+    departure: string;
+    destination: string;
+    date: string;
+    departure_time: string;
+    agencies: { name: string } | null;
+  } | null;
+  boarding_branch?: { name: string; city: string | null } | null;
+}
+
+function useCountdown(target: string | null | undefined) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  if (!target) return null;
+  const diff = new Date(target).getTime() - now;
+  if (diff <= 0) return { expired: true, label: "Expiré" };
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const label = d > 0 ? `${d}j ${h}h ${m}m` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
+  return { expired: false, label, days: d };
+}
+
+const Countdown = ({ deadline }: { deadline: string | null }) => {
+  const c = useCountdown(deadline);
+  if (!c) return null;
+  const urgent = !c.expired && (c.days ?? 0) < 1;
+  return (
+    <div className={`flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg ${c.expired ? "bg-destructive/10 text-destructive" : urgent ? "bg-warning/20 text-warning-foreground" : "bg-secondary text-muted-foreground"}`}>
+      {c.expired ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+      {c.expired ? "Réservation expirée" : `Payer dans ${c.label}`}
+    </div>
+  );
+};
+
+const MyReservations = () => {
+  const navigate = useNavigate();
+  const [items, setItems] = useState<Reservation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [payFor, setPayFor] = useState<Reservation | null>(null);
+  const [method, setMethod] = useState("mtn");
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = async () => {
+    const { data } = await supabase
+      .from("bookings")
+      .select("id, qr_code, seat_number, total_amount, payment_status, payment_deadline, passenger_name, boarding_branch_id, trips(departure, destination, date, departure_time, agencies(name))")
+      .eq("payment_status", "pending")
+      .eq("sale_channel" as any, "online")
+      .order("created_at", { ascending: false });
+    const rows = (data as any) || [];
+    const branchIds = Array.from(new Set(rows.map((r: any) => r.boarding_branch_id).filter(Boolean)));
+    let branchMap: Record<string, any> = {};
+    if (branchIds.length) {
+      const { data: bs } = await supabase.from("agency_branches" as any).select("id, name, city").in("id", branchIds);
+      branchMap = Object.fromEntries((bs || []).map((b: any) => [b.id, b]));
+    }
+    setItems(rows.map((r: any) => ({ ...r, boarding_branch: r.boarding_branch_id ? branchMap[r.boarding_branch_id] : null })));
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const paymentLabels: Record<string, string> = { mtn: "MTN MoMo", airtel: "Airtel Money", card: "Carte bancaire" };
+
+  const handlePay = async () => {
+    if (!payFor) return;
+    setSubmitting(true);
+    const { error } = await supabase
+      .from("bookings")
+      .update({ payment_status: "paid", payment_method: paymentLabels[method] || method })
+      .eq("id", payFor.id);
+    if (error) {
+      toast.error("Erreur lors du paiement");
+      setSubmitting(false);
+      return;
+    }
+    const commission = Math.round(payFor.total_amount * 0.1);
+    await supabase.from("transactions").insert({
+      agency_id: null,
+      amount: payFor.total_amount,
+      commission,
+      net_amount: payFor.total_amount - commission,
+      payment_method: paymentLabels[method] || method,
+      status: "completed",
+    } as any);
+    toast.success("Paiement confirmé");
+    setPayFor(null);
+    setSubmitting(false);
+    await load();
+  };
+
+  return (
+    <div className="min-h-screen pb-24">
+      <div className="gradient-primary px-4 pt-10 pb-6">
+        <button onClick={() => navigate(-1)} className="text-primary-foreground mb-4">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="font-display text-xl font-bold text-primary-foreground">Mes réservations</h1>
+        <p className="text-primary-foreground/70 text-xs mt-1">Réservations en attente de paiement</p>
+      </div>
+
+      <div className="px-4 py-4 max-w-lg mx-auto space-y-3">
+        {loading ? (
+          <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
+        ) : items.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p>Aucune réservation en attente</p>
+            <Button variant="link" onClick={() => navigate("/bookings")} className="mt-2">Voir mes billets payés →</Button>
+          </div>
+        ) : (
+          items.map((r) => (
+            <div key={r.id} className="bg-card rounded-2xl p-4 border border-border/50 space-y-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-3 w-3 text-primary" />
+                <span className="text-sm font-semibold">{r.trips?.departure} → {r.trips?.destination}</span>
+              </div>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>{r.trips?.date ? new Date(r.trips.date).toLocaleDateString("fr-FR") : ""} · {r.trips?.departure_time} · Siège {r.seat_number}</p>
+                <p>{r.passenger_name} · {r.trips?.agencies?.name}</p>
+                {r.boarding_branch && <p>🚏 Embarquement : {r.boarding_branch.name}{r.boarding_branch.city ? ` (${r.boarding_branch.city})` : ""}</p>}
+                <p className="font-mono">{r.qr_code}</p>
+              </div>
+              <Countdown deadline={r.payment_deadline} />
+              <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                <span className="font-display font-bold text-primary">{r.total_amount.toLocaleString()} FCFA</span>
+                <Button size="sm" onClick={() => setPayFor(r)} className="gradient-primary text-primary-foreground">
+                  <CreditCard className="h-3 w-3 mr-1" /> Payer maintenant
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground text-center">Ou payez directement à l'agence d'embarquement</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      <Dialog open={!!payFor} onOpenChange={(o) => !o && setPayFor(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Payer la réservation</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Montant : <span className="font-bold text-primary">{payFor?.total_amount.toLocaleString()} FCFA</span></p>
+            <div className="space-y-2">
+              {[
+                { id: "mtn", label: "MTN MoMo", emoji: "📱" },
+                { id: "airtel", label: "Airtel Money", emoji: "📲" },
+                { id: "card", label: "Carte bancaire", emoji: "💳" },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setMethod(m.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 ${method === m.id ? "border-primary bg-secondary" : "border-border"}`}
+                >
+                  <span className="text-xl">{m.emoji}</span>
+                  <span className="text-sm">{m.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayFor(null)}>Annuler</Button>
+            <Button onClick={handlePay} disabled={submitting} className="gradient-primary text-primary-foreground">
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmer le paiement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default MyReservations;
