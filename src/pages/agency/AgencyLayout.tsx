@@ -39,12 +39,12 @@ const AgencyLayout = () => {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <aside className="w-60 bg-card border-r border-border hidden md:flex flex-col">
-        <div className="p-5 border-b border-border">
+      <aside className="w-60 bg-card border-r border-border hidden md:flex flex-col sticky top-0 h-screen shrink-0">
+        <div className="p-5 border-b border-border shrink-0">
           <h1 className="font-display text-lg font-bold text-gradient">Mon Agence</h1>
           <p className="text-xs text-muted-foreground">Espace gestionnaire</p>
         </div>
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="p-3 space-y-1 overflow-y-auto">
           {navItems.map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
@@ -60,12 +60,12 @@ const AgencyLayout = () => {
               {label}
             </NavLink>
           ))}
+          <div className="pt-3 mt-2 border-t border-border">
+            <Button variant="ghost" onClick={signOut} className="w-full justify-start text-muted-foreground">
+              <LogOut className="h-4 w-4 mr-2" /> Déconnexion
+            </Button>
+          </div>
         </nav>
-        <div className="p-3 border-t border-border">
-          <Button variant="ghost" onClick={signOut} className="w-full justify-start text-muted-foreground">
-            <LogOut className="h-4 w-4 mr-2" /> Déconnexion
-          </Button>
-        </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
