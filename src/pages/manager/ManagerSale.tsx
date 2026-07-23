@@ -46,22 +46,36 @@ const ManagerSale = () => {
   const [takenSeats, setTakenSeats] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [lastTicket, setLastTicket] = useState<LastTicket | null>(null);
+  const [branches, setBranches] = useState<{ id: string; name: string; city: string | null }[]>([]);
+  const [boardingBranchId, setBoardingBranchId] = useState<string>("");
 
   useEffect(() => {
     if (!manager) return;
     (async () => {
       const today = new Date().toISOString().split("T")[0];
-      let q = supabase
+      // Counter sales: the agent can sell any of the agency's upcoming trips,
+      // even if the passenger will board at another sub-agency.
+      const { data } = await supabase
         .from("trips")
-        .select("id, departure, destination, date, departure_time, price, currency, total_seats, available_seats")
+        .select("id, departure, destination, date, departure_time, price, currency, total_seats, available_seats, branch_id")
         .eq("agency_id", manager.agency_id)
         .gte("date", today)
         .order("date");
-      if (manager.branch_id) q = q.eq("branch_id", manager.branch_id);
-      const { data } = await q;
       setTrips(data || []);
+
+      const { data: br } = await supabase
+        .from("agency_branches" as any)
+        .select("id, name, city")
+        .eq("agency_id", manager.agency_id)
+        .eq("status", "active")
+        .order("name");
+      setBranches((br as any) || []);
+
+      // Default boarding branch = this manager's own branch
+      if (manager.branch_id) setBoardingBranchId(manager.branch_id);
     })();
   }, [manager]);
+
 
   const trip = useMemo(() => trips.find((t) => t.id === tripId), [tripId, trips]);
   const [lockedSeats, setLockedSeats] = useState<number[]>([]);
