@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { useWebPushListener } from "@/hooks/useWebPush";
+import { useTripReminders } from "@/hooks/useTripReminders";
 import BottomNav from "@/components/BottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ClientOnlyRoute from "@/components/ClientOnlyRoute";
@@ -60,7 +61,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const PushBridge = () => { useWebPushListener(); return null; };
+const PushBridge = () => { useWebPushListener(); useTripReminders(); return null; };
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

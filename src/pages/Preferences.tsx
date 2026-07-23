@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, MessageSquare, Bell, BellOff, Smartphone, MonitorSmartphone } from "lucide-react";
+import { ArrowLeft, MessageSquare, Bell, BellOff, Smartphone, MonitorSmartphone, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWebPushToggle } from "@/hooks/useWebPush";
+import { REMINDER_OPTIONS, getReminderOffsets, setReminderOffsets } from "@/hooks/useTripReminders";
 
 type Channel = "sms" | "whatsapp";
 
@@ -21,6 +23,17 @@ const Preferences = () => {
   const [channel, setChannel] = useState<Channel>("sms");
   const [tripReminders, setTripReminders] = useState(true);
   const [cancellationAlerts, setCancellationAlerts] = useState(true);
+  const [offsets, setOffsets] = useState<number[]>(getReminderOffsets());
+
+  const toggleOffset = (val: number, on: boolean) => {
+    setOffsets((prev) => {
+      const next = on ? [...prev, val] : prev.filter((v) => v !== val);
+      const sorted = Array.from(new Set(next)).sort((a, b) => a - b);
+      setReminderOffsets(sorted);
+      return sorted;
+    });
+  };
+
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -258,6 +271,55 @@ const Preferences = () => {
             />
           </div>
         </motion.div>
+
+        {/* Reminder offsets (web push) */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="glass rounded-2xl p-5 space-y-4"
+        >
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Clock className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h2 className="font-display font-semibold">Rappels d'embarquement</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Choisissez quand recevoir un rappel push dans ce navigateur avant votre départ.
+                {!push.enabled && " Activez d'abord les notifications push ci-dessus."}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {REMINDER_OPTIONS.map((opt) => {
+              const checked = offsets.includes(opt.value);
+              const disabled = !push.enabled;
+              return (
+                <label
+                  key={opt.value}
+                  className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                    checked ? "border-primary bg-primary/5" : "border-border"
+                  } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-primary/40"}`}
+                >
+                  <Checkbox
+                    checked={checked}
+                    disabled={disabled}
+                    onCheckedChange={(v) => toggleOffset(opt.value, !!v)}
+                  />
+                  <span className="text-sm font-medium">{opt.label}</span>
+                </label>
+              );
+            })}
+          </div>
+          {offsets.length === 0 && push.enabled && (
+            <p className="text-xs text-muted-foreground">
+              Aucun rappel sélectionné — vous ne recevrez pas de notification avant le départ.
+            </p>
+          )}
+        </motion.div>
+
+
 
 
 
