@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Bell, CheckCheck, ArrowUpDown, ExternalLink } from "lucide-react";
+import { Bell, CheckCheck, ArrowUpDown, ExternalLink, Archive } from "lucide-react";
 import { toast } from "sonner";
 
 type Notif = {
@@ -25,6 +25,7 @@ type Notif = {
   message: string | null;
   kind: string;
   read_at: string | null;
+  archived_at: string | null;
   created_at: string;
   booking_id: string | null;
 };
