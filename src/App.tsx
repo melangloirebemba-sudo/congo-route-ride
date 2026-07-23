@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import BottomNav from "@/components/BottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ClientOnlyRoute from "@/components/ClientOnlyRoute";
 import Index from "./pages/Index";
 import SearchResults from "./pages/SearchResults";
 import TripDetails from "./pages/TripDetails";
