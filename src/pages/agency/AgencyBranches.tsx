@@ -25,6 +25,10 @@ type Branch = {
   phone: string | null;
   manager_name: string | null;
   status: string;
+  can_create_trips?: boolean;
+  can_sell_counter?: boolean;
+  can_scan?: boolean;
+  can_view_stats?: boolean;
 };
 
 const emptyForm = {
@@ -36,7 +40,12 @@ const emptyForm = {
   manager_name: "",
   parent_branch_id: "none",
   status: "active",
+  can_create_trips: true,
+  can_sell_counter: true,
+  can_scan: true,
+  can_view_stats: true,
 };
+
 
 const AgencyBranches = () => {
   const { agencyId } = useAuth();
@@ -80,6 +89,10 @@ const AgencyBranches = () => {
       manager_name: b.manager_name || "",
       parent_branch_id: b.parent_branch_id || "none",
       status: b.status,
+      can_create_trips: b.can_create_trips ?? true,
+      can_sell_counter: b.can_sell_counter ?? true,
+      can_scan: b.can_scan ?? true,
+      can_view_stats: b.can_view_stats ?? true,
     });
     setDialogOpen(true);
   };
@@ -97,7 +110,12 @@ const AgencyBranches = () => {
       manager_name: form.manager_name || null,
       parent_branch_id: form.parent_branch_id === "none" ? null : form.parent_branch_id,
       status: form.status,
+      can_create_trips: form.can_create_trips,
+      can_sell_counter: form.can_sell_counter,
+      can_scan: form.can_scan,
+      can_view_stats: form.can_view_stats,
     };
+
     const q = editing
       ? supabase.from("agency_branches" as any).update(payload).eq("id", editing.id)
       : supabase.from("agency_branches" as any).insert(payload);
@@ -172,10 +190,28 @@ const AgencyBranches = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="rounded-md border p-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Permissions de l'agence secondaire</p>
+                {[
+                  { key: "can_create_trips", label: "Créer et gérer les trajets" },
+                  { key: "can_sell_counter", label: "Vendre au guichet" },
+                  { key: "can_scan", label: "Scanner les billets" },
+                  { key: "can_view_stats", label: "Voir les statistiques" },
+                ].map(({ key, label }) => (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="text-sm">{label}</span>
+                    <Switch
+                      checked={(form as any)[key]}
+                      onCheckedChange={v => setForm(p => ({ ...p, [key]: v }))}
+                    />
+                  </div>
+                ))}
+              </div>
               <div className="flex items-center gap-2">
                 <Switch checked={form.status === "active"} onCheckedChange={v => setForm(p => ({ ...p, status: v ? "active" : "inactive" }))} />
                 <span className="text-sm">Active</span>
               </div>
+
               <Button onClick={save} className="w-full gradient-primary text-primary-foreground">
                 {editing ? "Enregistrer" : "Créer"}
               </Button>

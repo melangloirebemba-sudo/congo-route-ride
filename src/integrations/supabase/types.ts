@@ -117,6 +117,10 @@ export type Database = {
         Row: {
           address: string | null
           agency_id: string
+          can_create_trips: boolean
+          can_scan: boolean
+          can_sell_counter: boolean
+          can_view_stats: boolean
           city: string | null
           created_at: string
           district: string | null
@@ -131,6 +135,10 @@ export type Database = {
         Insert: {
           address?: string | null
           agency_id: string
+          can_create_trips?: boolean
+          can_scan?: boolean
+          can_sell_counter?: boolean
+          can_view_stats?: boolean
           city?: string | null
           created_at?: string
           district?: string | null
@@ -145,6 +153,10 @@ export type Database = {
         Update: {
           address?: string | null
           agency_id?: string
+          can_create_trips?: boolean
+          can_scan?: boolean
+          can_sell_counter?: boolean
+          can_view_stats?: boolean
           city?: string | null
           created_at?: string
           district?: string | null
@@ -549,6 +561,7 @@ export type Database = {
     }
     Functions: {
       check_in_booking: { Args: { _booking_id: string }; Returns: Json }
+      get_branch_permissions: { Args: { _user_id: string }; Returns: Json }
       get_manager_agency: { Args: { _user_id: string }; Returns: string }
       get_manager_branch: { Args: { _user_id: string }; Returns: string }
       has_role: {
