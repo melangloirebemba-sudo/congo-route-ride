@@ -54,6 +54,29 @@ const ManagerBoarding = () => {
 
   useEffect(() => { load(); }, [manager?.branch_id]);
 
+  // Realtime: refresh counters and list when any booking changes while scanning.
+  useEffect(() => {
+    if (!manager?.branch_id) return;
+    let t: any;
+    const debouncedLoad = () => { clearTimeout(t); t = setTimeout(load, 300); };
+    const channel = supabase
+      .channel(`boarding-${manager.branch_id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, debouncedLoad)
+      .subscribe();
+    return () => { clearTimeout(t); supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manager?.branch_id]);
+
+  const scanHref = useMemo(() => {
+    const p = new URLSearchParams();
+    if (dateFrom) p.set("date_from", dateFrom);
+    if (dateTo) p.set("date_to", dateTo);
+    if (tripId !== "all") p.set("trip_id", tripId);
+    if (status !== "all") p.set("status", status);
+    const qs = p.toString();
+    return `/manager/scan${qs ? `?${qs}` : ""}`;
+  }, [dateFrom, dateTo, tripId, status]);
+
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       const d = r.trips?.date;
