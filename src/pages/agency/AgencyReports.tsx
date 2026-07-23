@@ -290,18 +290,18 @@ const AgencyReports = () => {
       </Card>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Traiter le signalement</DialogTitle>
             <DialogDescription>{editing?.subject}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm">{editing?.message}</p>
+            <p className="text-sm whitespace-pre-wrap">{editing?.message}</p>
             {editing?.attachments && editing.attachments.length > 0 && (
               <div>
-                <p className="text-xs font-medium mb-1.5">Pièces jointes</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {editing.attachments.map((a, i) => <AttachmentLink key={i} att={a} />)}
+                <p className="text-xs font-medium mb-1.5">Pièces jointes ({editing.attachments.length})</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {editing.attachments.map((a, i) => <AttachmentPreview key={i} att={a} />)}
                 </div>
               </div>
             )}
