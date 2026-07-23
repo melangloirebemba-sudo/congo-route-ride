@@ -578,6 +578,30 @@ const BookingDetail = () => {
             <Button size="sm" variant="outline" onClick={shareOnWhatsApp} className="w-full border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10">
               <MessageSquare className="h-4 w-4 mr-2" /> Envoyer par WhatsApp
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="w-full">
+                  <CalendarPlus className="h-4 w-4 mr-2" /> Ajouter au calendrier
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Choisir un calendrier</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => window.open(googleCalendarUrl(calEvent!), "_blank")}>
+                  Google Agenda
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open(outlookCalendarUrl(calEvent!), "_blank")}>
+                  Outlook / Microsoft 365
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open(yahooCalendarUrl(calEvent!), "_blank")}>
+                  Yahoo Calendrier
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => downloadIcs(calEvent!, `voyage-${booking.qr_code}.ics`)}>
+                  Apple Calendrier (.ics)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ) : !isCancelled ? (
           <div className="bg-card rounded-2xl p-4 border border-border/50 space-y-3">
