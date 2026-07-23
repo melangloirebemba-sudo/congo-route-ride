@@ -14,6 +14,8 @@ const ManagerBookings = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [boardingFilter, setBoardingFilter] = useState("all");
+
 
   useEffect(() => {
     if (!manager) return;
@@ -48,9 +50,12 @@ const ManagerBookings = () => {
     const q = search.toLowerCase();
     const matchSearch = !q || b.passenger_name.toLowerCase().includes(q) || b.phone.includes(search);
     const matchStatus = statusFilter === "all" || b.status === statusFilter;
-    return matchSearch && matchStatus;
+    const currentBoarding = b.boarding_status || (b.status === "used" ? "boarded" : "pending");
+    const matchBoarding = boardingFilter === "all" || currentBoarding === boardingFilter;
+    return matchSearch && matchStatus && matchBoarding;
   });
-  const pg = usePagination(filtered, 5, [search, statusFilter], { paramKey: "" });
+  const pg = usePagination(filtered, 5, [search, statusFilter, boardingFilter], { paramKey: "" });
+
 
   return (
     <div className="space-y-6">
@@ -59,21 +64,31 @@ const ManagerBookings = () => {
         <p className="text-sm text-muted-foreground">{bookings.length} réservations pour votre branche (en ligne + guichet)</p>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Rechercher par nom ou téléphone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Statut" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous</SelectItem>
+            <SelectItem value="all">Tous statuts</SelectItem>
             <SelectItem value="confirmed">Confirmé</SelectItem>
             <SelectItem value="used">Embarqué</SelectItem>
             <SelectItem value="cancelled">Annulé</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={boardingFilter} onValueChange={setBoardingFilter}>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Embarquement" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous embarquements</SelectItem>
+            <SelectItem value="pending">Non scanné</SelectItem>
+            <SelectItem value="boarded">Embarqué</SelectItem>
+            <SelectItem value="refused">Refusé</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
 
       <Card>
         <CardContent className="p-0">
