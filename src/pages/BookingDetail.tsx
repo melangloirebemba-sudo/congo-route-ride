@@ -17,6 +17,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { googleCalendarUrl, outlookCalendarUrl, yahooCalendarUrl, downloadIcs, type CalendarEvent } from "@/lib/calendar";
 
 interface BookingRow {
   id: string;
