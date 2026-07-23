@@ -60,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [agencyStatus, setAgencyStatus] = useState<string | null>(null);
   const [manager, setManager] = useState<ManagerInfo | null>(null);
+  const [managerPermissions, setManagerPermissions] = useState<BranchPermissions>(DEFAULT_PERMS);
 
   const checkAdmin = async (userId: string) => {
     const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
@@ -86,7 +87,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .limit(1)
       .maybeSingle();
     setManager((data as any) || null);
+    const branchId = (data as any)?.branch_id;
+    if (branchId) {
+      const { data: b } = await supabase
+        .from("agency_branches" as any)
+        .select("can_create_trips, can_sell_counter, can_scan, can_view_stats")
+        .eq("id", branchId)
+        .maybeSingle();
+      if (b) {
+        setManagerPermissions({
+          can_create_trips: (b as any).can_create_trips ?? true,
+          can_sell_counter: (b as any).can_sell_counter ?? true,
+          can_scan: (b as any).can_scan ?? true,
+          can_view_stats: (b as any).can_view_stats ?? true,
+        });
+      } else {
+        setManagerPermissions(DEFAULT_PERMS);
+      }
+    } else {
+      setManagerPermissions(DEFAULT_PERMS);
+    }
   };
+
 
   const refreshAgency = async () => {
     if (user) await checkAgency(user.id);
