@@ -273,6 +273,14 @@ const ManagerBoarding = () => {
           >
             <Megaphone className="h-4 w-4 mr-2" /> Diffuser embarquement
           </Button>
+          <Button variant="outline" size="sm" onClick={() => { loadScheduled(); setScheduledOpen(true); }}>
+            <Clock className="h-4 w-4 mr-2" /> Planifiées
+            {scheduled.filter((s) => s.status === "scheduled").length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {scheduled.filter((s) => s.status === "scheduled").length}
+              </Badge>
+            )}
+          </Button>
           <Button asChild size="sm">
             <Link to={scanHref}><QrCode className="h-4 w-4 mr-2" /> Scanner</Link>
           </Button>
