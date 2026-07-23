@@ -12,20 +12,39 @@ const ManagerLayout = () => {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    if (!manager?.branch_id) { setUnread(0); return; }
+    const branchId = manager?.branch_id;
+    if (!branchId) { setUnread(0); return; }
     let cancelled = false;
     const load = async () => {
       const { count } = await supabase
         .from("branch_notifications" as any)
         .select("id", { count: "exact", head: true })
-        .eq("branch_id", manager.branch_id)
+        .eq("branch_id", branchId)
         .is("read_at", null);
       if (!cancelled) setUnread(count || 0);
     };
     load();
-    const t = setInterval(load, 30000);
-    return () => { cancelled = true; clearInterval(t); };
+
+    // Realtime: refresh badge instantly when a notification is inserted,
+    // updated (marked as read), or deleted for this branch.
+    const channel = supabase
+      .channel(`branch-notifs-${branchId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "branch_notifications", filter: `branch_id=eq.${branchId}` },
+        () => load()
+      )
+      .subscribe();
+
+    // Safety-net polling in case realtime is momentarily disconnected
+    const t = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+      supabase.removeChannel(channel);
+    };
   }, [manager?.branch_id, location.pathname]);
+
 
   const navItems = [
     { to: "/manager", icon: LayoutDashboard, label: "Tableau de bord", end: true, show: true, badge: 0 },
