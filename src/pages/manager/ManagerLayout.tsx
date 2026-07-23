@@ -3,16 +3,16 @@ import { LayoutDashboard, Bus, Ticket, QrCode, LogOut, PlusCircle } from "lucide
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 
-const navItems = [
-  { to: "/manager", icon: LayoutDashboard, label: "Tableau de bord", end: true },
-  { to: "/manager/trips", icon: Bus, label: "Trajets" },
-  { to: "/manager/bookings", icon: Ticket, label: "Réservations" },
-  { to: "/manager/sale", icon: PlusCircle, label: "Vente guichet" },
-  { to: "/manager/scan", icon: QrCode, label: "Scan billets" },
-];
-
 const ManagerLayout = () => {
-  const { user, loading, signOut, isManager } = useAuth();
+  const { user, loading, signOut, isManager, managerPermissions } = useAuth();
+
+  const navItems = [
+    { to: "/manager", icon: LayoutDashboard, label: "Tableau de bord", end: true, show: true },
+    { to: "/manager/trips", icon: Bus, label: "Trajets", show: managerPermissions.can_create_trips },
+    { to: "/manager/bookings", icon: Ticket, label: "Réservations", show: true },
+    { to: "/manager/sale", icon: PlusCircle, label: "Vente guichet", show: managerPermissions.can_sell_counter },
+    { to: "/manager/scan", icon: QrCode, label: "Scan billets", show: managerPermissions.can_scan },
+  ].filter(i => i.show);
 
   if (loading) {
     return (
@@ -23,6 +23,7 @@ const ManagerLayout = () => {
   }
   if (!user) return <Navigate to="/auth" replace />;
   if (!isManager) return <Navigate to="/" replace />;
+
 
   return (
     <div className="min-h-screen flex bg-background">
