@@ -70,14 +70,59 @@ type BookingRow = {
   } | null;
 };
 
+/** IANA timezone of the departure city — Republic of Congo (UTC+1, no DST).
+ *  Using Intl below makes any future DST-aware zone Just Work. */
+export const DEPARTURE_TZ = "Africa/Brazzaville";
+
+/** Minutes offset of `tz` at instant `utcMs` (positive = ahead of UTC). */
+const tzOffsetMinutes = (tz: string, utcMs: number): number => {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = dtf.formatToParts(new Date(utcMs));
+  const map: Record<string, string> = {};
+  parts.forEach((p) => (map[p.type] = p.value));
+  const asIfUTC = Date.UTC(
+    +map.year,
+    +map.month - 1,
+    +map.day,
+    +map.hour === 24 ? 0 : +map.hour,
+    +map.minute,
+    +map.second
+  );
+  return (asIfUTC - utcMs) / 60_000;
+};
+
+/** Convert a local wall-clock date/time in `tz` to a UTC timestamp,
+ *  correctly handling DST transitions by iterating the offset twice. */
+const zonedWallToUTC = (dateStr: string, timeStr: string, tz: string): number => {
+  const [Y, M, D] = dateStr.split("-").map(Number);
+  const [h, m, s = 0] = timeStr.split(":").map(Number);
+  let ts = Date.UTC(Y, M - 1, D, h, m, s);
+  // Two passes converge across DST jumps.
+  for (let i = 0; i < 2; i++) {
+    const off = tzOffsetMinutes(tz, ts);
+    ts = Date.UTC(Y, M - 1, D, h, m, s) - off * 60_000;
+  }
+  return ts;
+};
+
 const parseDeparture = (b: BookingRow): number | null => {
   const t = b.trips;
   if (!t?.date) return null;
-  const time = t.departure_time || "00:00:00";
-  const iso = `${t.date}T${time.length === 5 ? time + ":00" : time}`;
-  const ts = new Date(iso).getTime();
+  const rawTime = t.departure_time || "00:00:00";
+  const time = rawTime.length === 5 ? `${rawTime}:00` : rawTime;
+  const ts = zonedWallToUTC(t.date, time, DEPARTURE_TZ);
   return isNaN(ts) ? null : ts;
 };
+
 
 const schedule = (bookings: BookingRow[], timers: number[]) => {
   const offsets = getReminderOffsets();

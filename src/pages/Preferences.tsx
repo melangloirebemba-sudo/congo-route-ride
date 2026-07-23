@@ -270,7 +270,40 @@ const Preferences = () => {
               }}
             />
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={!push.supported || push.permission === "denied"}
+            onClick={async () => {
+              let ok = push.enabled;
+              if (!ok) ok = await push.enable();
+              if (!ok) {
+                toast.error("Autorisez d'abord les notifications");
+                return;
+              }
+              try {
+                const n = new Notification("Test de rappel TransCongo", {
+                  body: "Les notifications push fonctionnent sur cet appareil ✅",
+                  icon: "/favicon.ico",
+                  badge: "/favicon.ico",
+                  tag: "test-reminder",
+                });
+                n.onclick = () => {
+                  window.focus();
+                  n.close();
+                };
+                toast.success("Notification envoyée");
+              } catch {
+                toast.error("Impossible d'afficher la notification");
+              }
+            }}
+          >
+            <Bell className="h-4 w-4 mr-2" />
+            Tester le rappel
+          </Button>
         </motion.div>
+
 
         {/* Reminder offsets (web push) */}
         <motion.div
