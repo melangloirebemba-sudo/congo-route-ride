@@ -115,11 +115,12 @@ const AgencyLayout = () => {
   const roleLabel = isManager
     ? `Gestionnaire${branchName ? ` · ${branchName}` : ""}`
     : "Propriétaire d'agence";
+  const items = isManager ? managerNavItems : ownerNavItems;
 
   return (
     <div className="min-h-screen flex bg-background">
       <aside className="w-60 bg-card border-r border-border hidden md:flex flex-col sticky top-0 h-screen shrink-0">
-        <SidebarContent agencyName={agencyName} roleLabel={roleLabel} onSignOut={signOut} />
+        <SidebarContent agencyName={agencyName} roleLabel={roleLabel} items={items} onSignOut={signOut} />
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -134,10 +135,12 @@ const AgencyLayout = () => {
               <SidebarContent
                 agencyName={agencyName}
                 roleLabel={roleLabel}
+                items={items}
                 onNavigate={() => setMobileOpen(false)}
                 onSignOut={signOut}
               />
             </SheetContent>
+
           </Sheet>
           <div className="text-right min-w-0">
             <p className="font-display text-sm font-bold text-gradient truncate">{agencyName || "Agence"}</p>
