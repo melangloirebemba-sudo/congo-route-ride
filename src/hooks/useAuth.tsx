@@ -155,7 +155,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAgencyId(null);
     setAgencyStatus(null);
     setManager(null);
+    setManagerPermissions(DEFAULT_PERMS);
   };
+
 
   return (
     <AuthContext.Provider value={{
