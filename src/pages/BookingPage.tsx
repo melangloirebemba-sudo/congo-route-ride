@@ -471,6 +471,24 @@ const BookingPage = () => {
                 {paymentMethod === m.id && <CheckCircle2 className="ml-auto h-5 w-5 text-primary" />}
               </button>
             ))}
+            {(paymentMethod === "mtn" || paymentMethod === "airtel") && (
+              <div className="pt-2 space-y-1">
+                <label className="text-xs text-muted-foreground">Numéro Mobile Money à débiter</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <input
+                    value={momoPhone || phone}
+                    onChange={(e) => setMomoPhone(e.target.value)}
+                    placeholder="Ex: 06 000 00 00"
+                    inputMode="tel"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Vous recevrez une notification pour confirmer ou refuser la transaction.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
