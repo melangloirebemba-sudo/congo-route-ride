@@ -72,12 +72,12 @@ const ManagerLayout = () => {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <aside className="w-60 bg-card border-r border-border hidden md:flex flex-col">
-        <div className="p-5 border-b border-border">
+      <aside className="w-60 bg-card border-r border-border hidden md:flex flex-col sticky top-0 h-screen shrink-0">
+        <div className="p-5 border-b border-border shrink-0">
           <h1 className="font-display text-lg font-bold text-gradient">Guichet</h1>
           <p className="text-xs text-muted-foreground">Espace gestionnaire</p>
         </div>
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           {navItems.map(({ to, icon: Icon, label, end, badge }) => (
             <NavLink key={to} to={to} end={end}
               className={({ isActive }) =>
@@ -89,21 +89,20 @@ const ManagerLayout = () => {
               {badge > 0 && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">{badge}</Badge>}
             </NavLink>
           ))}
-
+          <div className="pt-3 mt-2 border-t border-border">
+            <Button variant="ghost" onClick={signOut} className="w-full justify-start text-muted-foreground">
+              <LogOut className="h-4 w-4 mr-2" /> Déconnexion
+            </Button>
+          </div>
         </nav>
-        <div className="p-3 border-t border-border">
-          <Button variant="ghost" onClick={signOut} className="w-full justify-start text-muted-foreground">
-            <LogOut className="h-4 w-4 mr-2" /> Déconnexion
-          </Button>
-        </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card">
+        <header className="md:hidden sticky top-0 z-30 flex items-center justify-between p-4 border-b border-border bg-card">
           <h1 className="font-display text-lg font-bold text-gradient">Guichet</h1>
           <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="h-4 w-4" /></Button>
         </header>
-        <nav className="md:hidden flex overflow-x-auto border-b border-border bg-card px-2">
+        <nav className="md:hidden sticky top-[57px] z-20 flex overflow-x-auto border-b border-border bg-card px-2">
           {navItems.map(({ to, icon: Icon, label, end, badge }) => (
             <NavLink key={to} to={to} end={end}
               className={({ isActive }) =>
@@ -119,9 +118,8 @@ const ManagerLayout = () => {
               )}
             </NavLink>
           ))}
-
         </nav>
-        <main className="flex-1 p-4 md:p-8 overflow-auto">
+        <main className="flex-1 p-4 md:p-8">
           <Outlet />
         </main>
       </div>
