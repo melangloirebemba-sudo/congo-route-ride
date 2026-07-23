@@ -255,6 +255,27 @@ const BookingPage = () => {
     toast.success("Compte créé ! Vos réservations sont conservées.");
   };
 
+  if (awaitingConfirm) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-md w-full text-center space-y-4">
+          <Loader2 className="h-12 w-12 mx-auto animate-spin text-primary" />
+          <h1 className="font-display text-xl font-bold">Paiement en attente</h1>
+          <p className="text-sm text-muted-foreground">
+            Une demande de paiement a été envoyée à votre numéro <strong>{momoPhone || phone}</strong>.
+            Ouvrez vos notifications pour <strong>confirmer</strong> ou <strong>refuser</strong> la transaction.
+          </p>
+          <div className="text-xs text-muted-foreground">
+            Réf : <span className="font-mono">{bookingRef}</span>
+          </div>
+          <Button variant="outline" onClick={() => navigate("/reservations")} className="rounded-xl w-full h-11">
+            Voir mes réservations
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (step === "confirmed") {
     return (
       <div className="min-h-screen pb-24">
