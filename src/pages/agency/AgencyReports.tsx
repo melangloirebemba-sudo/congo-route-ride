@@ -11,11 +11,12 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { AlertOctagon, CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { AlertOctagon, CheckCircle2, Clock, Loader2, FileIcon, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
+type Attachment = { path: string; name: string; type: string; size: number };
 type Report = {
   id: string;
   branch_id: string;
@@ -28,6 +29,28 @@ type Report = {
   owner_notes: string | null;
   resolved_at: string | null;
   created_at: string;
+  attachments: Attachment[] | null;
+};
+
+const AttachmentLink = ({ att }: { att: Attachment }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.storage.from("report-attachments").createSignedUrl(att.path, 3600).then(({ data }) => {
+      setUrl(data?.signedUrl || null);
+    });
+  }, [att.path]);
+  const isImg = att.type.startsWith("image/");
+  return (
+    <a
+      href={url || "#"}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1.5 rounded border bg-secondary/40 px-2 py-1 text-[11px] hover:bg-secondary max-w-full"
+    >
+      {isImg ? <ImageIcon className="h-3 w-3 shrink-0" /> : <FileIcon className="h-3 w-3 shrink-0" />}
+      <span className="truncate max-w-[180px]">{att.name}</span>
+    </a>
+  );
 };
 
 type BranchMap = Record<string, string>;
