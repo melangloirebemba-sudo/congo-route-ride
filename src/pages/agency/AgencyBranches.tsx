@@ -25,6 +25,10 @@ type Branch = {
   phone: string | null;
   manager_name: string | null;
   status: string;
+  can_create_trips?: boolean;
+  can_sell_counter?: boolean;
+  can_scan?: boolean;
+  can_view_stats?: boolean;
 };
 
 const emptyForm = {
@@ -36,7 +40,12 @@ const emptyForm = {
   manager_name: "",
   parent_branch_id: "none",
   status: "active",
+  can_create_trips: true,
+  can_sell_counter: true,
+  can_scan: true,
+  can_view_stats: true,
 };
+
 
 const AgencyBranches = () => {
   const { agencyId } = useAuth();
