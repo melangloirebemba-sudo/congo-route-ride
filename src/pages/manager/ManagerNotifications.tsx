@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Bell, CheckCheck, ExternalLink, ArrowUpDown } from "lucide-react";
+import { Bell, CheckCheck, ExternalLink, ArrowUpDown, Archive, ArchiveRestore } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ type Notif = {
   message: string | null;
   kind: string;
   read_at: string | null;
+  archived_at: string | null;
   created_at: string;
   booking_id: string | null;
 };
@@ -39,7 +40,7 @@ const ManagerNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [tab, setTab] = useState<"unread" | "all">("all");
+  const [tab, setTab] = useState<"unread" | "all" | "archived">("all");
   const [sortDesc, setSortDesc] = useState(true);
   const [kindFilter, setKindFilter] = useState<string>("all");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -47,17 +48,19 @@ const ManagerNotifications = () => {
   const loadPage = useCallback(async (from: number, replace: boolean) => {
     if (!manager?.branch_id) return;
     const to = from + PAGE_SIZE - 1;
-    const { data, error } = await supabase
+    let query = supabase
       .from("branch_notifications" as any)
-      .select("id, title, message, kind, read_at, created_at, booking_id")
-      .eq("branch_id", manager.branch_id)
+      .select("id, title, message, kind, read_at, archived_at, created_at, booking_id")
+      .eq("branch_id", manager.branch_id);
+    query = tab === "archived" ? query.not("archived_at", "is", null) : query.is("archived_at", null);
+    const { data, error } = await query
       .order("created_at", { ascending: false })
       .range(from, to);
     if (error) return;
     const rows = ((data as any) || []) as Notif[];
     setHasMore(rows.length === PAGE_SIZE);
     setItems((prev) => (replace ? rows : [...prev, ...rows]));
-  }, [manager?.branch_id]);
+  }, [manager?.branch_id, tab]);
 
   const load = useCallback(async () => {
     if (!manager?.branch_id) return;
@@ -129,9 +132,32 @@ const ManagerNotifications = () => {
       .from("branch_notifications" as any)
       .update({ read_at: now })
       .eq("branch_id", branchId)
-      .is("read_at", null);
+      .is("read_at", null)
+      .is("archived_at", null);
     if (error) { toast.error("Erreur"); load(); }
     else toast.success("Toutes les notifications marquées comme lues");
+  };
+
+  const archiveOne = async (id: string) => {
+    const prev = items;
+    setItems((list) => list.filter((n) => n.id !== id));
+    const { error } = await supabase
+      .from("branch_notifications" as any)
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) { toast.error("Impossible d'archiver"); setItems(prev); }
+    else toast.success("Notification archivée");
+  };
+
+  const restoreOne = async (id: string) => {
+    const prev = items;
+    setItems((list) => list.filter((n) => n.id !== id));
+    const { error } = await supabase
+      .from("branch_notifications" as any)
+      .update({ archived_at: null })
+      .eq("id", id);
+    if (error) { toast.error("Impossible de restaurer"); setItems(prev); }
+    else toast.success("Notification restaurée");
   };
 
   const kindMatcher = useMemo(
@@ -174,10 +200,11 @@ const ManagerNotifications = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "unread" | "all")}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "unread" | "all" | "archived")}>
           <TabsList>
-            <TabsTrigger value="all">Toutes ({items.length})</TabsTrigger>
+            <TabsTrigger value="all">Actives</TabsTrigger>
             <TabsTrigger value="unread">Non lues ({unreadCount})</TabsTrigger>
+            <TabsTrigger value="archived">Archivées</TabsTrigger>
           </TabsList>
         </Tabs>
         <Select value={kindFilter} onValueChange={setKindFilter}>
@@ -232,7 +259,7 @@ const ManagerNotifications = () => {
                           {new Date(n.created_at).toLocaleString("fr-FR")}
                         </p>
                       </button>
-                      <div className="flex gap-2 shrink-0">
+                      <div className="flex gap-2 shrink-0 flex-wrap">
                         {link && (
                           <Button asChild size="sm" variant="outline">
                             <Link to={link}>
@@ -240,9 +267,18 @@ const ManagerNotifications = () => {
                             </Link>
                           </Button>
                         )}
-                        {!n.read_at && (
+                        {!n.read_at && !n.archived_at && (
                           <Button size="sm" variant="ghost" onClick={() => markOne(n.id)} aria-label="Marquer comme lue">
                             <CheckCheck className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {n.archived_at ? (
+                          <Button size="sm" variant="ghost" onClick={() => restoreOne(n.id)} aria-label="Restaurer">
+                            <ArchiveRestore className="h-3.5 w-3.5 mr-1" /> Restaurer
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="ghost" onClick={() => archiveOne(n.id)} aria-label="Archiver">
+                            <Archive className="h-3.5 w-3.5 mr-1" /> Archiver
                           </Button>
                         )}
                       </div>

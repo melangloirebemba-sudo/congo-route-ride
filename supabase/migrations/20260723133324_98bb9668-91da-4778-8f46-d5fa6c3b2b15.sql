@@ -1,0 +1,2 @@
+ALTER TABLE public.branch_notifications ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+CREATE INDEX IF NOT EXISTS idx_branch_notifications_archived_at ON public.branch_notifications(branch_id, archived_at);

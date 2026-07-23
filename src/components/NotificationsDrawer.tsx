@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Bell, CheckCheck, ArrowUpDown, ExternalLink } from "lucide-react";
+import { Bell, CheckCheck, ArrowUpDown, ExternalLink, Archive } from "lucide-react";
 import { toast } from "sonner";
 
 type Notif = {
@@ -25,6 +25,7 @@ type Notif = {
   message: string | null;
   kind: string;
   read_at: string | null;
+  archived_at: string | null;
   created_at: string;
   booking_id: string | null;
 };
@@ -61,8 +62,9 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
     const to = from + PAGE_SIZE - 1;
     const { data, error } = await supabase
       .from("branch_notifications" as any)
-      .select("id, title, message, kind, read_at, created_at, booking_id")
+      .select("id, title, message, kind, read_at, archived_at, created_at, booking_id")
       .eq("branch_id", branchId)
+      .is("archived_at", null)
       .order("created_at", { ascending: false })
       .range(from, to);
     if (error) return;
@@ -119,9 +121,21 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
       .from("branch_notifications" as any)
       .update({ read_at: now })
       .eq("branch_id", branchId)
-      .is("read_at", null);
+      .is("read_at", null)
+      .is("archived_at", null);
     if (error) { toast.error("Erreur lors de la mise à jour"); load(); }
     else toast.success("Toutes marquées comme lues");
+  };
+
+  const archiveOne = async (id: string) => {
+    const prev = items;
+    setItems((list) => list.filter((n) => n.id !== id));
+    const { error } = await supabase
+      .from("branch_notifications" as any)
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) { toast.error("Impossible d'archiver"); setItems(prev); }
+    else toast.success("Notification archivée");
   };
 
   const kindMatcher = useMemo(
@@ -226,15 +240,24 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
                           {new Date(n.created_at).toLocaleString("fr-FR")}
                         </p>
                       </button>
-                      {link && (
-                        <div className="mt-2">
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {link && (
                           <Button asChild size="sm" variant="outline" className="h-7 text-xs" onClick={() => setOpen(false)}>
                             <Link to={link}>
                               <ExternalLink className="h-3 w-3 mr-1" /> Voir le détail
                             </Link>
                           </Button>
-                        </div>
-                      )}
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          onClick={() => archiveOne(n.id)}
+                          aria-label="Archiver la notification"
+                        >
+                          <Archive className="h-3 w-3 mr-1" /> Archiver
+                        </Button>
+                      </div>
                     </li>
                   );
                 })}
