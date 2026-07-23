@@ -1,13 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Loader2, MapPin, Calendar, CreditCard, Download, Printer, QrCode as QrIcon, Clock, CheckCircle2, XCircle, Ticket, User, Building2, AlertTriangle } from "lucide-react";
+import {
+  ArrowLeft, Loader2, MapPin, Calendar, CreditCard, Download, Printer,
+  QrCode as QrIcon, Clock, CheckCircle2, XCircle, Ticket, User, Building2,
+  AlertTriangle, Share2, Ban, RefreshCw, Wifi,
+} from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import QRCode from "qrcode";
 import { jsPDF } from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 interface BookingRow {
@@ -29,6 +37,7 @@ interface BookingRow {
   boarded_at: string | null;
   boarding_notes: string | null;
   boarding_branch_id: string | null;
+  trip_id: string;
   trips: {
     departure: string;
     destination: string;
@@ -46,6 +55,16 @@ interface EventItem {
   tone: "primary" | "success" | "warning" | "danger" | "muted";
   icon: any;
 }
+
+const paymentLabels: Record<string, string> = {
+  mtn: "MTN MoMo",
+  airtel: "Airtel Money",
+  card: "Carte bancaire",
+};
+const methodIdFromLabel = (label: string): string => {
+  const found = Object.entries(paymentLabels).find(([, v]) => v === label);
+  return found?.[0] ?? "mtn";
+};
 
 const statusMeta = (b: BookingRow) => {
   if (b.status === "cancelled") return { label: "Annulée", tone: "danger" as const, icon: XCircle };
@@ -84,28 +103,51 @@ const useCountdown = (target: string | null) => {
   return { expired: false, label: d > 0 ? `${d}j ${h}h ${m}m` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s` };
 };
 
+/** Refund policy based on hours until departure. */
+const refundPolicy = (tripDate?: string, tripTime?: string, amount = 0) => {
+  if (!tripDate) return { hours: null as number | null, pct: 0, refund: 0, label: "Aucun remboursement" };
+  const dt = new Date(`${tripDate}T${(tripTime || "00:00").slice(0, 8)}`);
+  const hours = (dt.getTime() - Date.now()) / 3600000;
+  let pct = 0;
+  if (hours >= 48) pct = 100;
+  else if (hours >= 24) pct = 50;
+  else if (hours >= 6) pct = 25;
+  else pct = 0;
+  const refund = Math.round((amount * pct) / 100);
+  const label =
+    pct === 100 ? "Remboursement intégral (>48h avant départ)"
+    : pct === 50 ? "Remboursement partiel 50 % (24–48h avant départ)"
+    : pct === 25 ? "Remboursement partiel 25 % (6–24h avant départ)"
+    : hours < 0 ? "Trajet passé — aucun remboursement" : "Aucun remboursement (moins de 6h avant départ)";
+  return { hours, pct, refund, label };
+};
+
 const BookingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState<BookingRow | null>(null);
   const [branch, setBranch] = useState<{ name: string; city: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [live, setLive] = useState(false);
+
   const [payOpen, setPayOpen] = useState(false);
   const [method, setMethod] = useState("mtn");
   const [submitting, setSubmitting] = useState(false);
+  const [paymentError, setPaymentError] = useState<{ code: string; message: string; method: string } | null>(null);
+
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
   const countdown = useCountdown(booking?.payment_status === "pending" ? booking.payment_deadline : null);
 
   const load = async () => {
     if (!id) return;
     const { data, error } = await supabase
       .from("bookings")
-      .select("id, qr_code, seat_number, total_amount, passenger_name, phone, status, payment_status, payment_method, payment_deadline, sale_channel, booking_date, created_at, updated_at, boarding_status, boarded_at, boarding_notes, boarding_branch_id, trips(departure, destination, date, departure_time, agencies(name))")
+      .select("id, qr_code, seat_number, total_amount, passenger_name, phone, status, payment_status, payment_method, payment_deadline, sale_channel, booking_date, created_at, updated_at, boarding_status, boarded_at, boarding_notes, boarding_branch_id, trip_id, trips(departure, destination, date, departure_time, agencies(name))")
       .eq("id", id)
       .maybeSingle();
-    if (error || !data) {
-      setLoading(false);
-      return;
-    }
+    if (error || !data) { setLoading(false); return; }
     setBooking(data as unknown as BookingRow);
     if ((data as any).boarding_branch_id) {
       const { data: b } = await supabase
@@ -118,35 +160,80 @@ const BookingDetail = () => {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
-  const paymentLabels: Record<string, string> = { mtn: "MTN MoMo", airtel: "Airtel Money", card: "Carte bancaire" };
+  // Realtime subscription — reflects payments and counter-side changes instantly.
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`booking-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings", filter: `id=eq.${id}` },
+        (payload) => {
+          const next = payload.new as any;
+          if (!next) return;
+          setBooking((prev) => (prev ? { ...prev, ...next } : prev));
+          if (payload.eventType === "UPDATE") {
+            toast("Réservation mise à jour", { description: "Statut synchronisé en temps réel." });
+          }
+        }
+      )
+      .subscribe((status) => {
+        setLive(status === "SUBSCRIBED");
+      });
+    return () => { supabase.removeChannel(channel); };
+  }, [id]);
 
-  const handlePay = async () => {
+  const handlePay = async (retryMethod?: string) => {
     if (!booking) return;
+    const useMethod = retryMethod ?? method;
     setSubmitting(true);
-    const { error } = await supabase
-      .from("bookings")
-      .update({ payment_status: "paid", payment_method: paymentLabels[method] || method })
-      .eq("id", booking.id);
-    if (error) {
-      toast.error("Erreur lors du paiement");
+    setPaymentError(null);
+    try {
+      // Simulated provider check: user can cancel a card auth, etc.
+      // Any DB error is treated as a payment failure with a detailed message.
+      const { error } = await supabase
+        .from("bookings")
+        .update({ payment_status: "paid", payment_method: paymentLabels[useMethod] || useMethod })
+        .eq("id", booking.id);
+      if (error) throw new Error(error.message);
+
+      const commission = Math.round(booking.total_amount * 0.1);
+      await supabase.from("transactions").insert({
+        agency_id: null,
+        amount: booking.total_amount,
+        commission,
+        net_amount: booking.total_amount - commission,
+        payment_method: paymentLabels[useMethod] || useMethod,
+        status: "completed",
+      } as any);
+      toast.success("Paiement confirmé");
+      setPayOpen(false);
+      setMethod(useMethod);
+      await load();
+    } catch (err: any) {
+      const msg: string = err?.message || "Erreur inconnue";
+      let code = "unknown";
+      let human = "Une erreur inattendue est survenue pendant la transaction.";
+      if (/permission|denied|rls|forbidden/i.test(msg)) {
+        code = "forbidden";
+        human = "Vous n'êtes pas autorisé à régler cette réservation. Contactez l'agence.";
+      } else if (/network|failed to fetch|timeout/i.test(msg)) {
+        code = "network";
+        human = "Connexion internet instable. Vérifiez votre réseau puis réessayez.";
+      } else if (/insufficient|balance|solde/i.test(msg)) {
+        code = "insufficient_funds";
+        human = "Solde insuffisant sur le compte mobile money sélectionné.";
+      } else if (/cancel|refus/i.test(msg)) {
+        code = "declined";
+        human = "Paiement refusé par le fournisseur. Réessayez ou changez de moyen.";
+      }
+      setPaymentError({ code, message: `${human} (${msg})`, method: useMethod });
+      toast.error("Paiement échoué");
+    } finally {
       setSubmitting(false);
-      return;
     }
-    const commission = Math.round(booking.total_amount * 0.1);
-    await supabase.from("transactions").insert({
-      agency_id: null,
-      amount: booking.total_amount,
-      commission,
-      net_amount: booking.total_amount - commission,
-      payment_method: paymentLabels[method] || method,
-      status: "completed",
-    } as any);
-    toast.success("Paiement confirmé");
-    setPayOpen(false);
-    setSubmitting(false);
-    await load();
   };
 
   const buildPdf = async (kind: "ticket" | "receipt") => {
@@ -190,17 +277,10 @@ const BookingDetail = () => {
     return doc;
   };
 
-  const downloadTicket = async () => {
-    const doc = await buildPdf("ticket");
-    if (doc && booking) doc.save(`billet-${booking.qr_code}.pdf`);
-  };
-  const downloadReceipt = async () => {
-    const doc = await buildPdf("receipt");
-    if (doc && booking) doc.save(`recu-${booking.qr_code}.pdf`);
-  };
+  const downloadTicket = async () => { const d = await buildPdf("ticket"); if (d && booking) d.save(`billet-${booking.qr_code}.pdf`); };
+  const downloadReceipt = async () => { const d = await buildPdf("receipt"); if (d && booking) d.save(`recu-${booking.qr_code}.pdf`); };
   const printTicket = async () => {
-    const doc = await buildPdf("ticket");
-    if (!doc) return;
+    const doc = await buildPdf("ticket"); if (!doc) return;
     const url = doc.output("bloburl") as unknown as string;
     const w = window.open(url, "_blank");
     if (w) w.addEventListener("load", () => { try { w.print(); } catch {} });
@@ -210,81 +290,111 @@ const BookingDetail = () => {
     if (!booking) return;
     const url = await QRCode.toDataURL(booking.qr_code, { width: 512, margin: 2 });
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `qr-${booking.qr_code}.png`;
-    a.click();
+    a.href = url; a.download = `qr-${booking.qr_code}.png`; a.click();
+  };
+
+  /** Send receipt PDF + QR PNG through WhatsApp. Uses native share when files are supported. */
+  const shareOnWhatsApp = async () => {
+    if (!booking) return;
+    try {
+      const [pdfDoc, qrUrl] = await Promise.all([
+        buildPdf("receipt"),
+        QRCode.toDataURL(booking.qr_code, { width: 512, margin: 2 }),
+      ]);
+      if (!pdfDoc) return;
+      const pdfBlob = pdfDoc.output("blob") as Blob;
+      const qrBlob = await (await fetch(qrUrl)).blob();
+      const files = [
+        new File([pdfBlob], `recu-${booking.qr_code}.pdf`, { type: "application/pdf" }),
+        new File([qrBlob], `qr-${booking.qr_code}.png`, { type: "image/png" }),
+      ];
+      const text = `Reçu TransCongo — ${booking.trips?.departure} → ${booking.trips?.destination} le ${booking.trips?.date} à ${booking.trips?.departure_time?.slice(0,5)}. Siège #${booking.seat_number}. Code: ${booking.qr_code}. Montant: ${booking.total_amount.toLocaleString("fr-FR")} FCFA.`;
+
+      const nav: any = navigator;
+      if (nav.canShare?.({ files }) && nav.share) {
+        await nav.share({ files, title: "Reçu TransCongo", text });
+        toast.success("Partage WhatsApp ouvert");
+        return;
+      }
+      // Fallback: download files + open wa.me with the text prefilled
+      pdfDoc.save(`recu-${booking.qr_code}.pdf`);
+      const a = document.createElement("a");
+      a.href = qrUrl; a.download = `qr-${booking.qr_code}.png`; a.click();
+      const phone = (booking.phone || "").replace(/[^\d]/g, "");
+      const wa = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+      window.open(wa, "_blank");
+      toast("Reçu et QR téléchargés", { description: "WhatsApp Web ouvert — joignez les fichiers au message." });
+    } catch (e: any) {
+      if (e?.name !== "AbortError") toast.error("Impossible d'ouvrir WhatsApp");
+    }
+  };
+
+  const refund = useMemo(() => refundPolicy(booking?.trips?.date, booking?.trips?.departure_time, booking?.total_amount ?? 0), [booking]);
+
+  const handleCancel = async () => {
+    if (!booking) return;
+    setCancelling(true);
+    const wasPaid = booking.payment_status === "paid";
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        status: "cancelled",
+        payment_status: wasPaid && refund.pct > 0 ? "refunded" : booking.payment_status,
+      })
+      .eq("id", booking.id);
+    if (error) {
+      toast.error("Impossible d'annuler : " + error.message);
+      setCancelling(false);
+      return;
+    }
+    if (wasPaid && refund.refund > 0) {
+      await supabase.from("transactions").insert({
+        agency_id: null,
+        amount: -refund.refund,
+        commission: 0,
+        net_amount: -refund.refund,
+        payment_method: booking.payment_method || "refund",
+        status: "refunded",
+      } as any);
+    }
+    toast.success("Réservation annulée" + (refund.refund > 0 ? ` — remboursement ${refund.refund.toLocaleString("fr-FR")} FCFA` : ""));
+    setCancelOpen(false);
+    setCancelling(false);
+    await load();
   };
 
   const events: EventItem[] = booking ? (() => {
     const list: EventItem[] = [];
     list.push({
-      key: "created",
-      when: booking.created_at,
+      key: "created", when: booking.created_at,
       title: booking.sale_channel === "online" ? "Réservation créée en ligne" : "Vente au guichet",
       desc: `Siège #${booking.seat_number} · ${booking.total_amount.toLocaleString("fr-FR")} FCFA`,
-      tone: "primary",
-      icon: Ticket,
+      tone: "primary", icon: Ticket,
     });
     if (booking.payment_status === "pending" && booking.payment_deadline) {
-      list.push({
-        key: "deadline",
-        when: booking.payment_deadline,
-        title: "Échéance de paiement",
-        desc: "Au-delà, la réservation sera libérée",
-        tone: "warning",
-        icon: Clock,
-      });
+      list.push({ key: "deadline", when: booking.payment_deadline, title: "Échéance de paiement", desc: "Au-delà, la réservation sera libérée", tone: "warning", icon: Clock });
     }
-    if (booking.payment_status === "paid") {
-      list.push({
-        key: "paid",
-        when: booking.updated_at,
-        title: "Paiement confirmé",
-        desc: booking.payment_method,
-        tone: "success",
-        icon: CreditCard,
-      });
+    if (booking.payment_status === "paid" || booking.payment_status === "refunded") {
+      list.push({ key: "paid", when: booking.updated_at, title: "Paiement confirmé", desc: booking.payment_method, tone: "success", icon: CreditCard });
+    }
+    if (paymentError) {
+      list.push({ key: "payment_failed", when: new Date().toISOString(), title: "Paiement échoué", desc: paymentError.message, tone: "danger", icon: XCircle });
     }
     if (booking.boarding_status === "boarded" && booking.boarded_at) {
-      list.push({
-        key: "boarded",
-        when: booking.boarded_at,
-        title: "Embarqué",
-        desc: "Billet scanné à l'embarquement",
-        tone: "success",
-        icon: CheckCircle2,
-      });
+      list.push({ key: "boarded", when: booking.boarded_at, title: "Embarqué", desc: "Billet scanné à l'embarquement", tone: "success", icon: CheckCircle2 });
     }
     if (booking.boarding_status === "refused" && booking.boarded_at) {
-      list.push({
-        key: "refused",
-        when: booking.boarded_at,
-        title: "Refusé à l'embarquement",
-        desc: booking.boarding_notes || undefined,
-        tone: "danger",
-        icon: XCircle,
-      });
+      list.push({ key: "refused", when: booking.boarded_at, title: "Refusé à l'embarquement", desc: booking.boarding_notes || undefined, tone: "danger", icon: XCircle });
     }
     if (booking.status === "cancelled") {
-      list.push({
-        key: "cancelled",
-        when: booking.updated_at,
-        title: "Réservation annulée",
-        tone: "danger",
-        icon: XCircle,
-      });
+      list.push({ key: "cancelled", when: booking.updated_at, title: booking.payment_status === "refunded" ? "Annulée · remboursée" : "Réservation annulée", tone: "danger", icon: Ban });
     }
     return list.sort((a, b) => new Date(a.when).getTime() - new Date(b.when).getTime());
   })() : [];
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
-
   if (!booking) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-6 text-center">
@@ -298,15 +408,24 @@ const BookingDetail = () => {
   const st = statusMeta(booking);
   const StIcon = st.icon;
   const isPaid = booking.payment_status === "paid";
+  const isCancelled = booking.status === "cancelled";
+  const canCancel = !isCancelled && booking.boarding_status !== "boarded";
 
   return (
     <div className="min-h-screen pb-24">
       <div className="gradient-primary px-4 pt-10 pb-6">
-        <button onClick={() => navigate(-1)} className="text-primary-foreground mb-4">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="font-display text-xl font-bold text-primary-foreground">Détail de la réservation</h1>
-        <p className="text-primary-foreground/70 text-xs mt-1 font-mono">{booking.qr_code}</p>
+        <button onClick={() => navigate(-1)} className="text-primary-foreground mb-4"><ArrowLeft className="h-5 w-5" /></button>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="font-display text-xl font-bold text-primary-foreground">Détail de la réservation</h1>
+            <p className="text-primary-foreground/70 text-xs mt-1 font-mono">{booking.qr_code}</p>
+          </div>
+          {live && (
+            <span className="flex items-center gap-1 text-[10px] font-medium bg-white/15 text-primary-foreground px-2 py-1 rounded-full">
+              <Wifi className="h-3 w-3" /> Temps réel
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-4">
@@ -323,6 +442,28 @@ const BookingDetail = () => {
           </div>
           <Badge variant="outline" className="capitalize">{booking.sale_channel === "online" ? "En ligne" : "Guichet"}</Badge>
         </div>
+
+        {/* Payment failure banner */}
+        {paymentError && !isPaid && !isCancelled && (
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-destructive">Le paiement a échoué</p>
+                <p className="text-xs text-muted-foreground mt-1">Moyen tenté : <span className="font-medium">{paymentLabels[paymentError.method] || paymentError.method}</span></p>
+                <p className="text-xs text-muted-foreground mt-1">{paymentError.message}</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Code : {paymentError.code}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" onClick={() => handlePay(paymentError.method)} disabled={submitting} className="gradient-primary text-primary-foreground">
+                {submitting ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                Réessayer avec {paymentLabels[paymentError.method] || paymentError.method}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => { setPaymentError(null); setPayOpen(true); }}>Changer de moyen</Button>
+            </div>
+          </div>
+        )}
 
         {/* Trip card */}
         <div className="bg-card rounded-2xl p-4 border border-border/50 space-y-3">
@@ -364,15 +505,25 @@ const BookingDetail = () => {
               <Button variant="outline" size="sm" onClick={downloadQr}><QrIcon className="h-3 w-3 mr-1" /> QR PNG</Button>
               <Button variant="outline" size="sm" onClick={printTicket}><Printer className="h-3 w-3 mr-1" /> Imprimer</Button>
             </div>
+            <Button size="sm" onClick={shareOnWhatsApp} className="w-full bg-[#25D366] hover:bg-[#1ebe57] text-white">
+              <Share2 className="h-4 w-4 mr-2" /> Envoyer reçu + QR par WhatsApp
+            </Button>
           </div>
-        ) : booking.status !== "cancelled" ? (
+        ) : !isCancelled ? (
           <div className="bg-card rounded-2xl p-4 border border-border/50 space-y-3">
             <p className="text-sm">Réglez cette réservation en ligne, ou présentez-vous à l'agence d'embarquement avant l'échéance.</p>
-            <Button className="w-full gradient-primary text-primary-foreground" onClick={() => setPayOpen(true)}>
+            <Button className="w-full gradient-primary text-primary-foreground" onClick={() => { setMethod(paymentError?.method || methodIdFromLabel(booking.payment_method || "")); setPayOpen(true); }}>
               <CreditCard className="h-4 w-4 mr-2" /> Payer maintenant
             </Button>
           </div>
         ) : null}
+
+        {/* Cancel */}
+        {canCancel && (
+          <Button variant="outline" className="w-full border-destructive/30 text-destructive hover:bg-destructive/5" onClick={() => setCancelOpen(true)}>
+            <Ban className="h-4 w-4 mr-2" /> Annuler la réservation
+          </Button>
+        )}
 
         {/* Event log */}
         <div className="bg-card rounded-2xl p-4 border border-border/50">
@@ -386,7 +537,7 @@ const BookingDetail = () => {
                     <Icon className="h-3 w-3" />
                   </span>
                   <p className="text-sm font-medium">{e.title}</p>
-                  {e.desc && <p className="text-xs text-muted-foreground">{e.desc}</p>}
+                  {e.desc && <p className="text-xs text-muted-foreground break-words">{e.desc}</p>}
                   <p className="text-[11px] text-muted-foreground mt-0.5">{fmt(e.when)}</p>
                 </li>
               );
@@ -395,9 +546,13 @@ const BookingDetail = () => {
         </div>
       </div>
 
+      {/* Pay dialog */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Payer la réservation</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Payer la réservation</DialogTitle>
+            <DialogDescription>Choisissez un moyen de paiement.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">Montant : <span className="font-bold text-primary">{booking.total_amount.toLocaleString()} FCFA</span></p>
             <div className="space-y-2">
@@ -418,13 +573,45 @@ const BookingDetail = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPayOpen(false)}>Annuler</Button>
-            <Button onClick={handlePay} disabled={submitting} className="gradient-primary text-primary-foreground">
+            <Button variant="outline" onClick={() => setPayOpen(false)}>Fermer</Button>
+            <Button onClick={() => handlePay()} disabled={submitting} className="gradient-primary text-primary-foreground">
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmer le paiement"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel confirmation */}
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Annuler cette réservation ?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>Cette action libère le siège et ne peut pas être défaite.</p>
+                <div className="rounded-lg border p-3 bg-muted/30 space-y-1">
+                  <p className="font-medium text-foreground">Politique de remboursement</p>
+                  <p className="text-xs">{refund.label}</p>
+                  {booking.payment_status === "paid" ? (
+                    <p className="text-xs">
+                      Montant payé : <span className="font-medium">{booking.total_amount.toLocaleString("fr-FR")} FCFA</span> ·{" "}
+                      Remboursement : <span className="font-bold text-primary">{refund.refund.toLocaleString("fr-FR")} FCFA</span> ({refund.pct}%)
+                    </p>
+                  ) : (
+                    <p className="text-xs">Aucun paiement n'a été enregistré — rien à rembourser.</p>
+                  )}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Retour</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancel} disabled={cancelling} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmer l'annulation"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
