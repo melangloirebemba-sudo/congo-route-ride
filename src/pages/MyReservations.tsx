@@ -227,6 +227,41 @@ const MyReservations = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={claimOpen} onOpenChange={setClaimOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Récupérer un billet invité</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Renseignez le code du billet (QR) et le numéro de téléphone utilisé lors de la réservation. Le billet sera rattaché à votre compte.
+            </p>
+            <div>
+              <label className="text-xs text-muted-foreground">Code du billet</label>
+              <input
+                value={claimQr}
+                onChange={(e) => setClaimQr(e.target.value)}
+                placeholder="Ex: TCG-XXXX-XXXX"
+                className="w-full rounded-xl bg-secondary text-secondary-foreground px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Téléphone du passager</label>
+              <input
+                value={claimPhone}
+                onChange={(e) => setClaimPhone(e.target.value)}
+                placeholder="+242…"
+                className="w-full rounded-xl bg-secondary text-secondary-foreground px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClaimOpen(false)}>Annuler</Button>
+            <Button onClick={handleClaim} disabled={claiming} className="gradient-primary text-primary-foreground">
+              {claiming ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rattacher le billet"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
