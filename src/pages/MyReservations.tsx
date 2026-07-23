@@ -61,6 +61,36 @@ const MyReservations = () => {
   const [payFor, setPayFor] = useState<Reservation | null>(null);
   const [method, setMethod] = useState("mtn");
   const [submitting, setSubmitting] = useState(false);
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimQr, setClaimQr] = useState("");
+  const [claimPhone, setClaimPhone] = useState("");
+  const [claiming, setClaiming] = useState(false);
+  const [isAnon, setIsAnon] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setIsAnon(!!data.user?.is_anonymous));
+  }, []);
+
+  const handleClaim = async () => {
+    if (!claimQr.trim() || !claimPhone.trim()) {
+      toast.error("Renseignez le code du billet et le téléphone");
+      return;
+    }
+    setClaiming(true);
+    const { data, error } = await supabase.rpc("claim_booking_by_ref", {
+      _qr: claimQr.trim(),
+      _phone: claimPhone.trim(),
+    });
+    setClaiming(false);
+    if (error) { toast.error(error.message); return; }
+    const r: any = data;
+    if (!r?.ok) { toast.error(r?.message || "Impossible de récupérer"); return; }
+    toast.success(r.message || "Billet rattaché");
+    setClaimOpen(false);
+    setClaimQr(""); setClaimPhone("");
+    if (r.booking_id) navigate(`/bookings/${r.booking_id}`);
+    else load();
+  };
 
   const load = async () => {
     const { data } = await (supabase as any)
@@ -122,6 +152,17 @@ const MyReservations = () => {
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-3">
+        <div className="bg-card rounded-2xl p-4 border border-border/50 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Récupérer un billet invité</p>
+            <p className="text-xs text-muted-foreground">
+              {isAnon
+                ? "Vous êtes en session invitée. Créez un compte ou connectez-vous pour rattacher vos billets à un compte permanent."
+                : "Rattachez à votre compte un billet réservé sans compte."}
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setClaimOpen(true)}>Récupérer</Button>
+        </div>
         {loading ? (
           <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
         ) : items.length === 0 ? (
@@ -182,6 +223,41 @@ const MyReservations = () => {
             <Button variant="outline" onClick={() => setPayFor(null)}>Annuler</Button>
             <Button onClick={handlePay} disabled={submitting} className="gradient-primary text-primary-foreground">
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmer le paiement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={claimOpen} onOpenChange={setClaimOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Récupérer un billet invité</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Renseignez le code du billet (QR) et le numéro de téléphone utilisé lors de la réservation. Le billet sera rattaché à votre compte.
+            </p>
+            <div>
+              <label className="text-xs text-muted-foreground">Code du billet</label>
+              <input
+                value={claimQr}
+                onChange={(e) => setClaimQr(e.target.value)}
+                placeholder="Ex: TCG-XXXX-XXXX"
+                className="w-full rounded-xl bg-secondary text-secondary-foreground px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Téléphone du passager</label>
+              <input
+                value={claimPhone}
+                onChange={(e) => setClaimPhone(e.target.value)}
+                placeholder="+242…"
+                className="w-full rounded-xl bg-secondary text-secondary-foreground px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClaimOpen(false)}>Annuler</Button>
+            <Button onClick={handleClaim} disabled={claiming} className="gradient-primary text-primary-foreground">
+              {claiming ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rattacher le billet"}
             </Button>
           </DialogFooter>
         </DialogContent>

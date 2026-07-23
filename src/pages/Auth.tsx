@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Phone, Lock, ArrowLeft, Eye, EyeOff, User, Building2, Briefcase, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,14 +14,32 @@ type RoleTab = "client" | "agency" | "manager" | "admin";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const claimQr = params.get("claim");
+  const claimPhone = params.get("phone");
+  const prefillEmail = params.get("email") || "";
   const [role, setRole] = useState<RoleTab>("client");
   const [mode, setMode] = useState<AuthMode>("login");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const tryClaim = async () => {
+    if (!claimQr || !claimPhone) return false;
+    const { data, error } = await supabase.rpc("claim_booking_by_ref", { _qr: claimQr, _phone: claimPhone });
+    if (error) { toast.error(error.message); return false; }
+    const r: any = data;
+    if (r?.ok) {
+      toast.success(r.message || "Billet rattaché à votre compte");
+      navigate(r.booking_id ? `/bookings/${r.booking_id}` : "/reservations");
+      return true;
+    }
+    toast.error(r?.message || "Impossible de récupérer le billet");
+    return false;
+  };
 
   const redirectByRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -32,7 +50,6 @@ const Auth = () => {
       supabase.from("branch_managers" as any).select("id").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle(),
     ]);
 
-    // Enforce that the account matches the selected role tab.
     const actual: RoleTab = isAdmin ? "admin" : agency ? "agency" : mgr ? "manager" : "client";
     if (role !== "client" && role !== actual) {
       await supabase.auth.signOut();
@@ -44,6 +61,11 @@ const Auth = () => {
       };
       toast.error(`Ce compte n'est pas un compte ${labels[role]}. Utilisez l'onglet ${labels[actual]}.`);
       return;
+    }
+
+    if (actual === "client" && claimQr && claimPhone) {
+      const claimed = await tryClaim();
+      if (claimed) return;
     }
 
     if (actual === "admin") return navigate("/admin");
@@ -134,6 +156,15 @@ const Auth = () => {
           <ArrowLeft className="h-4 w-4" /> Retour
         </button>
 
+        {claimQr && (
+          <div className="mb-4 rounded-xl border-2 border-primary/40 bg-primary/5 p-4 text-sm space-y-1">
+            <p className="font-display font-semibold">Récupérez votre billet invité</p>
+            <p className="text-xs text-muted-foreground">
+              Connectez-vous avec votre compte pour rattacher automatiquement le billet <span className="font-mono">{claimQr}</span>.
+              Le numéro de téléphone doit correspondre à celui utilisé lors de la réservation.
+            </p>
+          </div>
+        )}
         <div className="glass rounded-2xl p-6 space-y-6">
           <div className="text-center">
             <h1 className="font-display text-2xl font-bold">

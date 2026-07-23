@@ -31,6 +31,10 @@ const ManagerBoarding = () => {
   const [targetCount, setTargetCount] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [branchInfo, setBranchInfo] = useState<any>(null);
+  const [sendMode, setSendMode] = useState<"now" | "later">("now");
+  const [scheduledAt, setScheduledAt] = useState<string>("");
+  const [scheduled, setScheduled] = useState<any[]>([]);
+  const [scheduledOpen, setScheduledOpen] = useState(false);
 
   useEffect(() => {
     if (!manager?.branch_id) return;
@@ -87,9 +91,47 @@ const ManagerBoarding = () => {
     run();
   }, [broadcastOpen, broadcastTrip, manager?.branch_id, selectedTripObj]);
 
+  const loadScheduled = async () => {
+    if (!manager?.branch_id) return;
+    const { data } = await (supabase as any)
+      .from("scheduled_boarding_broadcasts")
+      .select("id, trip_id, scheduled_at, status, sent_at, recipients_count, extra_message, failure_reason, trips(departure, destination, date, departure_time)")
+      .eq("branch_id", manager.branch_id)
+      .order("scheduled_at", { ascending: false })
+      .limit(50);
+    setScheduled(data || []);
+  };
+
+  useEffect(() => { loadScheduled(); }, [manager?.branch_id]);
+
   const sendBroadcast = async () => {
     if (!broadcastTrip) { toast.error("Sélectionnez un trajet"); return; }
     setBroadcasting(true);
+
+    if (sendMode === "later") {
+      if (!scheduledAt) { setBroadcasting(false); toast.error("Choisissez une date/heure"); return; }
+      const when = new Date(scheduledAt);
+      if (when.getTime() <= Date.now() + 30_000) {
+        setBroadcasting(false);
+        toast.error("La date planifiée doit être au moins 1 minute dans le futur");
+        return;
+      }
+      const { error } = await (supabase as any).from("scheduled_boarding_broadcasts").insert({
+        trip_id: broadcastTrip,
+        branch_id: manager?.branch_id,
+        agency_id: manager?.agency_id,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        extra_message: broadcastMsg?.trim() || null,
+        scheduled_at: when.toISOString(),
+      });
+      setBroadcasting(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Diffusion planifiée pour le ${when.toLocaleString("fr-FR")}`);
+      setConfirmOpen(false); setBroadcastOpen(false); setBroadcastMsg(""); setScheduledAt(""); setSendMode("now");
+      loadScheduled();
+      return;
+    }
+
     const { data, error } = await supabase.rpc("broadcast_boarding_info", {
       _trip_id: broadcastTrip,
       _extra_message: broadcastMsg?.trim() || null,
@@ -102,6 +144,17 @@ const ManagerBoarding = () => {
     setConfirmOpen(false);
     setBroadcastOpen(false);
     setBroadcastMsg("");
+  };
+
+  const cancelScheduled = async (id: string) => {
+    const { error } = await (supabase as any)
+      .from("scheduled_boarding_broadcasts")
+      .update({ status: "cancelled" })
+      .eq("id", id)
+      .eq("status", "scheduled");
+    if (error) { toast.error(error.message); return; }
+    toast.success("Diffusion annulée");
+    loadScheduled();
   };
 
   const load = async () => {
@@ -219,6 +272,14 @@ const ManagerBoarding = () => {
             disabled={trips.length === 0}
           >
             <Megaphone className="h-4 w-4 mr-2" /> Diffuser embarquement
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { loadScheduled(); setScheduledOpen(true); }}>
+            <Clock className="h-4 w-4 mr-2" /> Planifiées
+            {scheduled.filter((s) => s.status === "scheduled").length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {scheduled.filter((s) => s.status === "scheduled").length}
+              </Badge>
+            )}
           </Button>
           <Button asChild size="sm">
             <Link to={scanHref}><QrCode className="h-4 w-4 mr-2" /> Scanner</Link>
@@ -358,6 +419,30 @@ const ManagerBoarding = () => {
                 placeholder="Ex: Merci de vous présenter 30 minutes avant le départ."
               />
             </div>
+            <div className="rounded-xl border p-3 space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase">Envoi</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setSendMode("now")}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm ${sendMode === "now" ? "border-primary bg-primary/10 font-medium" : ""}`}>
+                  Immédiat
+                </button>
+                <button type="button" onClick={() => setSendMode("later")}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm ${sendMode === "later" ? "border-primary bg-primary/10 font-medium" : ""}`}>
+                  Planifié
+                </button>
+              </div>
+              {sendMode === "later" && (
+                <div>
+                  <label className="text-xs text-muted-foreground">Date et heure d'envoi</label>
+                  <Input
+                    type="datetime-local"
+                    value={scheduledAt}
+                    min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
 
             {broadcastTrip && (
               <div className="rounded-xl border bg-muted/40 p-3 space-y-2">
@@ -385,9 +470,10 @@ const ManagerBoarding = () => {
             <Button variant="outline" onClick={() => setBroadcastOpen(false)}>Annuler</Button>
             <Button
               onClick={() => setConfirmOpen(true)}
-              disabled={!broadcastTrip || targetCount === 0 || targetCount === null}
+              disabled={!broadcastTrip || targetCount === 0 || targetCount === null || (sendMode === "later" && !scheduledAt)}
             >
-              <Megaphone className="h-4 w-4 mr-2" /> Prévisualiser et envoyer
+              <Megaphone className="h-4 w-4 mr-2" />
+              {sendMode === "later" ? "Prévisualiser et planifier" : "Prévisualiser et envoyer"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -396,9 +482,11 @@ const ManagerBoarding = () => {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmer la diffusion</DialogTitle>
+            <DialogTitle>{sendMode === "later" ? "Confirmer la planification" : "Confirmer la diffusion"}</DialogTitle>
             <DialogDescription>
-              Ce message sera envoyé immédiatement à <strong>{targetCount ?? 0}</strong> passager{(targetCount ?? 0) > 1 ? "s" : ""} ayant payé leur billet. Cette action est irréversible.
+              {sendMode === "later"
+                ? <>Ce message sera envoyé automatiquement le <strong>{scheduledAt ? new Date(scheduledAt).toLocaleString("fr-FR") : ""}</strong> à environ <strong>{targetCount ?? 0}</strong> passager(s) payés (le compte final est recalculé à l'envoi).</>
+                : <>Ce message sera envoyé immédiatement à <strong>{targetCount ?? 0}</strong> passager{(targetCount ?? 0) > 1 ? "s" : ""} ayant payé leur billet. Cette action est irréversible.</>}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-lg bg-muted/40 border p-3 text-sm">
@@ -413,8 +501,56 @@ const ManagerBoarding = () => {
             </Button>
             <Button onClick={sendBroadcast} disabled={broadcasting}>
               <Megaphone className="h-4 w-4 mr-2" />
-              {broadcasting ? "Envoi..." : `Confirmer l'envoi à ${targetCount ?? 0}`}
+              {broadcasting
+                ? (sendMode === "later" ? "Planification..." : "Envoi...")
+                : (sendMode === "later" ? "Confirmer la planification" : `Confirmer l'envoi à ${targetCount ?? 0}`)}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={scheduledOpen} onOpenChange={setScheduledOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Diffusions planifiées</DialogTitle>
+            <DialogDescription>Historique des envois planifiés pour votre sous-agence.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {scheduled.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Aucune diffusion planifiée</p>
+            ) : scheduled.map((s: any) => {
+              const when = new Date(s.scheduled_at);
+              const badge = s.status === "scheduled" ? "secondary" : s.status === "sent" ? "default" : "destructive";
+              const label = s.status === "scheduled" ? "Planifié" : s.status === "sent" ? "Envoyé" : s.status === "cancelled" ? "Annulé" : "Échec";
+              return (
+                <div key={s.id} className="rounded-xl border p-3 space-y-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="text-sm font-medium">
+                      {s.trips?.departure} → {s.trips?.destination}
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {s.trips?.date} {s.trips?.departure_time}
+                      </span>
+                    </div>
+                    <Badge variant={badge as any}>{label}</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Prévu : {when.toLocaleString("fr-FR")}
+                    {s.sent_at && ` · Envoyé : ${new Date(s.sent_at).toLocaleString("fr-FR")} · ${s.recipients_count ?? 0} destinataire(s)`}
+                  </div>
+                  {s.extra_message && <div className="text-xs italic text-muted-foreground">« {s.extra_message} »</div>}
+                  {s.failure_reason && <div className="text-xs text-destructive">{s.failure_reason}</div>}
+                  {s.status === "scheduled" && (
+                    <div className="pt-1">
+                      <Button variant="outline" size="sm" onClick={() => cancelScheduled(s.id)}>Annuler l'envoi</Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={loadScheduled}>Actualiser</Button>
+            <Button size="sm" onClick={() => setScheduledOpen(false)}>Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

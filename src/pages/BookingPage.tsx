@@ -194,6 +194,12 @@ const BookingPage = () => {
     });
     setSignupLoading(false);
     if (error) {
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("registered") || msg.includes("exists") || msg.includes("taken") || msg.includes("already")) {
+        toast.error("Cet email est déjà utilisé. Connectez-vous pour rattacher ce billet.");
+        navigate(`/auth?claim=${encodeURIComponent(bookingRef)}&phone=${encodeURIComponent(phone)}&email=${encodeURIComponent(signupEmail)}`);
+        return;
+      }
       toast.error(error.message || "Impossible de créer le compte");
       return;
     }
@@ -274,9 +280,23 @@ const BookingPage = () => {
             </motion.div>
           )}
           {isAnonymous && signupDone && (
-            <div className="mt-4 bg-accent/10 border border-accent rounded-2xl p-4 text-sm text-center">
-              <CheckCircle2 className="h-5 w-5 mx-auto text-accent mb-1" />
-              Compte créé. Vos réservations sont conservées.
+            <div className="mt-4 bg-accent/10 border border-accent rounded-2xl p-4 text-sm text-center space-y-2">
+              <CheckCircle2 className="h-5 w-5 mx-auto text-accent" />
+              <p>Compte créé. Vos réservations sont conservées.</p>
+              <p className="text-xs text-muted-foreground">
+                Sur un autre appareil, connectez-vous avec votre email et mot de passe pour retrouver vos billets.
+              </p>
+            </div>
+          )}
+          {isAnonymous && !signupDone && (
+            <div className="mt-3 text-center text-xs text-muted-foreground">
+              Déjà un compte ?{" "}
+              <button
+                onClick={() => navigate(`/auth?claim=${encodeURIComponent(bookingRef)}&phone=${encodeURIComponent(phone)}`)}
+                className="underline text-primary"
+              >
+                Se connecter et rattacher ce billet
+              </button>
             </div>
           )}
         </div>
