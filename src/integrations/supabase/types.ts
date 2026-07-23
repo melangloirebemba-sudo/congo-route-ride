@@ -1011,6 +1011,10 @@ export type Database = {
         Args: { _phone: string; _qr: string }
         Returns: Json
       }
+      confirm_payment_simulation: {
+        Args: { _notification_id: string }
+        Returns: Json
+      }
       dispatch_scheduled_boarding_broadcasts: { Args: never; Returns: number }
       dispatch_scheduled_broadcasts: { Args: never; Returns: number }
       get_branch_permissions: { Args: { _user_id: string }; Returns: Json }
@@ -1023,6 +1027,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      init_payment_simulation: {
+        Args: { _booking_id: string; _momo_phone: string; _provider: string }
+        Returns: Json
+      }
       is_agency_owner: { Args: { _agency_id: string }; Returns: boolean }
       is_branch_manager_of: { Args: { _agency_id: string }; Returns: boolean }
       lock_seat: {
@@ -1031,6 +1039,10 @@ export type Database = {
       }
       refuse_boarding: {
         Args: { _booking_id: string; _reason?: string }
+        Returns: Json
+      }
+      refuse_payment_simulation: {
+        Args: { _notification_id: string }
         Returns: Json
       }
       release_seat: {
