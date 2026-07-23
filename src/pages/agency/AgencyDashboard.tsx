@@ -19,8 +19,11 @@ type SaleRow = {
   total_amount: number;
   status: string;
   passenger_name: string;
-  trips: { agency_id: string; departure: string; destination: string } | null;
+  trips: { agency_id: string; departure: string; destination: string; branch_id: string | null } | null;
 };
+
+type BranchInfo = { id: string; name: string; city: string | null };
+
 
 const todayISO = () => new Date().toISOString().split("T")[0];
 const daysAgoISO = (n: number) => {
@@ -30,10 +33,11 @@ const daysAgoISO = (n: number) => {
 };
 
 const AgencyDashboard = () => {
-  const { agencyId } = useAuth();
+  const { agencyId, isManager } = useAuth();
   const [stats, setStats] = useState({ trips: 0, bookings: 0, revenue: 0, todayBookings: 0, branches: 0 });
   const [allBookings, setAllBookings] = useState<SaleRow[]>([]);
   const [recentBookings, setRecentBookings] = useState<SaleRow[]>([]);
+  const [branches, setBranches] = useState<BranchInfo[]>([]);
   const [agencyName, setAgencyName] = useState("");
   const [from, setFrom] = useState(daysAgoISO(30));
   const [to, setTo] = useState(todayISO());
@@ -47,15 +51,16 @@ const AgencyDashboard = () => {
         supabase.from("trips").select("id").eq("agency_id", agencyId),
         supabase
           .from("bookings")
-          .select("total_amount, booking_date, passenger_name, status, trips!inner(agency_id, departure, destination)")
+          .select("total_amount, booking_date, passenger_name, status, trips!inner(agency_id, departure, destination, branch_id)")
           .eq("trips.agency_id", agencyId)
           .order("booking_date", { ascending: false }),
-        supabase.from("agency_branches" as any).select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
+        supabase.from("agency_branches" as any).select("id, name, city").eq("agency_id", agencyId),
       ]);
 
       setAgencyName(agencyRes.data?.name || "");
       const trips = tripsRes.data || [];
       const bookings = (bookingsRes.data || []) as unknown as SaleRow[];
+      const branchList = ((branchesRes.data as any) || []) as BranchInfo[];
       const today = todayISO();
 
       setStats({
@@ -63,15 +68,17 @@ const AgencyDashboard = () => {
         bookings: bookings.length,
         revenue: bookings.filter((b) => b.status !== "cancelled").reduce((s, b) => s + Number(b.total_amount || 0), 0),
         todayBookings: bookings.filter((b) => b.booking_date === today).length,
-        branches: (branchesRes as any).count || 0,
+        branches: branchList.length,
       });
 
       setAllBookings(bookings);
       setRecentBookings(bookings.slice(0, 5));
+      setBranches(branchList);
     };
 
     fetchData();
   }, [agencyId]);
+
 
   const cards = [
     { label: "Sous-agences", value: stats.branches, icon: Building2, color: "text-primary", to: "/agency/sub-agencies" },
@@ -107,6 +114,22 @@ const AgencyDashboard = () => {
     });
     return { rows, byTrip: [...byTrip.values()].sort((a, b) => b.total - a.total), total, count };
   }, [allBookings, from, to]);
+
+  // Sales per branch (sub-agency) — main agency = rows without branch_id
+  const branchSales = useMemo(() => {
+    const map = new Map<string, { name: string; city: string | null; count: number; total: number }>();
+    map.set("__main__", { name: "Agence principale (siège)", city: null, count: 0, total: 0 });
+    branches.forEach((b) => map.set(b.id, { name: b.name, city: b.city, count: 0, total: 0 }));
+    periodSales.rows.forEach((b) => {
+      const key = b.trips?.branch_id || "__main__";
+      const cur = map.get(key) || { name: "Sous-agence supprimée", city: null, count: 0, total: 0 };
+      cur.count++;
+      cur.total += Number(b.total_amount || 0);
+      map.set(key, cur);
+    });
+    return [...map.values()].filter((r) => r.count > 0).sort((a, b) => b.total - a.total);
+  }, [periodSales.rows, branches]);
+
 
   const exportCSV = () => {
     if (periodSales.byTrip.length === 0) {
@@ -274,6 +297,54 @@ const AgencyDashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {!isManager && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-lg">Ventes par sous-agence</CardTitle>
+              <Link to="/agency/sub-agencies" className="text-xs text-primary hover:underline">
+                Voir les sous-agences
+              </Link>
+            </div>
+            <p className="text-xs text-muted-foreground">Période : {from} → {to}</p>
+          </CardHeader>
+          <CardContent>
+            {branchSales.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune vente sur la période.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground border-b">
+                      <th className="py-2">Sous-agence</th>
+                      <th className="py-2">Ville</th>
+                      <th className="py-2 text-right">Ventes</th>
+                      <th className="py-2 text-right">Total</th>
+                      <th className="py-2 text-right">Part</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {branchSales.map((r) => (
+                      <tr key={r.name} className="border-b last:border-0">
+                        <td className="py-2 font-medium">{r.name}</td>
+                        <td className="py-2 text-muted-foreground">{r.city || "—"}</td>
+                        <td className="py-2 text-right">{r.count}</td>
+                        <td className="py-2 text-right font-medium">{r.total.toLocaleString()} FCFA</td>
+                        <td className="py-2 text-right text-muted-foreground">
+                          {periodSales.total > 0 ? Math.round((r.total / periodSales.total) * 100) : 0}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+
 
       <Card>
         <CardHeader><CardTitle className="text-lg">Dernières réservations</CardTitle></CardHeader>
