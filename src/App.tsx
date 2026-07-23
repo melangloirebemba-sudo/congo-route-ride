@@ -44,6 +44,8 @@ import ManagerTrips from "./pages/manager/ManagerTrips";
 import ManagerBookings from "./pages/manager/ManagerBookings";
 import ManagerSale from "./pages/manager/ManagerSale";
 import ManagerNotifications from "./pages/manager/ManagerNotifications";
+import ManagerBoarding from "./pages/manager/ManagerBoarding";
+
 import AgencyCounterSale from "./pages/agency/AgencyCounterSale";
 
 import NotFound from "./pages/NotFound";
@@ -122,6 +124,8 @@ const App = () => (
               <Route path="sale" element={<ManagerSale />} />
               <Route path="notifications" element={<ManagerNotifications />} />
               <Route path="scan" element={<ScanAdmin />} />
+              <Route path="boarding" element={<ManagerBoarding />} />
+
             </Route>
 
 
