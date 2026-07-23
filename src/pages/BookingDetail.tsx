@@ -678,6 +678,36 @@ const BookingDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Share fallback (desktop / navigator.share unavailable) */}
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Partager le reçu</DialogTitle>
+            <DialogDescription>Choisissez un canal — le reçu PDF et le QR seront téléchargés pour être joints.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={shareOnWhatsApp} className="justify-start">
+              <MessageSquare className="h-4 w-4 mr-2 text-[#25D366]" /> WhatsApp
+            </Button>
+            <Button variant="outline" onClick={shareViaSms} className="justify-start">
+              <MessageSquare className="h-4 w-4 mr-2" /> SMS
+            </Button>
+            <Button variant="outline" onClick={shareViaEmail} className="justify-start">
+              <Mail className="h-4 w-4 mr-2" /> Email
+            </Button>
+            <Button variant="outline" onClick={copyShareText} className="justify-start">
+              <Copy className="h-4 w-4 mr-2" /> Copier texte
+            </Button>
+            <Button variant="outline" onClick={copyBookingLink} className="col-span-2 justify-start">
+              <Link2 className="h-4 w-4 mr-2" /> Copier le lien de la réservation
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShareOpen(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
