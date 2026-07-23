@@ -56,16 +56,18 @@ const ManagerLayout = () => {
           <p className="text-xs text-muted-foreground">Espace gestionnaire</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.map(({ to, icon: Icon, label, end }) => (
+          {navItems.map(({ to, icon: Icon, label, end, badge }) => (
             <NavLink key={to} to={to} end={end}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary"
                 }`}>
               <Icon className="h-4 w-4" />
-              {label}
+              <span className="flex-1">{label}</span>
+              {badge > 0 && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">{badge}</Badge>}
             </NavLink>
           ))}
+
         </nav>
         <div className="p-3 border-t border-border">
           <Button variant="ghost" onClick={signOut} className="w-full justify-start text-muted-foreground">
