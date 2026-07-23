@@ -220,7 +220,7 @@ const AgencyBroadcast = () => {
 
   const allSelected = branches.length > 0 && selected.size === branches.length;
   const scheduledList = items.filter((i) => i.status === "scheduled");
-  const sentList = items.filter((i) => i.status === "sent");
+  const sentList = items.filter((i) => i.status !== "scheduled");
 
   const readStats = (rows: ReadRow[]) => {
     const total = rows.length;
