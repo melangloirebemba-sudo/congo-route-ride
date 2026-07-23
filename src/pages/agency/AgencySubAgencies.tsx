@@ -99,19 +99,19 @@ const AgencySubAgencies = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Sous-agences</h1>
-          <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-xl sm:text-2xl font-bold">Sous-agences</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Détails de vos branches — accès rapide aux réservations et disponibilités
           </p>
         </div>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
           <Link to="/agency/branches"><Building2 className="h-4 w-4 mr-2" /> Gérer les branches</Link>
         </Button>
       </div>
 
-      <div className="relative max-w-md">
+      <div className="relative w-full sm:max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Rechercher par nom, ville, arrondissement..."
@@ -120,6 +120,7 @@ const AgencySubAgencies = () => {
           className="pl-9"
         />
       </div>
+
 
       {loading ? (
         <div className="flex justify-center py-12">
