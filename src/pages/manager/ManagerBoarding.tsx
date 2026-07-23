@@ -30,6 +30,14 @@ const ManagerBoarding = () => {
   const [broadcasting, setBroadcasting] = useState(false);
   const [targetCount, setTargetCount] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [branchInfo, setBranchInfo] = useState<any>(null);
+
+  useEffect(() => {
+    if (!manager?.branch_id) return;
+    supabase.from("agency_branches").select("id, name, city, district, address")
+      .eq("id", manager.branch_id).maybeSingle()
+      .then(({ data }) => setBranchInfo(data));
+  }, [manager?.branch_id]);
 
   const selectedTripObj = useMemo(
     () => trips.find((t) => t.id === broadcastTrip) || null,
@@ -37,13 +45,10 @@ const ManagerBoarding = () => {
   );
 
   const branchLocation = useMemo(() => {
-    const parts = [
-      manager?.branch?.name,
-      [manager?.branch?.address, manager?.branch?.district, manager?.branch?.city]
-        .filter(Boolean).join(", "),
-    ].filter(Boolean);
-    return parts.join(" — ") || manager?.branch?.name || "Votre sous-agence";
-  }, [manager]);
+    if (!branchInfo) return "Votre sous-agence";
+    const addr = [branchInfo.address, branchInfo.district, branchInfo.city].filter(Boolean).join(", ");
+    return addr ? `${branchInfo.name} — ${addr}` : branchInfo.name;
+  }, [branchInfo]);
 
   const previewMessage = useMemo(() => {
     if (!selectedTripObj) return "";
