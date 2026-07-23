@@ -288,8 +288,63 @@ const ManagerSale = () => {
     doc.save(`${lastTicket.qr}.pdf`);
   };
 
+  // Sales list computations (same model as Boarding)
+  const salesTripOptions = useMemo(() => {
+    const m = new Map<string, any>();
+    sales.forEach((r) => r.trips && m.set(r.trips.id, r.trips));
+    return Array.from(m.values()).sort((a, b) => (a.date < b.date ? 1 : -1));
+  }, [sales]);
+
+  const filteredSales = useMemo(() => {
+    return sales.filter((r) => {
+      const d = (r.booking_date || (r.created_at || "").slice(0, 10)) as string;
+      if (dateFrom && d && d < dateFrom) return false;
+      if (dateTo && d && d > dateTo) return false;
+      if (filterTrip !== "all" && r.trip_id !== filterTrip) return false;
+      if (filterPayment !== "all" && r.payment_method !== filterPayment) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const hay = `${r.passenger_name} ${r.phone} ${r.qr_code} ${r.trips?.departure} ${r.trips?.destination}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [sales, dateFrom, dateTo, filterTrip, filterPayment, search]);
+
+  const salesStats = useMemo(() => {
+    const s = { count: 0, total: 0, cash: 0, mobile: 0, card: 0 };
+    filteredSales.forEach((r) => {
+      if (r.payment_status !== "paid") return;
+      s.count++;
+      s.total += Number(r.total_amount || 0);
+      if (r.payment_method === "cash") s.cash += Number(r.total_amount || 0);
+      else if (r.payment_method === "mtn_momo" || r.payment_method === "airtel_money") s.mobile += Number(r.total_amount || 0);
+      else if (r.payment_method === "card") s.card += Number(r.total_amount || 0);
+    });
+    return s;
+  }, [filteredSales]);
+
+  const pgSales = usePagination(filteredSales, 10, [dateFrom, dateTo, filterTrip, filterPayment, search], { paramKey: "" });
+
+  const paymentLabel = (m: string) => paymentMethods.find((p) => p.value === m)?.label || m;
+  const paymentBadge = (m: string) => {
+    if (m === "cash") return <Badge variant="outline">Espèces</Badge>;
+    if (m === "mtn_momo") return <Badge className="bg-yellow-500 text-black">MTN MoMo</Badge>;
+    if (m === "airtel_money") return <Badge className="bg-red-600">Airtel Money</Badge>;
+    if (m === "card") return <Badge className="bg-blue-600">Carte</Badge>;
+    return <Badge variant="outline">{m}</Badge>;
+  };
+  const boardingBadge = (bs: string | null) => {
+    const v = bs || "pending";
+    if (v === "boarded") return <Badge className="bg-green-600">Embarqué</Badge>;
+    if (v === "refused") return <Badge variant="destructive">Refusé</Badge>;
+    return <Badge variant="outline">Non scanné</Badge>;
+  };
+  const fmt = (n: number) => n.toLocaleString("fr-FR");
+  const currency = salesTripOptions[0]?.currency || "FCFA";
+
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold flex items-center gap-2">
           <PlusCircle className="h-6 w-6 text-primary" /> Vente au guichet
