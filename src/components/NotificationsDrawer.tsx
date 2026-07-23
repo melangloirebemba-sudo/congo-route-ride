@@ -62,8 +62,9 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
     const to = from + PAGE_SIZE - 1;
     const { data, error } = await supabase
       .from("branch_notifications" as any)
-      .select("id, title, message, kind, read_at, created_at, booking_id")
+      .select("id, title, message, kind, read_at, archived_at, created_at, booking_id")
       .eq("branch_id", branchId)
+      .is("archived_at", null)
       .order("created_at", { ascending: false })
       .range(from, to);
     if (error) return;
