@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate } from "react-router-dom";
-import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog } from "lucide-react";
+import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 
@@ -10,8 +10,10 @@ const navItems = [
   { to: "/agency/trips", icon: Bus, label: "Trajets" },
   { to: "/agency/bookings", icon: Ticket, label: "Réservations" },
   { to: "/admin/scan", icon: QrCode, label: "Scan billets" },
+  { to: "/agency/audit", icon: ScrollText, label: "Journal d'audit" },
   { to: "/agency/settings", icon: Settings, label: "Paramètres" },
 ];
+
 
 const AgencyLayout = () => {
   const { user, loading, signOut, agencyId } = useAuth();

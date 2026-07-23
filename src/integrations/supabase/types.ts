@@ -113,6 +113,45 @@ export type Database = {
         }
         Relationships: []
       }
+      agency_audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_role: string | null
+          agency_id: string | null
+          branch_id: string | null
+          created_at: string
+          details: Json
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_role?: string | null
+          agency_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_role?: string | null
+          agency_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       agency_branches: {
         Row: {
           address: string | null
@@ -560,6 +599,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _actor_role: { Args: { _uid: string }; Returns: string }
       check_in_booking: { Args: { _booking_id: string }; Returns: Json }
       get_branch_permissions: { Args: { _user_id: string }; Returns: Json }
       get_manager_agency: { Args: { _user_id: string }; Returns: string }

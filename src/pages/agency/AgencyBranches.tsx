@@ -191,7 +191,24 @@ const AgencyBranches = () => {
                 </Select>
               </div>
               <div className="rounded-md border p-3 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Permissions de l'agence secondaire</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Permissions de l'agence secondaire</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => setForm(p => ({
+                      ...p,
+                      can_create_trips: true,
+                      can_sell_counter: true,
+                      can_scan: true,
+                      can_view_stats: true,
+                    }))}
+                  >
+                    Réinitialiser
+                  </Button>
+                </div>
                 {[
                   { key: "can_create_trips", label: "Créer et gérer les trajets" },
                   { key: "can_sell_counter", label: "Vendre au guichet" },
@@ -207,6 +224,7 @@ const AgencyBranches = () => {
                   </div>
                 ))}
               </div>
+
               <div className="flex items-center gap-2">
                 <Switch checked={form.status === "active"} onCheckedChange={v => setForm(p => ({ ...p, status: v ? "active" : "inactive" }))} />
                 <span className="text-sm">Active</span>
