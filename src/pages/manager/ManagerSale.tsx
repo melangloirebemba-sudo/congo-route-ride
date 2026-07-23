@@ -16,6 +16,7 @@ import SeatSelector from "@/components/SeatSelector";
 import QRCode from "qrcode";
 import { jsPDF } from "jspdf";
 import { generateUniqueTicketCode } from "@/lib/ticketCode";
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 
 const paymentMethods = [
