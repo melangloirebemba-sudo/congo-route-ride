@@ -2,6 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { LayoutDashboard, Building2, CreditCard, Settings, Users, BarChart3, LogOut, Ticket, QrCode, ScrollText, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { SignOutConfirm } from "@/components/SignOutConfirm";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Tableau de bord", end: true },
@@ -47,9 +48,11 @@ const AdminLayout = () => {
           ))}
         </nav>
         <div className="p-4 border-t border-border">
-          <Button variant="ghost" onClick={signOut} className="w-full justify-start text-muted-foreground">
-            <LogOut className="h-4 w-4 mr-2" /> Déconnexion
-          </Button>
+          <SignOutConfirm onConfirm={signOut}>
+            <Button variant="ghost" aria-label="Déconnexion" className="w-full justify-start text-muted-foreground">
+              <LogOut className="h-4 w-4 mr-2" aria-hidden="true" /> Déconnexion
+            </Button>
+          </SignOutConfirm>
         </div>
       </aside>
 
@@ -57,9 +60,11 @@ const AdminLayout = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card">
           <h1 className="font-display text-lg font-bold text-gradient">Admin</h1>
-          <Button variant="ghost" size="icon" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <SignOutConfirm onConfirm={signOut}>
+            <Button variant="ghost" size="icon" aria-label="Déconnexion">
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </SignOutConfirm>
         </header>
 
         {/* Mobile nav */}

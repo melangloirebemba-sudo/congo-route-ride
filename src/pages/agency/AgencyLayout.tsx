@@ -4,6 +4,7 @@ import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, User
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { SignOutConfirm } from "@/components/SignOutConfirm";
 import {
   Sidebar,
   SidebarContent,
@@ -85,8 +86,14 @@ const AgencySidebar = ({
                           : "hover:bg-secondary"
                       }
                     >
-                      <NavLink to={to} end={end} className="flex items-center gap-3">
-                        <Icon className="h-4 w-4 shrink-0" />
+                      <NavLink
+                        to={to}
+                        end={end}
+                        aria-label={label}
+                        aria-current={active ? "page" : undefined}
+                        className="flex items-center gap-3"
+                      >
+                        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                         {!collapsed && <span className="truncate">{label}</span>}
                       </NavLink>
                     </SidebarMenuButton>
@@ -99,15 +106,16 @@ const AgencySidebar = ({
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          onClick={onSignOut}
-          className={`w-full text-muted-foreground ${collapsed ? "justify-center px-0" : "justify-start"}`}
-          title="Déconnexion"
-        >
-          <LogOut className="h-4 w-4" />
-          {!collapsed && <span className="ml-2">Déconnexion</span>}
-        </Button>
+        <SignOutConfirm onConfirm={onSignOut}>
+          <Button
+            variant="ghost"
+            aria-label="Déconnexion"
+            className={`w-full text-muted-foreground ${collapsed ? "justify-center px-0" : "justify-start"}`}
+          >
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            {!collapsed && <span className="ml-2">Déconnexion</span>}
+          </Button>
+        </SignOutConfirm>
       </SidebarFooter>
     </Sidebar>
   );
@@ -164,14 +172,16 @@ const AgencyLayout = () => {
 
         <div className="flex-1 flex flex-col min-w-0 h-screen">
           <header className="sticky top-0 z-30 h-14 flex items-center gap-2 px-3 md:px-4 border-b border-border bg-card shrink-0">
-            <SidebarTrigger />
+            <SidebarTrigger aria-label="Ouvrir ou fermer le menu de navigation" />
             <div className="flex-1 min-w-0">
               <p className="font-display text-sm md:text-base font-bold text-gradient truncate">{agencyName || "Agence"}</p>
               <p className="text-[10px] md:text-xs text-muted-foreground truncate">{roleLabel}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={signOut} title="Déconnexion">
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <SignOutConfirm onConfirm={signOut}>
+              <Button variant="ghost" size="icon" aria-label="Déconnexion">
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </SignOutConfirm>
           </header>
           <main className="flex-1 overflow-auto p-4 md:p-8">
             <Outlet />

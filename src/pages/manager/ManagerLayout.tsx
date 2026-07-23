@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { SignOutConfirm } from "@/components/SignOutConfirm";
 import {
   Sidebar,
   SidebarContent,
@@ -81,14 +82,16 @@ const ManagerLayout = () => {
 
         <div className="flex-1 flex flex-col min-w-0 h-screen">
           <header className="sticky top-0 z-30 h-14 flex items-center gap-2 px-3 md:px-4 border-b border-border bg-card shrink-0">
-            <SidebarTrigger />
+            <SidebarTrigger aria-label="Ouvrir ou fermer le menu de navigation" />
             <div className="flex-1 min-w-0">
               <h1 className="font-display text-sm md:text-base font-bold text-gradient truncate">Guichet</h1>
               <p className="text-[10px] md:text-xs text-muted-foreground truncate">Espace gestionnaire</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={signOut} title="Déconnexion">
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <SignOutConfirm onConfirm={signOut}>
+              <Button variant="ghost" size="icon" aria-label="Déconnexion">
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </SignOutConfirm>
           </header>
           <main className="flex-1 overflow-auto p-4 md:p-8">
             <Outlet />
@@ -133,26 +136,41 @@ const ManagerSidebar = ({
             <SidebarMenu>
               {navItems.map(({ to, icon: Icon, label, end, badge }) => {
                 const active = isActive(to, end);
+                const badgeText = badge > 99 ? "99+" : String(badge);
+                const ariaLabel = badge > 0 ? `${label} (${badge} non lue${badge > 1 ? "s" : ""})` : label;
                 return (
                   <SidebarMenuItem key={to}>
                     <SidebarMenuButton
                       asChild
                       isActive={active}
-                      tooltip={label}
+                      tooltip={ariaLabel}
                       className={
                         active
                           ? "bg-primary/15 text-primary font-semibold border-l-4 border-primary rounded-l-none hover:bg-primary/20"
                           : "hover:bg-secondary"
                       }
                     >
-                      <NavLink to={to} end={end} className="flex items-center gap-3">
-                        <Icon className="h-4 w-4 shrink-0" />
+                      <NavLink
+                        to={to}
+                        end={end}
+                        aria-label={ariaLabel}
+                        aria-current={active ? "page" : undefined}
+                        className="relative flex items-center gap-3"
+                      >
+                        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                         {!collapsed && <span className="flex-1 truncate">{label}</span>}
                         {badge > 0 && !collapsed && (
-                          <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">{badge}</Badge>
+                          <Badge variant="destructive" className="h-5 px-1.5 text-[10px]" aria-hidden="true">
+                            {badgeText}
+                          </Badge>
                         )}
                         {badge > 0 && collapsed && (
-                          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
+                          <span
+                            aria-hidden="true"
+                            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center leading-none ring-2 ring-sidebar"
+                          >
+                            {badgeText}
+                          </span>
                         )}
                       </NavLink>
                     </SidebarMenuButton>
@@ -165,15 +183,16 @@ const ManagerSidebar = ({
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          onClick={onSignOut}
-          className={`w-full text-muted-foreground ${collapsed ? "justify-center px-0" : "justify-start"}`}
-          title="Déconnexion"
-        >
-          <LogOut className="h-4 w-4" />
-          {!collapsed && <span className="ml-2">Déconnexion</span>}
-        </Button>
+        <SignOutConfirm onConfirm={onSignOut}>
+          <Button
+            variant="ghost"
+            aria-label="Déconnexion"
+            className={`w-full text-muted-foreground ${collapsed ? "justify-center px-0" : "justify-start"}`}
+          >
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            {!collapsed && <span className="ml-2">Déconnexion</span>}
+          </Button>
+        </SignOutConfirm>
       </SidebarFooter>
     </Sidebar>
   );
