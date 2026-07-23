@@ -649,6 +649,76 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_boarding_broadcasts: {
+        Row: {
+          agency_id: string
+          branch_id: string
+          created_at: string
+          created_by: string
+          extra_message: string | null
+          failure_reason: string | null
+          id: string
+          recipients_count: number | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          branch_id: string
+          created_at?: string
+          created_by: string
+          extra_message?: string | null
+          failure_reason?: string | null
+          id?: string
+          recipients_count?: number | null
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          branch_id?: string
+          created_at?: string
+          created_by?: string
+          extra_message?: string | null
+          failure_reason?: string | null
+          id?: string
+          recipients_count?: number | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_boarding_broadcasts_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_boarding_broadcasts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "agency_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_boarding_broadcasts_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scheduled_broadcasts: {
         Row: {
           agency_id: string
@@ -937,6 +1007,7 @@ export type Database = {
         Returns: Json
       }
       check_in_booking: { Args: { _booking_id: string }; Returns: Json }
+      dispatch_scheduled_boarding_broadcasts: { Args: never; Returns: number }
       dispatch_scheduled_broadcasts: { Args: never; Returns: number }
       get_branch_permissions: { Args: { _user_id: string }; Returns: Json }
       get_manager_agency: { Args: { _user_id: string }; Returns: string }
