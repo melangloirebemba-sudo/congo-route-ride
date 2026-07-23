@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Bus, Ticket, QrCode, LogOut, PlusCircle, Bell, ClipboardCheck, AlertOctagon } from "lucide-react";
+import { LayoutDashboard, Bus, Ticket, QrCode, LogOut, PlusCircle, Bell, ClipboardCheck, AlertOctagon, Globe } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
