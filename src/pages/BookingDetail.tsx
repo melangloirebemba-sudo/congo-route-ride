@@ -294,23 +294,54 @@ const BookingDetail = () => {
     a.href = url; a.download = `qr-${booking.qr_code}.png`; a.click();
   };
 
+  /** Build receipt PDF + QR PNG as File[] plus a shareable text message. */
+  const buildShareAssets = async () => {
+    if (!booking) return null;
+    const [pdfDoc, qrUrl] = await Promise.all([
+      buildPdf("receipt"),
+      QRCode.toDataURL(booking.qr_code, { width: 512, margin: 2 }),
+    ]);
+    if (!pdfDoc) return null;
+    const pdfBlob = pdfDoc.output("blob") as Blob;
+    const qrBlob = await (await fetch(qrUrl)).blob();
+    const files = [
+      new File([pdfBlob], `recu-${booking.qr_code}.pdf`, { type: "application/pdf" }),
+      new File([qrBlob], `qr-${booking.qr_code}.png`, { type: "image/png" }),
+    ];
+    const text = `Reçu TransCongo — ${booking.trips?.departure} → ${booking.trips?.destination} le ${booking.trips?.date} à ${booking.trips?.departure_time?.slice(0,5)}. Siège #${booking.seat_number}. Code: ${booking.qr_code}. Montant: ${booking.total_amount.toLocaleString("fr-FR")} FCFA.`;
+    return { files, text, pdfDoc, qrUrl };
+  };
+
+  /** System share sheet (WhatsApp, Messages, Email, etc.). Falls back to a channel dialog. */
+  const shareSystem = async () => {
+    if (!booking) return;
+    try {
+      const assets = await buildShareAssets();
+      if (!assets) return;
+      const nav: any = navigator;
+      if (nav.canShare?.({ files: assets.files }) && nav.share) {
+        await nav.share({ files: assets.files, title: "Reçu TransCongo", text: assets.text });
+        toast.success("Partage ouvert");
+        return;
+      }
+      if (nav.share) {
+        await nav.share({ title: "Reçu TransCongo", text: assets.text });
+        toast.success("Partage ouvert");
+        return;
+      }
+      setShareOpen(true);
+    } catch (e: any) {
+      if (e?.name !== "AbortError") setShareOpen(true);
+    }
+  };
+
   /** Send receipt PDF + QR PNG through WhatsApp. Uses native share when files are supported. */
   const shareOnWhatsApp = async () => {
     if (!booking) return;
     try {
-      const [pdfDoc, qrUrl] = await Promise.all([
-        buildPdf("receipt"),
-        QRCode.toDataURL(booking.qr_code, { width: 512, margin: 2 }),
-      ]);
-      if (!pdfDoc) return;
-      const pdfBlob = pdfDoc.output("blob") as Blob;
-      const qrBlob = await (await fetch(qrUrl)).blob();
-      const files = [
-        new File([pdfBlob], `recu-${booking.qr_code}.pdf`, { type: "application/pdf" }),
-        new File([qrBlob], `qr-${booking.qr_code}.png`, { type: "image/png" }),
-      ];
-      const text = `Reçu TransCongo — ${booking.trips?.departure} → ${booking.trips?.destination} le ${booking.trips?.date} à ${booking.trips?.departure_time?.slice(0,5)}. Siège #${booking.seat_number}. Code: ${booking.qr_code}. Montant: ${booking.total_amount.toLocaleString("fr-FR")} FCFA.`;
-
+      const assets = await buildShareAssets();
+      if (!assets) return;
+      const { files, text, pdfDoc, qrUrl } = assets;
       const nav: any = navigator;
       if (nav.canShare?.({ files }) && nav.share) {
         await nav.share({ files, title: "Reçu TransCongo", text });
@@ -328,6 +359,37 @@ const BookingDetail = () => {
     } catch (e: any) {
       if (e?.name !== "AbortError") toast.error("Impossible d'ouvrir WhatsApp");
     }
+  };
+
+  /** Fallback channel actions used inside the share dialog (desktop). */
+  const shareViaEmail = async () => {
+    const assets = await buildShareAssets();
+    if (!assets || !booking) return;
+    assets.pdfDoc.save(`recu-${booking.qr_code}.pdf`);
+    const a = document.createElement("a");
+    a.href = assets.qrUrl; a.download = `qr-${booking.qr_code}.png`; a.click();
+    const subject = `Reçu TransCongo — ${booking.qr_code}`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(assets.text)}`;
+    toast("Reçu et QR téléchargés", { description: "Client email ouvert — joignez les fichiers." });
+    setShareOpen(false);
+  };
+  const shareViaSms = async () => {
+    if (!booking) return;
+    const assets = await buildShareAssets();
+    if (!assets) return;
+    const phone = (booking.phone || "").replace(/[^\d]/g, "");
+    window.location.href = `sms:${phone}?body=${encodeURIComponent(assets.text)}`;
+    setShareOpen(false);
+  };
+  const copyShareText = async () => {
+    const assets = await buildShareAssets();
+    if (!assets) return;
+    await navigator.clipboard.writeText(assets.text);
+    toast.success("Texte du reçu copié");
+  };
+  const copyBookingLink = async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    toast.success("Lien copié");
   };
 
   const refund = useMemo(() => refundPolicy(booking?.trips?.date, booking?.trips?.departure_time, booking?.total_amount ?? 0), [booking]);
