@@ -314,6 +314,21 @@ const MyReservations = () => {
                 </button>
               ))}
             </div>
+            {(method === "mtn" || method === "airtel") && (
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Numéro Mobile Money</label>
+                <input
+                  value={momoPhone}
+                  onChange={(e) => setMomoPhone(e.target.value)}
+                  placeholder="Ex: 06 000 00 00"
+                  inputMode="tel"
+                  className="w-full rounded-xl bg-secondary text-secondary-foreground px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Une demande apparaîtra ci-dessus à confirmer ou refuser.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPayFor(null)}>Annuler</Button>
