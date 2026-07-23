@@ -291,6 +291,8 @@ const ScanAdmin = () => {
       unpaid: "unpaid",
       expired: "expired",
       notfound: "notfound",
+      refused: "refused",
+
     };
     if (verdictByCode[code]) setVerdict(verdictByCode[code]);
     toast.error(meta.title);
