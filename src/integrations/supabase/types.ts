@@ -226,7 +226,11 @@ export type Database = {
       }
       bookings: {
         Row: {
+          boarded_at: string | null
+          boarded_by: string | null
           boarding_branch_id: string | null
+          boarding_notes: string | null
+          boarding_status: Database["public"]["Enums"]["boarding_status"]
           booking_date: string
           created_at: string
           id: string
@@ -243,7 +247,11 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          boarded_at?: string | null
+          boarded_by?: string | null
           boarding_branch_id?: string | null
+          boarding_notes?: string | null
+          boarding_status?: Database["public"]["Enums"]["boarding_status"]
           booking_date?: string
           created_at?: string
           id?: string
@@ -260,7 +268,11 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          boarded_at?: string | null
+          boarded_by?: string | null
           boarding_branch_id?: string | null
+          boarding_notes?: string | null
+          boarding_status?: Database["public"]["Enums"]["boarding_status"]
           booking_date?: string
           created_at?: string
           id?: string
@@ -685,6 +697,10 @@ export type Database = {
         Args: { _seat_number: number; _trip_id: string; _ttl_seconds?: number }
         Returns: Json
       }
+      refuse_boarding: {
+        Args: { _booking_id: string; _reason?: string }
+        Returns: Json
+      }
       release_seat: {
         Args: { _seat_number: number; _trip_id: string }
         Returns: Json
@@ -692,6 +708,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      boarding_status: "pending" | "boarded" | "refused"
       notification_channel: "sms" | "whatsapp"
     }
     CompositeTypes: {
@@ -821,6 +838,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      boarding_status: ["pending", "boarded", "refused"],
       notification_channel: ["sms", "whatsapp"],
     },
   },

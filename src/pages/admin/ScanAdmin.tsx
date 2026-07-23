@@ -36,6 +36,8 @@ type BookingResult = {
   payment_method: string | null;
   total_amount: number;
   booking_date: string;
+  boarding_status?: string | null;
+  boarding_notes?: string | null;
   trip: {
     id: string;
     departure: string;
@@ -50,16 +52,28 @@ type BookingResult = {
   } | null;
 };
 
-type Verdict = "valid" | "used" | "unpaid" | "cancelled" | "expired" | "notfound";
+type Verdict = "valid" | "used" | "unpaid" | "cancelled" | "expired" | "notfound" | "refused";
 
 const verdictMeta: Record<Verdict, { label: string; tone: string; icon: any }> = {
   valid: { label: "Billet valide", tone: "bg-green-500/15 text-green-600 border-green-500/30", icon: CheckCircle2 },
-  used: { label: "Déjà utilisé", tone: "bg-amber-500/15 text-amber-600 border-amber-500/30", icon: AlertTriangle },
+  used: { label: "Déjà embarqué", tone: "bg-amber-500/15 text-amber-600 border-amber-500/30", icon: AlertTriangle },
+  refused: { label: "Refusé à l'embarquement", tone: "bg-red-500/15 text-red-600 border-red-500/30", icon: XCircle },
   unpaid: { label: "Non payé", tone: "bg-red-500/15 text-red-600 border-red-500/30", icon: XCircle },
   cancelled: { label: "Annulé", tone: "bg-red-500/15 text-red-600 border-red-500/30", icon: XCircle },
   expired: { label: "Voyage passé", tone: "bg-amber-500/15 text-amber-600 border-amber-500/30", icon: AlertTriangle },
   notfound: { label: "Billet introuvable", tone: "bg-red-500/15 text-red-600 border-red-500/30", icon: XCircle },
 };
+
+const boardingBadgeTone = (s?: string | null) =>
+  s === "boarded"
+    ? "bg-green-500/15 text-green-700 border-green-500/30"
+    : s === "refused"
+    ? "bg-red-500/15 text-red-700 border-red-500/30"
+    : "bg-amber-500/15 text-amber-700 border-amber-500/30";
+
+const boardingLabel = (s?: string | null) =>
+  s === "boarded" ? "Embarqué" : s === "refused" ? "Refusé" : "Non scanné";
+
 
 const ScanAdmin = () => {
   const { isAdmin, agencyId } = useAuth();
@@ -85,11 +99,12 @@ const ScanAdmin = () => {
       .from("bookings")
       .select(`
         id, qr_code, passenger_name, phone, seat_number, status, payment_status,
-        payment_method, total_amount, booking_date,
+        payment_method, total_amount, booking_date, boarding_status, boarding_notes,
         trip:trips ( id, departure, destination, date, departure_time, arrival_time, bus_type, price, currency, agency:agencies ( id, name ) )
       `)
       .eq("qr_code", trimmed)
       .maybeSingle();
+
 
     setLoading(false);
     if (error) {
@@ -115,7 +130,8 @@ const ScanAdmin = () => {
 
     let v: Verdict = "valid";
     if (b.status === "cancelled") v = "cancelled";
-    else if (b.status === "used" || b.status === "checked_in") v = "used";
+    else if (b.boarding_status === "refused") v = "refused";
+    else if (b.status === "used" || b.status === "checked_in" || b.boarding_status === "boarded") v = "used";
     else if (b.payment_status !== "paid") v = "unpaid";
     else if (b.trip?.date && new Date(b.trip.date) < new Date(new Date().toDateString())) v = "expired";
 
@@ -123,6 +139,7 @@ const ScanAdmin = () => {
     if (v === "valid") toast.success("Billet valide");
     else toast.warning(verdictMeta[v].label);
   };
+
 
 
   const startScanner = async () => {
@@ -176,7 +193,37 @@ const ScanAdmin = () => {
     cancelled: { title: "Réservation annulée", message: "Cette transaction a été annulée et le billet n'est plus valide.", hint: "Orientez le passager vers le guichet pour un nouveau billet." },
     unpaid: { title: "Paiement non confirmé", message: "Le paiement n'a pas encore été validé pour ce billet.", hint: "Demandez au passager de finaliser le paiement (MTN MoMo / Airtel Money) avant l'embarquement." },
     expired: { title: "Trajet expiré", message: "Le voyage associé à ce billet est déjà passé.", hint: "Ce billet ne peut plus être utilisé — proposez un nouveau trajet." },
+    refused: { title: "Billet refusé", message: "Ce billet a été refusé à l'embarquement.", hint: "Consultez le motif du refus dans la fiche du billet." },
   };
+
+  const [refuseOpen, setRefuseOpen] = useState(false);
+  const [refuseReason, setRefuseReason] = useState("");
+  const [refusing, setRefusing] = useState(false);
+
+  const refuseBoarding = async () => {
+    if (!booking) return;
+    setRefusing(true);
+    const { data, error } = await supabase.rpc("refuse_boarding" as any, {
+      _booking_id: booking.id,
+      _reason: refuseReason.trim() || null,
+    });
+    setRefusing(false);
+    if (error) {
+      toast.error(error.message || "Échec du refus");
+      return;
+    }
+    const res = (data ?? {}) as { ok?: boolean; message?: string };
+    if (res.ok) {
+      toast.success(res.message || "Billet refusé à l'embarquement");
+      setBooking({ ...booking, boarding_status: "refused", boarding_notes: refuseReason.trim() || null });
+      setVerdict("refused");
+      setRefuseOpen(false);
+      setRefuseReason("");
+    } else {
+      toast.error(res.message || "Refus impossible");
+    }
+  };
+
 
   const markAsUsed = async () => {
     if (!booking) return;
@@ -244,6 +291,8 @@ const ScanAdmin = () => {
       unpaid: "unpaid",
       expired: "expired",
       notfound: "notfound",
+      refused: "refused",
+
     };
     if (verdictByCode[code]) setVerdict(verdictByCode[code]);
     toast.error(meta.title);
@@ -495,15 +544,31 @@ const ScanAdmin = () => {
                         </div>
                       </div>
                     )}
+                    <div className="rounded-md border p-3 flex items-center justify-between text-xs">
+                      <span className="font-medium">Statut d'embarquement</span>
+                      <Badge variant="outline" className={boardingBadgeTone(booking.boarding_status)}>
+                        {boardingLabel(booking.boarding_status)}
+                      </Badge>
+                    </div>
+                    {booking.boarding_status === "refused" && booking.boarding_notes && (
+                      <div className="text-xs text-muted-foreground italic">
+                        Motif du refus : {booking.boarding_notes}
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       {verdict === "valid" ? (
-                        <Button onClick={() => setConfirmOpen(true)} disabled={validating} className="flex-1">
-                          {validating ? (
-                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Validation…</>
-                          ) : (
-                            <><CheckCircle2 className="h-4 w-4 mr-2" /> Valider l'embarquement</>
-                          )}
-                        </Button>
+                        <>
+                          <Button onClick={() => setConfirmOpen(true)} disabled={validating} className="flex-1">
+                            {validating ? (
+                              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Validation…</>
+                            ) : (
+                              <><CheckCircle2 className="h-4 w-4 mr-2" /> Valider</>
+                            )}
+                          </Button>
+                          <Button variant="destructive" onClick={() => setRefuseOpen(true)} className="flex-1">
+                            <XCircle className="h-4 w-4 mr-2" /> Refuser
+                          </Button>
+                        </>
                       ) : (
                         <Button disabled className="flex-1" variant="secondary">
                           <XCircle className="h-4 w-4 mr-2" /> Validation bloquée
@@ -513,6 +578,7 @@ const ScanAdmin = () => {
                         Nouveau scan
                       </Button>
                     </div>
+
                     <div className="flex gap-2">
                       <Button variant="secondary" onClick={downloadTicket} className="flex-1">
                         <Download className="h-4 w-4 mr-2" /> Télécharger PDF
@@ -570,6 +636,35 @@ const ScanAdmin = () => {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+
+                    <AlertDialog open={refuseOpen} onOpenChange={setRefuseOpen}>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Refuser l'embarquement</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Ce billet sera marqué comme <strong>refusé</strong>. Indiquez le motif du refus (facultatif mais recommandé).
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Motif du refus (ex : pièce d'identité manquante)"
+                            value={refuseReason}
+                            onChange={(e) => setRefuseReason(e.target.value)}
+                          />
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={refusing}>Annuler</AlertDialogCancel>
+                          <AlertDialogAction
+                            disabled={refusing}
+                            onClick={async (e) => { e.preventDefault(); await refuseBoarding(); }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {refusing ? "Refus…" : "Confirmer le refus"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
 
 
                   </div>

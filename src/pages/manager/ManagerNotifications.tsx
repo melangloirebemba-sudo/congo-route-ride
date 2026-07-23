@@ -39,6 +39,30 @@ const ManagerNotifications = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    const branchId = manager?.branch_id;
+    if (!branchId) return;
+    const channel = supabase
+      .channel(`branch-notifs-page-${branchId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "branch_notifications", filter: `branch_id=eq.${branchId}` },
+        (payload: any) => {
+          const n = payload.new;
+          toast.info(n?.title || "Nouvelle notification", { description: n?.message ?? undefined });
+          load();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "branch_notifications", filter: `branch_id=eq.${branchId}` },
+        () => load()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [manager?.branch_id, load]);
+
+
   const markOne = async (id: string) => {
     await supabase.from("branch_notifications" as any).update({ read_at: new Date().toISOString() }).eq("id", id);
     load();

@@ -12,6 +12,8 @@ import { PlusCircle, Ticket, Download, RotateCcw } from "lucide-react";
 import SeatSelector from "@/components/SeatSelector";
 import QRCode from "qrcode";
 import { jsPDF } from "jspdf";
+import { generateUniqueTicketCode } from "@/lib/ticketCode";
+
 
 const paymentMethods = [
   { value: "cash", label: "Espèces (guichet)" },
@@ -145,7 +147,7 @@ const ManagerSale = () => {
     }
 
     setSubmitting(true);
-    const qr = `TC-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const qr = await generateUniqueTicketCode();
     const { error } = await supabase.from("bookings").insert({
       trip_id: trip.id,
       user_id: user?.id,

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
+import { generateUniqueTicketCode } from "@/lib/ticketCode";
+
 
 interface TripData {
   id: string;
@@ -70,7 +72,7 @@ const BookingPage = () => {
     if (!name || !phone) return;
     setSubmitting(true);
 
-    const qrCode = `TC-${Date.now().toString(36).toUpperCase()}`;
+    const qrCode = await generateUniqueTicketCode();
     const { data: session } = await supabase.auth.getSession();
     const userId = session?.session?.user?.id || null;
 
