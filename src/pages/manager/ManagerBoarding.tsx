@@ -28,6 +28,64 @@ const ManagerBoarding = () => {
   const [broadcastTrip, setBroadcastTrip] = useState<string>("");
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [broadcasting, setBroadcasting] = useState(false);
+  const [targetCount, setTargetCount] = useState<number | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [branchInfo, setBranchInfo] = useState<any>(null);
+
+  useEffect(() => {
+    if (!manager?.branch_id) return;
+    supabase.from("agency_branches").select("id, name, city, district, address")
+      .eq("id", manager.branch_id).maybeSingle()
+      .then(({ data }) => setBranchInfo(data));
+  }, [manager?.branch_id]);
+
+  const selectedTripObj = useMemo(
+    () => trips.find((t) => t.id === broadcastTrip) || null,
+    [trips, broadcastTrip]
+  );
+
+  const branchLocation = useMemo(() => {
+    if (!branchInfo) return "Votre sous-agence";
+    const addr = [branchInfo.address, branchInfo.district, branchInfo.city].filter(Boolean).join(", ");
+    return addr ? `${branchInfo.name} — ${addr}` : branchInfo.name;
+  }, [branchInfo]);
+
+  const previewMessage = useMemo(() => {
+    if (!selectedTripObj) return "";
+    const d = selectedTripObj.date
+      ? new Date(selectedTripObj.date + "T00:00").toLocaleDateString("fr-FR")
+      : "";
+    const h = (selectedTripObj.departure_time || "").slice(0, 5);
+    const base = `Embarquement le ${d} à ${h}. Lieu : ${branchLocation}.`;
+    const extra = broadcastMsg?.trim();
+    return extra ? `${base}\n${extra}` : base;
+  }, [selectedTripObj, broadcastMsg, branchLocation]);
+
+  // Recount targets whenever selected trip changes / dialog opens
+  useEffect(() => {
+    const run = async () => {
+      if (!broadcastOpen || !broadcastTrip || !manager?.branch_id) {
+        setTargetCount(null);
+        return;
+      }
+      const tripBranchId = selectedTripObj?.branch_id ?? null;
+      let q = supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("trip_id", broadcastTrip)
+        .eq("payment_status", "paid")
+        .neq("status", "cancelled")
+        .not("user_id", "is", null);
+      if (tripBranchId === manager.branch_id) {
+        q = q.or(`boarding_branch_id.eq.${manager.branch_id},boarding_branch_id.is.null`);
+      } else {
+        q = q.eq("boarding_branch_id", manager.branch_id);
+      }
+      const { count } = await q;
+      setTargetCount(count ?? 0);
+    };
+    run();
+  }, [broadcastOpen, broadcastTrip, manager?.branch_id, selectedTripObj]);
 
   const sendBroadcast = async () => {
     if (!broadcastTrip) { toast.error("Sélectionnez un trajet"); return; }
@@ -41,6 +99,7 @@ const ManagerBoarding = () => {
     const res: any = data;
     if (!res?.ok) { toast.error(res?.message || "Diffusion impossible"); return; }
     toast.success(`Diffusion envoyée à ${res.sent} passager(s)`);
+    setConfirmOpen(false);
     setBroadcastOpen(false);
     setBroadcastMsg("");
   };
@@ -299,12 +358,62 @@ const ManagerBoarding = () => {
                 placeholder="Ex: Merci de vous présenter 30 minutes avant le départ."
               />
             </div>
+
+            {broadcastTrip && (
+              <div className="rounded-xl border bg-muted/40 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Aperçu du message</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {targetCount === null ? "…" : `${targetCount} passager${targetCount > 1 ? "s" : ""} ciblé${targetCount > 1 ? "s" : ""}`}
+                  </Badge>
+                </div>
+                <div className="rounded-lg bg-background border p-3 text-sm">
+                  <div className="font-semibold mb-1">
+                    Rappel embarquement : {selectedTripObj?.departure} → {selectedTripObj?.destination}
+                  </div>
+                  <div className="whitespace-pre-wrap text-muted-foreground">{previewMessage}</div>
+                </div>
+                {targetCount === 0 && (
+                  <p className="text-xs text-warning-foreground">
+                    Aucun passager payé n'est associé à votre sous-agence pour ce trajet.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBroadcastOpen(false)}>Annuler</Button>
-            <Button onClick={sendBroadcast} disabled={broadcasting || !broadcastTrip}>
+            <Button
+              onClick={() => setConfirmOpen(true)}
+              disabled={!broadcastTrip || targetCount === 0 || targetCount === null}
+            >
+              <Megaphone className="h-4 w-4 mr-2" /> Prévisualiser et envoyer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la diffusion</DialogTitle>
+            <DialogDescription>
+              Ce message sera envoyé immédiatement à <strong>{targetCount ?? 0}</strong> passager{(targetCount ?? 0) > 1 ? "s" : ""} ayant payé leur billet. Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-muted/40 border p-3 text-sm">
+            <div className="font-semibold mb-1">
+              {selectedTripObj?.departure} → {selectedTripObj?.destination}
+            </div>
+            <div className="whitespace-pre-wrap text-muted-foreground">{previewMessage}</div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={broadcasting}>
+              Modifier
+            </Button>
+            <Button onClick={sendBroadcast} disabled={broadcasting}>
               <Megaphone className="h-4 w-4 mr-2" />
-              {broadcasting ? "Envoi..." : "Envoyer la diffusion"}
+              {broadcasting ? "Envoi..." : `Confirmer l'envoi à ${targetCount ?? 0}`}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,7 +1,7 @@
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Phone, User, CreditCard, CheckCircle2, Loader2, MapPin, Clock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Phone, User, CreditCard, CheckCircle2, Loader2, MapPin, Clock, AlertTriangle, UserPlus, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
@@ -54,6 +54,11 @@ const BookingPage = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [allowedBranchIds, setAllowedBranchIds] = useState<string[]>([]);
   const [boardingBranchId, setBoardingBranchId] = useState<string>("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [signupDone, setSignupDone] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -114,8 +119,21 @@ const BookingPage = () => {
     setSubmitting(true);
 
     const qrCode = await generateUniqueTicketCode();
-    const { data: session } = await supabase.auth.getSession();
-    const userId = session?.session?.user?.id || null;
+    let { data: session } = await supabase.auth.getSession();
+    let userId = session?.session?.user?.id || null;
+    let anonUsed = false;
+
+    // Guest checkout: sign in anonymously to satisfy RLS and preserve history
+    if (!userId) {
+      const { data: anon, error: anonErr } = await supabase.auth.signInAnonymously();
+      if (anonErr || !anon?.user?.id) {
+        toast.error("Impossible de créer une session invité. Réessayez.");
+        setSubmitting(false);
+        return;
+      }
+      userId = anon.user.id;
+      anonUsed = true;
+    }
 
     const isReservation = payMode === "later";
     // deadline: 2h before departure OR now+30min if <2h, cap 24h before if trip far
@@ -158,8 +176,29 @@ const BookingPage = () => {
 
     setBookingRef(qrCode);
     setPendingRef(isReservation);
+    setIsAnonymous(anonUsed || !!session?.session?.user?.is_anonymous);
     setStep("confirmed");
     setSubmitting(false);
+  };
+
+  const handleCreateAccount = async () => {
+    if (!signupEmail || signupPassword.length < 6) {
+      toast.error("Email et mot de passe (6+ caractères) requis");
+      return;
+    }
+    setSignupLoading(true);
+    const { error } = await supabase.auth.updateUser({
+      email: signupEmail,
+      password: signupPassword,
+      data: { full_name: name, phone },
+    });
+    setSignupLoading(false);
+    if (error) {
+      toast.error(error.message || "Impossible de créer le compte");
+      return;
+    }
+    setSignupDone(true);
+    toast.success("Compte créé ! Vos réservations sont conservées.");
   };
 
   if (step === "confirmed") {
@@ -202,6 +241,44 @@ const BookingPage = () => {
               <Button variant="outline" onClick={() => navigate("/")} className="rounded-xl h-12">Retour à l'accueil</Button>
             </div>
           </motion.div>
+
+          {isAnonymous && !signupDone && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              className="mt-4 bg-card rounded-2xl p-5 border-2 border-primary/40 space-y-3">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-primary" />
+                <h3 className="font-display font-semibold">Créez un compte pour conserver vos billets</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Votre réservation reste liée à ce compte : retrouvez votre historique, vos billets et vos rappels sur tous vos appareils.
+              </p>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <input type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)}
+                  placeholder="Votre email" autoComplete="email"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <input type="password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)}
+                  placeholder="Mot de passe (6+ caractères)" autoComplete="new-password"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+              <Button onClick={handleCreateAccount} disabled={signupLoading}
+                className="w-full gradient-primary text-primary-foreground rounded-xl h-11 font-display">
+                {signupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Créer mon compte"}
+              </Button>
+              <button onClick={() => setSignupDone(true)} className="text-xs text-muted-foreground underline w-full text-center">
+                Non merci, continuer sans compte
+              </button>
+            </motion.div>
+          )}
+          {isAnonymous && signupDone && (
+            <div className="mt-4 bg-accent/10 border border-accent rounded-2xl p-4 text-sm text-center">
+              <CheckCircle2 className="h-5 w-5 mx-auto text-accent mb-1" />
+              Compte créé. Vos réservations sont conservées.
+            </div>
+          )}
         </div>
       </div>
     );
