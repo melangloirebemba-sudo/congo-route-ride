@@ -637,6 +637,35 @@ const ScanAdmin = () => {
                       </AlertDialogContent>
                     </AlertDialog>
 
+                    <AlertDialog open={refuseOpen} onOpenChange={setRefuseOpen}>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Refuser l'embarquement</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Ce billet sera marqué comme <strong>refusé</strong>. Indiquez le motif du refus (facultatif mais recommandé).
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Motif du refus (ex : pièce d'identité manquante)"
+                            value={refuseReason}
+                            onChange={(e) => setRefuseReason(e.target.value)}
+                          />
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={refusing}>Annuler</AlertDialogCancel>
+                          <AlertDialogAction
+                            disabled={refusing}
+                            onClick={async (e) => { e.preventDefault(); await refuseBoarding(); }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {refusing ? "Refus…" : "Confirmer le refus"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
+
 
                   </div>
                 )}
