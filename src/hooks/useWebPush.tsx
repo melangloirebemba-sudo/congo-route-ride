@@ -102,24 +102,9 @@ export const useWebPushListener = () => {
         .subscribe()
     );
 
-    // Branch / broadcast notifications addressed to this user
-    channels.push(
-      supabase
-        .channel(`push-notifs-${user.id}`)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "branch_notifications", filter: `user_id=eq.${user.id}` },
-          (payload) => {
-            const n: any = payload.new;
-            if (!n) return;
-            show(n.title || "Nouvelle notification", n.message || "", `nt-${n.id}`);
-          }
-        )
-        .subscribe()
-    );
-
     return () => {
       channels.forEach((c) => supabase.removeChannel(c));
     };
   }, [user]);
 };
+
