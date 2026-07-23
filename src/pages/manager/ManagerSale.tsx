@@ -325,6 +325,20 @@ const ManagerSale = () => {
     return s;
   }, [filteredSales]);
 
+  const chartData = useMemo(() => {
+    const m = new Map<string, { date: string; count: number; total: number }>();
+    filteredSales.forEach((r) => {
+      if (r.payment_status !== "paid") return;
+      const d = (r.booking_date || (r.created_at || "").slice(0, 10)) as string;
+      if (!d) return;
+      const cur = m.get(d) || { date: d, count: 0, total: 0 };
+      cur.count++;
+      cur.total += Number(r.total_amount || 0);
+      m.set(d, cur);
+    });
+    return Array.from(m.values()).sort((a, b) => (a.date < b.date ? -1 : 1));
+  }, [filteredSales]);
+
   const pgSales = usePagination(filteredSales, 10, [dateFrom, dateTo, filterTrip, filterPayment, search], { paramKey: "" });
 
   const paymentLabel = (m: string) => paymentMethods.find((p) => p.value === m)?.label || m;
