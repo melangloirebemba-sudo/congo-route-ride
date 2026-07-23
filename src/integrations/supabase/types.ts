@@ -1007,6 +1007,10 @@ export type Database = {
         Returns: Json
       }
       check_in_booking: { Args: { _booking_id: string }; Returns: Json }
+      claim_booking_by_ref: {
+        Args: { _phone: string; _qr: string }
+        Returns: Json
+      }
       dispatch_scheduled_boarding_broadcasts: { Args: never; Returns: number }
       dispatch_scheduled_broadcasts: { Args: never; Returns: number }
       get_branch_permissions: { Args: { _user_id: string }; Returns: Json }
