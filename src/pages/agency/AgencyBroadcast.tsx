@@ -28,9 +28,11 @@ type Scheduled = {
   target_branch_ids: string[];
   scheduled_at: string;
   sent_at: string | null;
-  status: "scheduled" | "sent" | "cancelled";
+  status: "scheduled" | "sent" | "cancelled" | "failed";
   broadcast_id: string | null;
   created_at: string;
+  failure_reason: string | null;
+  fully_read_at: string | null;
 };
 
 type ReadRow = {
@@ -98,7 +100,21 @@ const AgencyBroadcast = () => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "scheduled_broadcasts", filter: `agency_id=eq.${agencyId}` },
-        () => loadItems()
+        (payload: any) => {
+          const oldRow = payload.old as Scheduled | null;
+          const newRow = payload.new as Scheduled | null;
+          if (newRow && !oldRow?.fully_read_at && newRow.fully_read_at) {
+            toast.success("Broadcast lu par toutes les sous-agences", {
+              description: newRow.subject,
+            });
+          }
+          if (newRow && oldRow?.status !== "failed" && newRow.status === "failed") {
+            toast.error("Échec d'un broadcast planifié", {
+              description: newRow.failure_reason || newRow.subject,
+            });
+          }
+          loadItems();
+        }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -204,7 +220,7 @@ const AgencyBroadcast = () => {
 
   const allSelected = branches.length > 0 && selected.size === branches.length;
   const scheduledList = items.filter((i) => i.status === "scheduled");
-  const sentList = items.filter((i) => i.status === "sent");
+  const sentList = items.filter((i) => i.status !== "scheduled");
 
   const readStats = (rows: ReadRow[]) => {
     const total = rows.length;
@@ -406,18 +422,38 @@ const AgencyBroadcast = () => {
                 <ul className="divide-y divide-border">
                   {sentList.map((s) => {
                     const M = KIND_META[s.kind];
+                    const statusBadge =
+                      s.status === "sent"
+                        ? { cls: "bg-green-500/15 text-green-700 dark:text-green-400", label: "Envoyé" }
+                        : s.status === "failed"
+                          ? { cls: "bg-destructive/15 text-destructive", label: "Échec" }
+                          : { cls: "bg-muted text-foreground", label: s.status };
                     return (
                       <li key={s.id} className="py-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge className={M.badge}>{M.label}</Badge>
+                            <Badge className={statusBadge.cls}>{statusBadge.label}</Badge>
+                            {s.fully_read_at && (
+                              <Badge className="bg-primary/15 text-primary">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />Lu par tous
+                              </Badge>
+                            )}
                             <p className="font-medium text-sm truncate">{s.subject}</p>
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5 break-words">{s.message}</p>
                           <p className="text-[11px] text-muted-foreground mt-1">
-                            Envoyé le {new Date(s.sent_at || s.scheduled_at).toLocaleString("fr-FR")}
+                            {s.status === "failed"
+                              ? <>Tentative le {new Date(s.scheduled_at).toLocaleString("fr-FR")}</>
+                              : <>Envoyé le {new Date(s.sent_at || s.scheduled_at).toLocaleString("fr-FR")}</>}
                             {" · "}{s.target_branch_ids.length} destinataire(s)
+                            {s.fully_read_at && <> · Lu par tous le {new Date(s.fully_read_at).toLocaleString("fr-FR")}</>}
                           </p>
+                          {s.status === "failed" && s.failure_reason && (
+                            <p className="text-[11px] text-destructive mt-1 rounded bg-destructive/10 px-2 py-1">
+                              Raison : {s.failure_reason}
+                            </p>
+                          )}
                         </div>
                         <Button variant="outline" size="sm" onClick={() => openRead(s)} disabled={!s.broadcast_id}>
                           <Eye className="h-4 w-4 mr-1" /> Suivi de lecture

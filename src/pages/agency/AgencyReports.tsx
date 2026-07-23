@@ -53,6 +53,55 @@ const AttachmentLink = ({ att }: { att: Attachment }) => {
   );
 };
 
+const AttachmentPreview = ({ att }: { att: Attachment }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.storage.from("report-attachments").createSignedUrl(att.path, 3600).then(({ data }) => {
+      setUrl(data?.signedUrl || null);
+    });
+  }, [att.path]);
+  const isImg = att.type.startsWith("image/");
+  const isPdf = att.type === "application/pdf" || att.name.toLowerCase().endsWith(".pdf");
+  const sizeKb = Math.max(1, Math.round(att.size / 1024));
+
+  return (
+    <div className="rounded border overflow-hidden bg-secondary/30">
+      <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-b bg-background/50">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {isImg ? <ImageIcon className="h-3.5 w-3.5 shrink-0" /> : <FileIcon className="h-3.5 w-3.5 shrink-0" />}
+          <span className="text-[11px] truncate" title={att.name}>{att.name}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[10px] text-muted-foreground">{sizeKb} Ko</span>
+          {url && (
+            <a href={url} target="_blank" rel="noreferrer" className="text-[11px] text-primary hover:underline">
+              Ouvrir
+            </a>
+          )}
+        </div>
+      </div>
+      {isImg && url && (
+        <a href={url} target="_blank" rel="noreferrer" className="block bg-black/5">
+          <img src={url} alt={att.name} className="max-h-64 w-full object-contain" loading="lazy" />
+        </a>
+      )}
+      {isPdf && url && (
+        <iframe src={url} title={att.name} className="w-full h-72 bg-white" />
+      )}
+      {!isImg && !isPdf && (
+        <div className="p-3 text-[11px] text-muted-foreground">
+          Aperçu non disponible pour ce type de fichier.
+        </div>
+      )}
+      {(isImg || isPdf) && !url && (
+        <div className="p-6 flex justify-center">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 type BranchMap = Record<string, string>;
 
 const SEV_META: Record<string, string> = {
@@ -241,18 +290,18 @@ const AgencyReports = () => {
       </Card>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Traiter le signalement</DialogTitle>
             <DialogDescription>{editing?.subject}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm">{editing?.message}</p>
+            <p className="text-sm whitespace-pre-wrap">{editing?.message}</p>
             {editing?.attachments && editing.attachments.length > 0 && (
               <div>
-                <p className="text-xs font-medium mb-1.5">Pièces jointes</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {editing.attachments.map((a, i) => <AttachmentLink key={i} att={a} />)}
+                <p className="text-xs font-medium mb-1.5">Pièces jointes ({editing.attachments.length})</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {editing.attachments.map((a, i) => <AttachmentPreview key={i} att={a} />)}
                 </div>
               </div>
             )}
