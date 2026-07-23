@@ -91,9 +91,47 @@ const ManagerBoarding = () => {
     run();
   }, [broadcastOpen, broadcastTrip, manager?.branch_id, selectedTripObj]);
 
+  const loadScheduled = async () => {
+    if (!manager?.branch_id) return;
+    const { data } = await (supabase as any)
+      .from("scheduled_boarding_broadcasts")
+      .select("id, trip_id, scheduled_at, status, sent_at, recipients_count, extra_message, failure_reason, trips(departure, destination, date, departure_time)")
+      .eq("branch_id", manager.branch_id)
+      .order("scheduled_at", { ascending: false })
+      .limit(50);
+    setScheduled(data || []);
+  };
+
+  useEffect(() => { loadScheduled(); }, [manager?.branch_id]);
+
   const sendBroadcast = async () => {
     if (!broadcastTrip) { toast.error("Sélectionnez un trajet"); return; }
     setBroadcasting(true);
+
+    if (sendMode === "later") {
+      if (!scheduledAt) { setBroadcasting(false); toast.error("Choisissez une date/heure"); return; }
+      const when = new Date(scheduledAt);
+      if (when.getTime() <= Date.now() + 30_000) {
+        setBroadcasting(false);
+        toast.error("La date planifiée doit être au moins 1 minute dans le futur");
+        return;
+      }
+      const { error } = await (supabase as any).from("scheduled_boarding_broadcasts").insert({
+        trip_id: broadcastTrip,
+        branch_id: manager?.branch_id,
+        agency_id: manager?.agency_id,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        extra_message: broadcastMsg?.trim() || null,
+        scheduled_at: when.toISOString(),
+      });
+      setBroadcasting(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Diffusion planifiée pour le ${when.toLocaleString("fr-FR")}`);
+      setConfirmOpen(false); setBroadcastOpen(false); setBroadcastMsg(""); setScheduledAt(""); setSendMode("now");
+      loadScheduled();
+      return;
+    }
+
     const { data, error } = await supabase.rpc("broadcast_boarding_info", {
       _trip_id: broadcastTrip,
       _extra_message: broadcastMsg?.trim() || null,
@@ -106,6 +144,17 @@ const ManagerBoarding = () => {
     setConfirmOpen(false);
     setBroadcastOpen(false);
     setBroadcastMsg("");
+  };
+
+  const cancelScheduled = async (id: string) => {
+    const { error } = await (supabase as any)
+      .from("scheduled_boarding_broadcasts")
+      .update({ status: "cancelled" })
+      .eq("id", id)
+      .eq("status", "scheduled");
+    if (error) { toast.error(error.message); return; }
+    toast.success("Diffusion annulée");
+    loadScheduled();
   };
 
   const load = async () => {
