@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, Loader2, MapPin, Calendar, CreditCard, Download, Printer,
   QrCode as QrIcon, Clock, CheckCircle2, XCircle, Ticket, User, Building2,
-  AlertTriangle, Share2, Ban, RefreshCw, Wifi,
+  AlertTriangle, Share2, Ban, RefreshCw, Wifi, Mail, MessageSquare, Copy, Link2,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import QRCode from "qrcode";
