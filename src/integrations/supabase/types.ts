@@ -226,6 +226,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          boarding_branch_id: string | null
           booking_date: string
           created_at: string
           id: string
@@ -242,6 +243,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          boarding_branch_id?: string | null
           booking_date?: string
           created_at?: string
           id?: string
@@ -258,6 +260,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          boarding_branch_id?: string | null
           booking_date?: string
           created_at?: string
           id?: string
@@ -274,6 +277,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_boarding_branch_id_fkey"
+            columns: ["boarding_branch_id"]
+            isOneToOne: false
+            referencedRelation: "agency_branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_trip_id_fkey"
             columns: ["trip_id"]
@@ -330,6 +340,64 @@ export type Database = {
           },
           {
             foreignKeyName: "branch_managers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "agency_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_notifications: {
+        Row: {
+          agency_id: string
+          booking_id: string | null
+          branch_id: string
+          created_at: string
+          id: string
+          kind: string
+          message: string | null
+          read_at: string | null
+          title: string
+        }
+        Insert: {
+          agency_id: string
+          booking_id?: string | null
+          branch_id: string
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string | null
+          read_at?: string | null
+          title: string
+        }
+        Update: {
+          agency_id?: string
+          booking_id?: string | null
+          branch_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string | null
+          read_at?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_notifications_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_notifications_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "agency_branches"
