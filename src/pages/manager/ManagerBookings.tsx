@@ -29,11 +29,12 @@ const ManagerBookings = () => {
 
       // Bookings assigned to this branch for boarding (created by the agency owner)
       const q2 = manager.branch_id
-        ? supabase
+        ? (supabase
             .from("bookings")
             .select(select)
             .eq("boarding_branch_id" as any, manager.branch_id)
-            .order("created_at", { ascending: false })
+            .order("created_at", { ascending: false }) as any)
+
         : null;
 
       const [{ data: d1 }, r2] = await Promise.all([q1, q2 ?? Promise.resolve({ data: [] as any[] })]);
