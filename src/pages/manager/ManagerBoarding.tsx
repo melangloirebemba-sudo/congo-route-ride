@@ -8,8 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ListPagination, usePagination } from "@/components/ListPagination";
-import { CheckCircle2, Clock, XCircle, QrCode, RefreshCw } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, QrCode, RefreshCw, Megaphone } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 const ManagerBoarding = () => {
   const { manager } = useAuth();
@@ -21,6 +24,26 @@ const ManagerBoarding = () => {
   const [tripId, setTripId] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
+  const [broadcastTrip, setBroadcastTrip] = useState<string>("");
+  const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [broadcasting, setBroadcasting] = useState(false);
+
+  const sendBroadcast = async () => {
+    if (!broadcastTrip) { toast.error("Sélectionnez un trajet"); return; }
+    setBroadcasting(true);
+    const { data, error } = await supabase.rpc("broadcast_boarding_info", {
+      _trip_id: broadcastTrip,
+      _extra_message: broadcastMsg?.trim() || null,
+    });
+    setBroadcasting(false);
+    if (error) { toast.error(error.message); return; }
+    const res: any = data;
+    if (!res?.ok) { toast.error(res?.message || "Diffusion impossible"); return; }
+    toast.success(`Diffusion envoyée à ${res.sent} passager(s)`);
+    setBroadcastOpen(false);
+    setBroadcastMsg("");
+  };
 
   const load = async () => {
     if (!manager?.branch_id) return;
@@ -123,9 +146,20 @@ const ManagerBoarding = () => {
           <h1 className="font-display text-2xl font-bold">Tableau d'embarquement</h1>
           <p className="text-sm text-muted-foreground">Suivi des billets à embarquer dans votre sous-agence</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Actualiser
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setBroadcastTrip(tripId !== "all" ? tripId : (trips[0]?.id ?? ""));
+              setBroadcastOpen(true);
+            }}
+            disabled={trips.length === 0}
+          >
+            <Megaphone className="h-4 w-4 mr-2" /> Diffuser embarquement
           </Button>
           <Button asChild size="sm">
             <Link to={scanHref}><QrCode className="h-4 w-4 mr-2" /> Scanner</Link>
@@ -233,6 +267,48 @@ const ManagerBoarding = () => {
           <div className="p-4 border-t"><ListPagination {...pg} /></div>
         </CardContent>
       </Card>
+
+      <Dialog open={broadcastOpen} onOpenChange={setBroadcastOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Diffuser les infos d'embarquement</DialogTitle>
+            <DialogDescription>
+              Un message avec la date, l'heure et le lieu d'embarquement (votre sous-agence) sera envoyé à tous les passagers ayant payé leur billet pour ce trajet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Trajet</label>
+              <Select value={broadcastTrip} onValueChange={setBroadcastTrip}>
+                <SelectTrigger><SelectValue placeholder="Sélectionnez un trajet" /></SelectTrigger>
+                <SelectContent>
+                  {trips.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.departure} → {t.destination} — {t.date} {t.departure_time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Message additionnel (facultatif)</label>
+              <Textarea
+                rows={3}
+                value={broadcastMsg}
+                onChange={(e) => setBroadcastMsg(e.target.value)}
+                placeholder="Ex: Merci de vous présenter 30 minutes avant le départ."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBroadcastOpen(false)}>Annuler</Button>
+            <Button onClick={sendBroadcast} disabled={broadcasting || !broadcastTrip}>
+              <Megaphone className="h-4 w-4 mr-2" />
+              {broadcasting ? "Envoi..." : "Envoyer la diffusion"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

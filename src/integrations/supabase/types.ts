@@ -549,6 +549,79 @@ export type Database = {
         }
         Relationships: []
       }
+      passenger_notifications: {
+        Row: {
+          agency_id: string | null
+          boarding_date: string | null
+          boarding_location: string | null
+          boarding_time: string | null
+          booking_id: string | null
+          branch_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          read_at: string | null
+          title: string
+          trip_id: string | null
+          user_id: string
+        }
+        Insert: {
+          agency_id?: string | null
+          boarding_date?: string | null
+          boarding_location?: string | null
+          boarding_time?: string | null
+          booking_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          message: string
+          read_at?: string | null
+          title: string
+          trip_id?: string | null
+          user_id: string
+        }
+        Update: {
+          agency_id?: string | null
+          boarding_date?: string | null
+          boarding_location?: string | null
+          boarding_time?: string | null
+          booking_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          read_at?: string | null
+          title?: string
+          trip_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passenger_notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "passenger_notifications_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "agency_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "passenger_notifications_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           description: string | null
@@ -859,6 +932,10 @@ export type Database = {
     }
     Functions: {
       _actor_role: { Args: { _uid: string }; Returns: string }
+      broadcast_boarding_info: {
+        Args: { _extra_message?: string; _trip_id: string }
+        Returns: Json
+      }
       check_in_booking: { Args: { _booking_id: string }; Returns: Json }
       dispatch_scheduled_broadcasts: { Args: never; Returns: number }
       get_branch_permissions: { Args: { _user_id: string }; Returns: Json }
