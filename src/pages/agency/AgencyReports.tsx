@@ -248,6 +248,14 @@ const AgencyReports = () => {
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm">{editing?.message}</p>
+            {editing?.attachments && editing.attachments.length > 0 && (
+              <div>
+                <p className="text-xs font-medium mb-1.5">Pièces jointes</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {editing.attachments.map((a, i) => <AttachmentLink key={i} att={a} />)}
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="notes">Note de la direction (optionnel)</Label>
               <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
