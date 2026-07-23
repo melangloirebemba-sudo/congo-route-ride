@@ -88,6 +88,46 @@ const ManagerSale = () => {
     })();
   }, [manager]);
 
+  // Load recent sales for this manager's branch
+  const loadSales = async () => {
+    if (!manager?.branch_id) return;
+    setSalesLoading(true);
+    const { data: bA } = await supabase
+      .from("bookings")
+      .select("id, passenger_name, phone, seat_number, qr_code, payment_method, payment_status, total_amount, booking_date, created_at, boarding_status, boarding_branch_id, trip_id, trips!inner(id, departure, destination, date, departure_time, currency, branch_id)")
+      .eq("boarding_branch_id", manager.branch_id)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const { data: bB } = await supabase
+      .from("bookings")
+      .select("id, passenger_name, phone, seat_number, qr_code, payment_method, payment_status, total_amount, booking_date, created_at, boarding_status, boarding_branch_id, trip_id, trips!inner(id, departure, destination, date, departure_time, currency, branch_id)")
+      .is("boarding_branch_id", null)
+      .eq("trips.branch_id", manager.branch_id)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const map = new Map<string, any>();
+    [...(bA || []), ...(bB || [])].forEach((r: any) => map.set(r.id, r));
+    setSales(Array.from(map.values()).sort((a, b) => (a.created_at < b.created_at ? 1 : -1)));
+    setSalesLoading(false);
+  };
+
+  useEffect(() => { loadSales(); }, [manager?.branch_id]);
+
+  // Realtime refresh
+  useEffect(() => {
+    if (!manager?.branch_id) return;
+    let t: any;
+    const debounced = () => { clearTimeout(t); t = setTimeout(loadSales, 300); };
+    const channel = supabase
+      .channel(`sales-${manager.branch_id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, debounced)
+      .subscribe();
+    return () => { clearTimeout(t); supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manager?.branch_id]);
+
+
+
 
   const trip = useMemo(() => trips.find((t) => t.id === tripId), [tripId, trips]);
   const [lockedSeats, setLockedSeats] = useState<number[]>([]);
