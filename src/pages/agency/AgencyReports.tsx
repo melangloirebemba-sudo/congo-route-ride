@@ -216,6 +216,11 @@ const AgencyReports = () => {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 break-words">{r.message}</p>
+                    {r.attachments && r.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {r.attachments.map((a, i) => <AttachmentLink key={i} att={a} />)}
+                      </div>
+                    )}
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {branches[r.branch_id] || "Sous-agence"} · {new Date(r.created_at).toLocaleString("fr-FR")}
                     </p>
