@@ -9,6 +9,20 @@ interface ManagerInfo {
   full_name: string;
 }
 
+export interface BranchPermissions {
+  can_create_trips: boolean;
+  can_sell_counter: boolean;
+  can_scan: boolean;
+  can_view_stats: boolean;
+}
+
+const DEFAULT_PERMS: BranchPermissions = {
+  can_create_trips: true,
+  can_sell_counter: true,
+  can_scan: true,
+  can_view_stats: true,
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -18,6 +32,7 @@ interface AuthContextType {
   agencyStatus: string | null;
   manager: ManagerInfo | null;
   isManager: boolean;
+  managerPermissions: BranchPermissions;
   refreshAgency: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -31,9 +46,11 @@ const AuthContext = createContext<AuthContextType>({
   agencyStatus: null,
   manager: null,
   isManager: false,
+  managerPermissions: DEFAULT_PERMS,
   refreshAgency: async () => {},
   signOut: async () => {},
 });
+
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
