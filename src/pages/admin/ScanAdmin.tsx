@@ -77,8 +77,11 @@ const boardingLabel = (s?: string | null) =>
 
 
 const ScanAdmin = () => {
-  const { isAdmin, agencyId } = useAuth();
+  const { isAdmin, agencyId, manager } = useAuth();
   const scope: "admin" | "agency" = isAdmin ? "admin" : "agency";
+  // Effective agency for scoping: agency owners use their agency, branch managers use their parent agency
+  const effectiveAgencyId = agencyId || manager?.agency_id || null;
+  const managerBranchId = manager?.branch_id || null;
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
@@ -136,7 +139,8 @@ const ScanAdmin = () => {
       .select(`
         id, qr_code, passenger_name, phone, seat_number, status, payment_status,
         payment_method, total_amount, booking_date, boarding_status, boarding_notes,
-        trip:trips ( id, departure, destination, date, departure_time, arrival_time, bus_type, price, currency, agency:agencies ( id, name ) )
+        boarding_branch_id,
+        trip:trips ( id, departure, destination, date, departure_time, arrival_time, bus_type, price, currency, branch_id, agency:agencies ( id, name ) )
       `)
       .eq("qr_code", trimmed)
       .maybeSingle();
@@ -153,13 +157,24 @@ const ScanAdmin = () => {
       return;
     }
 
-    const b = data as unknown as BookingResult;
+    const b = data as unknown as BookingResult & { boarding_branch_id?: string | null; trip: any };
 
-    // Agency scope: only tickets on this agency's trips
-    if (scope === "agency" && b.trip?.agency?.id !== agencyId) {
-      setVerdict("notfound");
-      toast.error("Ce billet n'appartient pas à votre agence");
-      return;
+    // Agency scope: ticket must belong to this agency (owner) OR to this manager's branch
+    // (either through the trip's branch or the passenger's chosen boarding branch).
+    if (scope === "agency") {
+      const sameAgency = b.trip?.agency?.id && b.trip.agency.id === effectiveAgencyId;
+      const branchMatches = managerBranchId
+        ? (b.boarding_branch_id === managerBranchId || b.trip?.branch_id === managerBranchId)
+        : true; // agency owner: no branch restriction
+      if (!sameAgency || !branchMatches) {
+        setVerdict("notfound");
+        toast.error(
+          managerBranchId
+            ? "Ce billet n'est pas embarquable dans votre sous-agence"
+            : "Ce billet n'appartient pas à votre agence"
+        );
+        return;
+      }
     }
 
     setBooking(b);
