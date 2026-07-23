@@ -362,6 +362,7 @@ export type Database = {
       branch_notifications: {
         Row: {
           agency_id: string
+          archived_at: string | null
           booking_id: string | null
           branch_id: string
           created_at: string
@@ -373,6 +374,7 @@ export type Database = {
         }
         Insert: {
           agency_id: string
+          archived_at?: string | null
           booking_id?: string | null
           branch_id: string
           created_at?: string
@@ -384,6 +386,7 @@ export type Database = {
         }
         Update: {
           agency_id?: string
+          archived_at?: string | null
           booking_id?: string | null
           branch_id?: string
           created_at?: string
