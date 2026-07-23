@@ -1,21 +1,25 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, Navigate } from "react-router-dom";
-import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText, Menu } from "lucide-react";
+import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText, Menu, PlusCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 
-const navItems = [
+const ownerNavItems = [
   { to: "/agency", icon: LayoutDashboard, label: "Tableau de bord", end: true },
   { to: "/agency/branches", icon: Building2, label: "Mes agences" },
   { to: "/agency/managers", icon: UserCog, label: "Gestionnaires" },
   { to: "/agency/trips", icon: Bus, label: "Trajets" },
   { to: "/agency/bookings", icon: Ticket, label: "Réservations" },
+  { to: "/agency/counter-sale", icon: PlusCircle, label: "Nouvelle réservation" },
   { to: "/admin/scan", icon: QrCode, label: "Scan billets" },
   { to: "/agency/audit", icon: ScrollText, label: "Journal d'audit" },
   { to: "/agency/settings", icon: Settings, label: "Paramètres" },
 ];
+
+const managerNavItems = ownerNavItems.filter((i) => i.to !== "/agency/counter-sale");
+
 
 const SidebarContent = ({
   agencyName,
