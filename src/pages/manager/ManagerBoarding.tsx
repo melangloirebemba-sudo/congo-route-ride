@@ -163,6 +163,52 @@ const ManagerBoarding = () => {
     loadScheduled();
   };
 
+  const openEditScheduled = (row: any, mode: "edit" | "duplicate") => {
+    setEditItem(row);
+    setEditMode(mode);
+    const iso = row.scheduled_at ? new Date(row.scheduled_at) : new Date(Date.now() + 60 * 60 * 1000);
+    // Convert to yyyy-MM-ddTHH:mm local
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setEditAt(`${iso.getFullYear()}-${pad(iso.getMonth() + 1)}-${pad(iso.getDate())}T${pad(iso.getHours())}:${pad(iso.getMinutes())}`);
+    setEditMsg(row.extra_message || "");
+    setScheduledOpen(false);
+  };
+
+  const submitEditScheduled = async () => {
+    if (!editItem) return;
+    if (!editAt) { toast.error("Choisissez une date/heure"); return; }
+    const when = new Date(editAt);
+    if (when.getTime() <= Date.now()) { toast.error("La date doit être dans le futur"); return; }
+    setEditSaving(true);
+    if (editMode === "edit") {
+      const { error } = await (supabase as any)
+        .from("scheduled_boarding_broadcasts")
+        .update({ scheduled_at: when.toISOString(), extra_message: editMsg?.trim() || null })
+        .eq("id", editItem.id)
+        .eq("status", "scheduled");
+      setEditSaving(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Diffusion mise à jour");
+    } else {
+      const { error } = await (supabase as any).from("scheduled_boarding_broadcasts").insert({
+        trip_id: editItem.trip_id,
+        branch_id: editItem.branch_id ?? manager?.branch_id,
+        agency_id: editItem.agency_id ?? manager?.agency_id,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        extra_message: editMsg?.trim() || null,
+        scheduled_at: when.toISOString(),
+        status: "scheduled",
+      });
+      setEditSaving(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Diffusion dupliquée et planifiée");
+    }
+    setEditItem(null);
+    setEditConfirmOpen(false);
+    loadScheduled();
+    setScheduledOpen(true);
+  };
+
   const load = async () => {
     if (!manager?.branch_id) return;
     setLoading(true);
