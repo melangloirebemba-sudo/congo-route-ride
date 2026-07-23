@@ -193,7 +193,37 @@ const ScanAdmin = () => {
     cancelled: { title: "Réservation annulée", message: "Cette transaction a été annulée et le billet n'est plus valide.", hint: "Orientez le passager vers le guichet pour un nouveau billet." },
     unpaid: { title: "Paiement non confirmé", message: "Le paiement n'a pas encore été validé pour ce billet.", hint: "Demandez au passager de finaliser le paiement (MTN MoMo / Airtel Money) avant l'embarquement." },
     expired: { title: "Trajet expiré", message: "Le voyage associé à ce billet est déjà passé.", hint: "Ce billet ne peut plus être utilisé — proposez un nouveau trajet." },
+    refused: { title: "Billet refusé", message: "Ce billet a été refusé à l'embarquement.", hint: "Consultez le motif du refus dans la fiche du billet." },
   };
+
+  const [refuseOpen, setRefuseOpen] = useState(false);
+  const [refuseReason, setRefuseReason] = useState("");
+  const [refusing, setRefusing] = useState(false);
+
+  const refuseBoarding = async () => {
+    if (!booking) return;
+    setRefusing(true);
+    const { data, error } = await supabase.rpc("refuse_boarding" as any, {
+      _booking_id: booking.id,
+      _reason: refuseReason.trim() || null,
+    });
+    setRefusing(false);
+    if (error) {
+      toast.error(error.message || "Échec du refus");
+      return;
+    }
+    const res = (data ?? {}) as { ok?: boolean; message?: string };
+    if (res.ok) {
+      toast.success(res.message || "Billet refusé à l'embarquement");
+      setBooking({ ...booking, boarding_status: "refused", boarding_notes: refuseReason.trim() || null });
+      setVerdict("refused");
+      setRefuseOpen(false);
+      setRefuseReason("");
+    } else {
+      toast.error(res.message || "Refus impossible");
+    }
+  };
+
 
   const markAsUsed = async () => {
     if (!booking) return;
