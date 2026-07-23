@@ -468,54 +468,15 @@ const AgencyBroadcast = () => {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!readOpen} onOpenChange={(v) => !v && setReadOpen(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Suivi de lecture</DialogTitle>
-            <DialogDescription>{readOpen?.subject}</DialogDescription>
-          </DialogHeader>
-          {readLoading ? (
-            <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-          ) : readRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Aucune donnée de lecture disponible.</p>
-          ) : (
-            <>
-              {(() => {
-                const s = readStats(readRows);
-                return (
-                  <div className="rounded border p-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Lu par</p>
-                      <p className="text-lg font-bold">{s.read} / {s.total}</p>
-                    </div>
-                    <Badge variant="outline">{s.pct}%</Badge>
-                  </div>
-                );
-              })()}
-              <ul className="divide-y divide-border max-h-[50vh] overflow-auto -mx-1">
-                {readRows
-                  .slice()
-                  .sort((a, b) => Number(!!b.read_at) - Number(!!a.read_at))
-                  .map((r) => (
-                    <li key={r.id} className="py-2 px-1 flex items-center justify-between gap-2">
-                      <span className="text-sm truncate">{branchName(r.branch_id)}</span>
-                      {r.read_at ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-green-700 dark:text-green-400">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          {new Date(r.read_at).toLocaleString("fr-FR")}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" /> Non lu
-                        </span>
-                      )}
-                    </li>
-                  ))}
-              </ul>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <ReadTrackingDialog
+        open={!!readOpen}
+        onClose={() => setReadOpen(null)}
+        subject={readOpen?.subject}
+        rows={readRows}
+        loading={readLoading}
+        branchName={branchName}
+        stats={readStats(readRows)}
+      />
     </div>
   );
 };
