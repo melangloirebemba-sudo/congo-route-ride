@@ -1,10 +1,23 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, Navigate } from "react-router-dom";
-import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText, Menu, PlusCircle } from "lucide-react";
+import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
+import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText, PlusCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 const ownerNavItems = [
   { to: "/agency", icon: LayoutDashboard, label: "Tableau de bord", end: true },
@@ -20,63 +33,90 @@ const ownerNavItems = [
 
 const managerNavItems = ownerNavItems.filter((i) => i.to !== "/agency/counter-sale");
 
-
-const SidebarContent = ({
+const AgencySidebar = ({
   agencyName,
   roleLabel,
   items,
-  onNavigate,
   onSignOut,
 }: {
   agencyName: string;
   roleLabel: string;
   items: typeof ownerNavItems;
-  onNavigate?: () => void;
   onSignOut: () => void;
-}) => (
-  <div className="flex flex-col h-full">
-    <div className="p-5 border-b border-border shrink-0 bg-card">
-      <h1 className="font-display text-lg font-bold text-gradient truncate">
-        {agencyName || "Mon Agence"}
-      </h1>
-      <p className="text-xs text-muted-foreground truncate">{roleLabel}</p>
-    </div>
-    <nav className="p-3 space-y-1 overflow-y-auto flex-1">
-      {items.map(({ to, icon: Icon, label, end }) => (
+}) => {
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
+  const { pathname } = useLocation();
+  const isActive = (to: string, end?: boolean) =>
+    end ? pathname === to : pathname === to || pathname.startsWith(to + "/");
 
-        <NavLink
-          key={to}
-          to={to}
-          end={end}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary"
-            }`
-          }
-        >
-          <Icon className="h-4 w-4" />
-          {label}
-        </NavLink>
-      ))}
-      <div className="pt-3 mt-2 border-t border-border">
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="px-2 py-2">
+          {!collapsed ? (
+            <>
+              <h2 className="font-display text-base font-bold text-gradient truncate">{agencyName || "Mon Agence"}</h2>
+              <p className="text-[10px] text-muted-foreground truncate">{roleLabel}</p>
+            </>
+          ) : (
+            <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary mx-auto">
+              {(agencyName || "A").charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {items.map(({ to, icon: Icon, label, end }) => {
+                const active = isActive(to, end);
+                return (
+                  <SidebarMenuItem key={to}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={label}
+                      className={
+                        active
+                          ? "bg-primary/15 text-primary font-semibold border-l-4 border-primary rounded-l-none hover:bg-primary/20"
+                          : "hover:bg-secondary"
+                      }
+                    >
+                      <NavLink to={to} end={end} className="flex items-center gap-3">
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {!collapsed && <span className="truncate">{label}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t border-sidebar-border">
         <Button
           variant="ghost"
           onClick={onSignOut}
-          className="w-full justify-start text-muted-foreground"
+          className={`w-full text-muted-foreground ${collapsed ? "justify-center px-0" : "justify-start"}`}
+          title="Déconnexion"
         >
-          <LogOut className="h-4 w-4 mr-2" /> Déconnexion
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span className="ml-2">Déconnexion</span>}
         </Button>
-      </div>
-    </nav>
-  </div>
-);
+      </SidebarFooter>
+    </Sidebar>
+  );
+};
 
 const AgencyLayout = () => {
   const { user, loading, signOut, agencyId, manager, isManager } = useAuth();
   const [agencyName, setAgencyName] = useState("");
   const [branchName, setBranchName] = useState<string | null>(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (!agencyId) return;
@@ -118,40 +158,27 @@ const AgencyLayout = () => {
   const items = isManager ? managerNavItems : ownerNavItems;
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <aside className="w-60 bg-card border-r border-border hidden md:flex flex-col sticky top-0 h-screen shrink-0">
-        <SidebarContent agencyName={agencyName} roleLabel={roleLabel} items={items} onSignOut={signOut} />
-      </aside>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AgencySidebar agencyName={agencyName} roleLabel={roleLabel} items={items} onSignOut={signOut} />
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="md:hidden sticky top-0 z-30 flex items-center justify-between p-3 border-b border-border bg-card">
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Menu className="h-4 w-4" /> Menu
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-72">
-              <SidebarContent
-                agencyName={agencyName}
-                roleLabel={roleLabel}
-                items={items}
-                onNavigate={() => setMobileOpen(false)}
-                onSignOut={signOut}
-              />
-            </SheetContent>
-
-          </Sheet>
-          <div className="text-right min-w-0">
-            <p className="font-display text-sm font-bold text-gradient truncate">{agencyName || "Agence"}</p>
-            <p className="text-[10px] text-muted-foreground truncate">{roleLabel}</p>
-          </div>
-        </header>
-        <main className="flex-1 p-4 md:p-8 overflow-auto">
-          <Outlet />
-        </main>
+        <div className="flex-1 flex flex-col min-w-0 h-screen">
+          <header className="sticky top-0 z-30 h-14 flex items-center gap-2 px-3 md:px-4 border-b border-border bg-card shrink-0">
+            <SidebarTrigger />
+            <div className="flex-1 min-w-0">
+              <p className="font-display text-sm md:text-base font-bold text-gradient truncate">{agencyName || "Agence"}</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground truncate">{roleLabel}</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={signOut} title="Déconnexion">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </header>
+          <main className="flex-1 overflow-auto p-4 md:p-8">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
