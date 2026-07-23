@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { useWebPushListener } from "@/hooks/useWebPush";
+import { useTripReminders } from "@/hooks/useTripReminders";
 import BottomNav from "@/components/BottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ClientOnlyRoute from "@/components/ClientOnlyRoute";
