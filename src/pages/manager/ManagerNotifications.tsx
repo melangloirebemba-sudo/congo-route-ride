@@ -40,7 +40,7 @@ const ManagerNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [tab, setTab] = useState<"unread" | "all">("all");
+  const [tab, setTab] = useState<"unread" | "all" | "archived">("all");
   const [sortDesc, setSortDesc] = useState(true);
   const [kindFilter, setKindFilter] = useState<string>("all");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -48,17 +48,19 @@ const ManagerNotifications = () => {
   const loadPage = useCallback(async (from: number, replace: boolean) => {
     if (!manager?.branch_id) return;
     const to = from + PAGE_SIZE - 1;
-    const { data, error } = await supabase
+    let query = supabase
       .from("branch_notifications" as any)
-      .select("id, title, message, kind, read_at, created_at, booking_id")
-      .eq("branch_id", manager.branch_id)
+      .select("id, title, message, kind, read_at, archived_at, created_at, booking_id")
+      .eq("branch_id", manager.branch_id);
+    query = tab === "archived" ? query.not("archived_at", "is", null) : query.is("archived_at", null);
+    const { data, error } = await query
       .order("created_at", { ascending: false })
       .range(from, to);
     if (error) return;
     const rows = ((data as any) || []) as Notif[];
     setHasMore(rows.length === PAGE_SIZE);
     setItems((prev) => (replace ? rows : [...prev, ...rows]));
-  }, [manager?.branch_id]);
+  }, [manager?.branch_id, tab]);
 
   const load = useCallback(async () => {
     if (!manager?.branch_id) return;
