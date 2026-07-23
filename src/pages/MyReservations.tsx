@@ -132,7 +132,7 @@ const MyReservations = () => {
           </div>
         ) : (
           items.map((r) => (
-            <div key={r.id} className="bg-card rounded-2xl p-4 border border-border/50 space-y-3">
+            <div key={r.id} onClick={() => navigate(`/bookings/${r.id}`)} className="bg-card rounded-2xl p-4 border border-border/50 space-y-3 cursor-pointer hover:border-primary/40 transition-colors" role="button">
               <div className="flex items-center gap-2">
                 <MapPin className="h-3 w-3 text-primary" />
                 <span className="text-sm font-semibold">{r.trips?.departure} → {r.trips?.destination}</span>
