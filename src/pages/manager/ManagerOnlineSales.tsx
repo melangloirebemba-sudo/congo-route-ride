@@ -92,14 +92,25 @@ const ManagerOnlineSales = () => {
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Nom, téléphone, code..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous statuts</SelectItem>
-            <SelectItem value="paid">Payé</SelectItem>
-            <SelectItem value="pending">En attente</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <div>
+            <label className="text-[10px] uppercase text-muted-foreground">Du</label>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase text-muted-foreground">Au</label>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
+          </div>
+          {(dateFrom || dateTo) && (
+            <button
+              type="button"
+              onClick={() => { setDateFrom(""); setDateTo(""); }}
+              className="self-end text-xs underline text-muted-foreground pb-2 px-1"
+            >
+              Réinitialiser
+            </button>
+          )}
+        </div>
       </div>
 
       <Card><CardContent className="p-0">
@@ -109,17 +120,17 @@ const ManagerOnlineSales = () => {
               <TableHead>Passager</TableHead>
               <TableHead>Trajet</TableHead>
               <TableHead>Date voyage</TableHead>
+              <TableHead>Vente</TableHead>
               <TableHead>Siège</TableHead>
               <TableHead>Montant</TableHead>
               <TableHead>Paiement</TableHead>
-              <TableHead>Statut</TableHead>
               <TableHead>Code</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-8">Chargement...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Aucune vente en ligne</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Aucune vente en ligne confirmée</TableCell></TableRow>
               ) : pg.paginated.map((b: any) => (
                 <TableRow key={b.id}>
                   <TableCell>
@@ -128,16 +139,10 @@ const ManagerOnlineSales = () => {
                   </TableCell>
                   <TableCell className="text-sm">{b.trips?.departure} → {b.trips?.destination}</TableCell>
                   <TableCell className="text-sm">{b.trips?.date} · {b.trips?.departure_time}</TableCell>
+                  <TableCell className="text-xs">{(b.booking_date || b.created_at || "").slice(0, 10)}</TableCell>
                   <TableCell>N°{b.seat_number}</TableCell>
                   <TableCell className="font-semibold text-sm">{b.total_amount?.toLocaleString()} FCFA</TableCell>
                   <TableCell className="text-xs">{b.payment_method || "-"}</TableCell>
-                  <TableCell>
-                    {b.payment_status === "paid" ? (
-                      <Badge className="bg-accent/20 text-accent">Payé</Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-warning text-warning-foreground">En attente</Badge>
-                    )}
-                  </TableCell>
                   <TableCell className="font-mono text-xs">{b.qr_code}</TableCell>
                 </TableRow>
               ))}
