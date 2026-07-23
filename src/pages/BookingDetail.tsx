@@ -398,6 +398,29 @@ const BookingDetail = () => {
 
   const refund = useMemo(() => refundPolicy(booking?.trips?.date, booking?.trips?.departure_time, booking?.total_amount ?? 0), [booking]);
 
+  /** Calendar event derived from the booking — used by the "Ajouter au calendrier" menu. */
+  const calEvent: CalendarEvent | null = useMemo(() => {
+    if (!booking?.trips?.date || !booking?.trips?.departure_time) return null;
+    const locParts = [
+      branch?.name,
+      branch?.city,
+      !branch ? booking.trips.departure : null,
+    ].filter(Boolean);
+    return {
+      title: `TransCongo · ${booking.trips.departure} → ${booking.trips.destination}`,
+      description: [
+        `Passager : ${booking.passenger_name}`,
+        `Siège : #${booking.seat_number}`,
+        `Code : ${booking.qr_code}`,
+        booking.trips.agencies?.name ? `Agence : ${booking.trips.agencies.name}` : "",
+      ].filter(Boolean).join("\n"),
+      location: locParts.join(", "),
+      date: booking.trips.date,
+      time: booking.trips.departure_time,
+      durationMinutes: 240,
+    };
+  }, [booking, branch]);
+
   const handleCancel = async () => {
     if (!booking) return;
     setCancelling(true);
