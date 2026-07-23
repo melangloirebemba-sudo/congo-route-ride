@@ -28,6 +28,59 @@ const ManagerBoarding = () => {
   const [broadcastTrip, setBroadcastTrip] = useState<string>("");
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [broadcasting, setBroadcasting] = useState(false);
+  const [targetCount, setTargetCount] = useState<number | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const selectedTripObj = useMemo(
+    () => trips.find((t) => t.id === broadcastTrip) || null,
+    [trips, broadcastTrip]
+  );
+
+  const branchLocation = useMemo(() => {
+    const parts = [
+      manager?.branch?.name,
+      [manager?.branch?.address, manager?.branch?.district, manager?.branch?.city]
+        .filter(Boolean).join(", "),
+    ].filter(Boolean);
+    return parts.join(" — ") || manager?.branch?.name || "Votre sous-agence";
+  }, [manager]);
+
+  const previewMessage = useMemo(() => {
+    if (!selectedTripObj) return "";
+    const d = selectedTripObj.date
+      ? new Date(selectedTripObj.date + "T00:00").toLocaleDateString("fr-FR")
+      : "";
+    const h = (selectedTripObj.departure_time || "").slice(0, 5);
+    const base = `Embarquement le ${d} à ${h}. Lieu : ${branchLocation}.`;
+    const extra = broadcastMsg?.trim();
+    return extra ? `${base}\n${extra}` : base;
+  }, [selectedTripObj, broadcastMsg, branchLocation]);
+
+  // Recount targets whenever selected trip changes / dialog opens
+  useEffect(() => {
+    const run = async () => {
+      if (!broadcastOpen || !broadcastTrip || !manager?.branch_id) {
+        setTargetCount(null);
+        return;
+      }
+      const tripBranchId = selectedTripObj?.branch_id ?? null;
+      let q = supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("trip_id", broadcastTrip)
+        .eq("payment_status", "paid")
+        .neq("status", "cancelled")
+        .not("user_id", "is", null);
+      if (tripBranchId === manager.branch_id) {
+        q = q.or(`boarding_branch_id.eq.${manager.branch_id},boarding_branch_id.is.null`);
+      } else {
+        q = q.eq("boarding_branch_id", manager.branch_id);
+      }
+      const { count } = await q;
+      setTargetCount(count ?? 0);
+    };
+    run();
+  }, [broadcastOpen, broadcastTrip, manager?.branch_id, selectedTripObj]);
 
   const sendBroadcast = async () => {
     if (!broadcastTrip) { toast.error("Sélectionnez un trajet"); return; }
@@ -41,6 +94,7 @@ const ManagerBoarding = () => {
     const res: any = data;
     if (!res?.ok) { toast.error(res?.message || "Diffusion impossible"); return; }
     toast.success(`Diffusion envoyée à ${res.sent} passager(s)`);
+    setConfirmOpen(false);
     setBroadcastOpen(false);
     setBroadcastMsg("");
   };
