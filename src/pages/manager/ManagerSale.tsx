@@ -46,22 +46,36 @@ const ManagerSale = () => {
   const [takenSeats, setTakenSeats] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [lastTicket, setLastTicket] = useState<LastTicket | null>(null);
+  const [branches, setBranches] = useState<{ id: string; name: string; city: string | null }[]>([]);
+  const [boardingBranchId, setBoardingBranchId] = useState<string>("");
 
   useEffect(() => {
     if (!manager) return;
     (async () => {
       const today = new Date().toISOString().split("T")[0];
-      let q = supabase
+      // Counter sales: the agent can sell any of the agency's upcoming trips,
+      // even if the passenger will board at another sub-agency.
+      const { data } = await supabase
         .from("trips")
-        .select("id, departure, destination, date, departure_time, price, currency, total_seats, available_seats")
+        .select("id, departure, destination, date, departure_time, price, currency, total_seats, available_seats, branch_id")
         .eq("agency_id", manager.agency_id)
         .gte("date", today)
         .order("date");
-      if (manager.branch_id) q = q.eq("branch_id", manager.branch_id);
-      const { data } = await q;
       setTrips(data || []);
+
+      const { data: br } = await supabase
+        .from("agency_branches" as any)
+        .select("id, name, city")
+        .eq("agency_id", manager.agency_id)
+        .eq("status", "active")
+        .order("name");
+      setBranches((br as any) || []);
+
+      // Default boarding branch = this manager's own branch
+      if (manager.branch_id) setBoardingBranchId(manager.branch_id);
     })();
   }, [manager]);
+
 
   const trip = useMemo(() => trips.find((t) => t.id === tripId), [tripId, trips]);
   const [lockedSeats, setLockedSeats] = useState<number[]>([]);
@@ -160,7 +174,9 @@ const ManagerSale = () => {
       booking_date: new Date().toISOString().split("T")[0],
       qr_code: qr,
       total_amount: trip.price,
+      boarding_branch_id: boardingBranchId || manager?.branch_id || null,
     });
+
 
     if (error) {
       setSubmitting(false);
@@ -289,6 +305,25 @@ const ManagerSale = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="sm:col-span-2">
+              <Label>Lieu d'embarquement</Label>
+              <Select value={boardingBranchId} onValueChange={setBoardingBranchId}>
+                <SelectTrigger><SelectValue placeholder="Sélectionner une sous-agence d'embarquement" /></SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}{b.city ? ` — ${b.city}` : ""}{manager?.branch_id === b.id ? " (ici)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {boardingBranchId && manager?.branch_id && boardingBranchId !== manager.branch_id && (
+                <p className="text-xs text-amber-700 mt-1">
+                  ⚠️ Le passager embarquera dans une autre sous-agence. Elle sera notifiée automatiquement.
+                </p>
+              )}
+            </div>
+
           </div>
 
           <Button onClick={submit} disabled={submitting || !trip || !seat} className="w-full">

@@ -18,16 +18,32 @@ const ManagerTrips = () => {
   useEffect(() => {
     if (!manager) return;
     (async () => {
+      // Trips visible to this branch = trips assigned via trip_branches
+      // OR (legacy) trips whose primary branch_id matches this branch.
+      const { data: links } = await supabase
+        .from("trip_branches" as any)
+        .select("trip_id")
+        .eq("branch_id", manager.branch_id);
+      const assignedIds = ((links as any[]) || []).map((l) => l.trip_id);
+
       let q = supabase
         .from("trips")
         .select("*")
         .eq("agency_id", manager.agency_id)
         .order("date", { ascending: false });
-      if (manager.branch_id) q = q.eq("branch_id", manager.branch_id);
+
+      if (assignedIds.length > 0) {
+        // OR filter: id in assigned OR branch_id equal
+        q = q.or(`id.in.(${assignedIds.join(",")}),branch_id.eq.${manager.branch_id}`);
+      } else if (manager.branch_id) {
+        q = q.eq("branch_id", manager.branch_id);
+      }
+
       const { data } = await q;
       setTrips(data || []);
     })();
   }, [manager]);
+
 
   const filtered = trips.filter((t) => {
     const q = search.toLowerCase();

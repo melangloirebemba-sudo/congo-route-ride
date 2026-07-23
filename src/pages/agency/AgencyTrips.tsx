@@ -5,27 +5,32 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { Plus, Edit, Trash2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Edit, Trash2, Building2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Tables } from "@/integrations/supabase/types";
 import { ListPagination, usePagination } from "@/components/ListPagination";
 
 type Trip = Tables<"trips">;
 type Branch = { id: string; name: string; city: string | null };
 
-const emptyTrip = {
+const emptyForm = {
   departure: "", destination: "", date: "", departure_time: "", arrival_time: "",
-  price: "", total_seats: "", bus_type: "Standard", branch_id: "",
+  price: "", total_seats: "", bus_type: "Standard",
+  assignAll: true as boolean,
+  branchIds: [] as string[],
 };
 
 const AgencyTrips = () => {
   const { agencyId } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [tripBranchMap, setTripBranchMap] = useState<Record<string, string[]>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState(emptyTrip);
+  const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
 
   const fetchTrips = async () => {
@@ -36,17 +41,51 @@ const AgencyTrips = () => {
     ]);
     setTrips(data || []);
     setBranches((br as any) || []);
+
+    const ids = (data || []).map((t) => t.id);
+    if (ids.length) {
+      const { data: links } = await supabase
+        .from("trip_branches" as any)
+        .select("trip_id, branch_id")
+        .in("trip_id", ids);
+      const map: Record<string, string[]> = {};
+      (links as any[] || []).forEach((l) => {
+        (map[l.trip_id] ||= []).push(l.branch_id);
+      });
+      setTripBranchMap(map);
+    } else {
+      setTripBranchMap({});
+    }
   };
 
   useEffect(() => { fetchTrips(); }, [agencyId]);
+
+  const syncTripBranches = async (tripId: string) => {
+    // Wipe then insert according to form
+    await supabase.from("trip_branches" as any).delete().eq("trip_id", tripId);
+    const target = form.assignAll ? branches.map((b) => b.id) : form.branchIds;
+    if (target.length === 0) return;
+    const rows = target.map((branch_id) => ({ trip_id: tripId, branch_id }));
+    const { error } = await supabase.from("trip_branches" as any).insert(rows);
+    if (error) toast.error("Assignation aux sous-agences : " + error.message);
+  };
 
   const saveTrip = async () => {
     if (!form.departure || !form.destination || !form.date || !form.departure_time || !form.arrival_time || !form.price || !form.total_seats) {
       toast.error("Tous les champs sont requis");
       return;
     }
+    if (!form.assignAll && form.branchIds.length === 0) {
+      toast.error("Sélectionnez au moins une sous-agence ou cochez « Toutes les sous-agences »");
+      return;
+    }
 
-    const payload = {
+    // Keep legacy branch_id populated for older manager filters (single "home" branch)
+    const homeBranch = form.assignAll
+      ? null
+      : (form.branchIds[0] || null);
+
+    const payload: any = {
       agency_id: agencyId!,
       departure: form.departure,
       destination: form.destination,
@@ -57,20 +96,24 @@ const AgencyTrips = () => {
       total_seats: parseInt(form.total_seats),
       available_seats: editId ? undefined : parseInt(form.total_seats),
       bus_type: form.bus_type,
-      branch_id: form.branch_id || null,
+      branch_id: homeBranch,
     };
 
+    let tripId = editId;
     let error;
     if (editId) {
       const { available_seats, ...updatePayload } = payload;
       ({ error } = await supabase.from("trips").update(updatePayload).eq("id", editId));
     } else {
-      ({ error } = await supabase.from("trips").insert(payload as any));
+      const res = await supabase.from("trips").insert(payload).select("id").single();
+      error = res.error; tripId = res.data?.id ?? null;
     }
 
     if (error) { toast.error(error.message); return; }
+    if (tripId) await syncTripBranches(tripId);
+
     toast.success(editId ? "Trajet mis à jour" : "Trajet créé");
-    setForm(emptyTrip);
+    setForm(emptyForm);
     setEditId(null);
     setDialogOpen(false);
     fetchTrips();
@@ -85,6 +128,8 @@ const AgencyTrips = () => {
   };
 
   const openEdit = (trip: Trip) => {
+    const linked = tripBranchMap[trip.id] || [];
+    const allSelected = branches.length > 0 && linked.length === branches.length;
     setForm({
       departure: trip.departure,
       destination: trip.destination,
@@ -94,16 +139,24 @@ const AgencyTrips = () => {
       price: trip.price.toString(),
       total_seats: trip.total_seats.toString(),
       bus_type: trip.bus_type || "Standard",
-      branch_id: (trip as any).branch_id || "",
+      assignAll: allSelected || linked.length === 0,
+      branchIds: linked,
     });
     setEditId(trip.id);
     setDialogOpen(true);
   };
 
   const openNew = () => {
-    setForm(emptyTrip);
+    setForm({ ...emptyForm, assignAll: true, branchIds: [] });
     setEditId(null);
     setDialogOpen(true);
+  };
+
+  const toggleBranch = (id: string) => {
+    setForm((p) => ({
+      ...p,
+      branchIds: p.branchIds.includes(id) ? p.branchIds.filter((x) => x !== id) : [...p.branchIds, id],
+    }));
   };
 
   const pg = usePagination(trips, 5, [], { paramKey: "" });
@@ -115,6 +168,16 @@ const AgencyTrips = () => {
       completed: "bg-muted text-muted-foreground",
     };
     return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${styles[status] || ""}`}>{status}</span>;
+  };
+
+  const branchesLabel = (tripId: string) => {
+    const ids = tripBranchMap[tripId] || [];
+    if (branches.length > 0 && ids.length === branches.length) return "Toutes";
+    if (ids.length === 0) return "—";
+    if (ids.length <= 2) {
+      return branches.filter((b) => ids.includes(b.id)).map((b) => b.name).join(", ");
+    }
+    return `${ids.length} sous-agences`;
   };
 
   return (
@@ -140,7 +203,7 @@ const AgencyTrips = () => {
                   <TableHead>Horaires</TableHead>
                   <TableHead>Prix</TableHead>
                   <TableHead>Places</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>Sous-agences</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -162,7 +225,11 @@ const AgencyTrips = () => {
                       <TableCell>
                         <span className="text-sm">{trip.available_seats}/{trip.total_seats}</span>
                       </TableCell>
-                      <TableCell className="text-xs">{trip.bus_type}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[11px]">
+                          <Building2 className="h-3 w-3 mr-1" /> {branchesLabel(trip.id)}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{statusBadge(trip.status)}</TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
@@ -186,7 +253,7 @@ const AgencyTrips = () => {
 
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editId ? "Modifier le trajet" : "Nouveau trajet"}</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="grid grid-cols-2 gap-3">
@@ -211,18 +278,39 @@ const AgencyTrips = () => {
                 <SelectItem value="Luxe">Luxe</SelectItem>
               </SelectContent>
             </Select>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Agence régionale (branche) — indispensable pour qu'un gestionnaire local voie ce trajet</label>
-              <Select value={form.branch_id || "none"} onValueChange={v => setForm(p => ({ ...p, branch_id: v === "none" ? "" : v }))}>
-                <SelectTrigger><SelectValue placeholder="Aucune branche" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucune (siège / agence mère)</SelectItem>
-                  {branches.map(b => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}{b.city ? ` — ${b.city}` : ""}</SelectItem>
+
+            <div className="rounded-lg border p-3 space-y-3 bg-secondary/30">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Sous-agences autorisées à vendre ce trajet</label>
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={form.assignAll}
+                    onCheckedChange={(v) => setForm((p) => ({ ...p, assignAll: !!v, branchIds: v ? branches.map(b => b.id) : p.branchIds }))}
+                  />
+                  Toutes les sous-agences
+                </label>
+              </div>
+              {!form.assignAll && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                  {branches.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Aucune sous-agence active. Créez-en une dans « Sous-agences ».</p>
+                  )}
+                  {branches.map((b) => (
+                    <label key={b.id} className="flex items-center gap-2 text-sm cursor-pointer p-1 rounded hover:bg-background">
+                      <Checkbox
+                        checked={form.branchIds.includes(b.id)}
+                        onCheckedChange={() => toggleBranch(b.id)}
+                      />
+                      <span>{b.name}{b.city ? ` — ${b.city}` : ""}</span>
+                    </label>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                Les sous-agences sélectionnées verront et pourront vendre ce trajet. Les autres pourront le voir uniquement si un client demande explicitement à embarquer chez elles.
+              </p>
             </div>
+
             <Button onClick={saveTrip} className="w-full gradient-primary text-primary-foreground">
               {editId ? "Enregistrer" : "Créer le trajet"}
             </Button>

@@ -581,6 +581,39 @@ export type Database = {
           },
         ]
       }
+      trip_branches: {
+        Row: {
+          branch_id: string
+          created_at: string
+          trip_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          trip_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_branches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "agency_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_branches_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           agency_id: string
