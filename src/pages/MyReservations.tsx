@@ -60,16 +60,57 @@ const MyReservations = () => {
   const [loading, setLoading] = useState(true);
   const [payFor, setPayFor] = useState<Reservation | null>(null);
   const [method, setMethod] = useState("mtn");
+  const [momoPhone, setMomoPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
   const [claimQr, setClaimQr] = useState("");
   const [claimPhone, setClaimPhone] = useState("");
   const [claiming, setClaiming] = useState(false);
   const [isAnon, setIsAnon] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [processingReq, setProcessingReq] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setIsAnon(!!data.user?.is_anonymous));
   }, []);
+
+  const loadPendingRequests = async () => {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u?.user?.id) return;
+    const { data } = await (supabase as any)
+      .from("passenger_notifications")
+      .select("id, title, message, created_at, booking_id, kind, read_at")
+      .eq("user_id", u.user.id)
+      .eq("kind", "payment_request")
+      .is("read_at", null)
+      .order("created_at", { ascending: false });
+    setPendingRequests((data as any) || []);
+  };
+
+  const confirmRequest = async (id: string) => {
+    setProcessingReq(id);
+    const { data, error } = await (supabase as any).rpc("confirm_payment_simulation", { _notification_id: id });
+    setProcessingReq(null);
+    if (error || (data && data.ok === false)) {
+      toast.error(data?.message || error?.message || "Échec de la confirmation");
+      return;
+    }
+    toast.success("Paiement confirmé");
+    await Promise.all([loadPendingRequests(), load()]);
+  };
+
+  const refuseRequest = async (id: string) => {
+    setProcessingReq(id);
+    const { data, error } = await (supabase as any).rpc("refuse_payment_simulation", { _notification_id: id });
+    setProcessingReq(null);
+    if (error || (data && data.ok === false)) {
+      toast.error(data?.message || error?.message || "Échec du refus");
+      return;
+    }
+    toast.info("Transaction refusée");
+    await Promise.all([loadPendingRequests(), load()]);
+  };
+
 
   const handleClaim = async () => {
     if (!claimQr.trim() || !claimPhone.trim()) {
