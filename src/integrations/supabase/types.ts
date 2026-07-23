@@ -227,6 +227,7 @@ export type Database = {
       agency_reports: {
         Row: {
           agency_id: string
+          attachments: Json
           branch_id: string
           category: string
           created_at: string
@@ -243,6 +244,7 @@ export type Database = {
         }
         Insert: {
           agency_id: string
+          attachments?: Json
           branch_id: string
           category?: string
           created_at?: string
@@ -259,6 +261,7 @@ export type Database = {
         }
         Update: {
           agency_id?: string
+          attachments?: Json
           branch_id?: string
           category?: string
           created_at?: string
@@ -431,6 +434,7 @@ export type Database = {
           archived_at: string | null
           booking_id: string | null
           branch_id: string
+          broadcast_id: string | null
           created_at: string
           id: string
           kind: string
@@ -443,6 +447,7 @@ export type Database = {
           archived_at?: string | null
           booking_id?: string | null
           branch_id: string
+          broadcast_id?: string | null
           created_at?: string
           id?: string
           kind?: string
@@ -455,6 +460,7 @@ export type Database = {
           archived_at?: string | null
           booking_id?: string | null
           branch_id?: string
+          broadcast_id?: string | null
           created_at?: string
           id?: string
           kind?: string
@@ -563,6 +569,65 @@ export type Database = {
           value?: string
         }
         Relationships: []
+      }
+      scheduled_broadcasts: {
+        Row: {
+          agency_id: string
+          broadcast_id: string | null
+          created_at: string
+          created_by: string
+          error: string | null
+          id: string
+          kind: string
+          message: string
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          subject: string
+          target_branch_ids: string[]
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          broadcast_id?: string | null
+          created_at?: string
+          created_by: string
+          error?: string | null
+          id?: string
+          kind: string
+          message: string
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+          subject: string
+          target_branch_ids?: string[]
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          broadcast_id?: string | null
+          created_at?: string
+          created_by?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          message?: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          target_branch_ids?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_broadcasts_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       seat_locks: {
         Row: {
@@ -783,6 +848,7 @@ export type Database = {
     Functions: {
       _actor_role: { Args: { _uid: string }; Returns: string }
       check_in_booking: { Args: { _booking_id: string }; Returns: Json }
+      dispatch_scheduled_broadcasts: { Args: never; Returns: number }
       get_branch_permissions: { Args: { _user_id: string }; Returns: Json }
       get_manager_agency: { Args: { _user_id: string }; Returns: string }
       get_manager_branch: { Args: { _user_id: string }; Returns: string }
