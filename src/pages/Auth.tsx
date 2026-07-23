@@ -14,6 +14,7 @@ type RoleTab = "client" | "agency" | "manager" | "admin";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [role, setRole] = useState<RoleTab>("client");
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,11 +31,28 @@ const Auth = () => {
       supabase.from("agencies").select("id").eq("owner_id", user.id).limit(1).maybeSingle(),
       supabase.from("branch_managers" as any).select("id").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle(),
     ]);
-    if (isAdmin) return navigate("/admin");
-    if (agency) return navigate("/agency");
-    if (mgr) return navigate("/manager");
+
+    // Enforce that the account matches the selected role tab.
+    const actual: RoleTab = isAdmin ? "admin" : agency ? "agency" : mgr ? "manager" : "client";
+    if (role !== "client" && role !== actual) {
+      await supabase.auth.signOut();
+      const labels: Record<RoleTab, string> = {
+        client: "Client",
+        agency: "Propriétaire d'agence",
+        manager: "Gestionnaire de sous-agence",
+        admin: "Super Admin",
+      };
+      toast.error(`Ce compte n'est pas un compte ${labels[role]}. Utilisez l'onglet ${labels[actual]}.`);
+      return;
+    }
+
+    if (actual === "admin") return navigate("/admin");
+    if (actual === "agency") return navigate("/agency");
+    if (actual === "manager") return navigate("/manager");
     navigate("/");
   };
+
+
 
 
   const handleEmailAuth = async () => {
