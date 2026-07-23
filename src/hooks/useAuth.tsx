@@ -162,8 +162,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       user, session, loading, isAdmin,
       agencyId, agencyStatus,
       manager, isManager: !!manager,
+      managerPermissions,
       refreshAgency, signOut,
     }}>
+
       {children}
     </AuthContext.Provider>
   );
