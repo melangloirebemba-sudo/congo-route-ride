@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { PlusCircle, Ticket, Download, RotateCcw, MapPin, Navigate as NavigateIcon } from "lucide-react";
+import { PlusCircle, Ticket, Download, RotateCcw, MapPin } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import SeatSelector from "@/components/SeatSelector";
 import QRCode from "qrcode";
