@@ -12,7 +12,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Megaphone, Info, AlertTriangle, Siren, Send, Clock, CheckCircle2, Eye, CalendarClock, Trash2, Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Megaphone, Info, AlertTriangle, Siren, Send, Clock, CheckCircle2, Eye, CalendarClock, Trash2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
