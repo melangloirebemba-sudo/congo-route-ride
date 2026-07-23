@@ -81,14 +81,16 @@ const ManagerLayout = () => {
 
         <div className="flex-1 flex flex-col min-w-0 h-screen">
           <header className="sticky top-0 z-30 h-14 flex items-center gap-2 px-3 md:px-4 border-b border-border bg-card shrink-0">
-            <SidebarTrigger />
+            <SidebarTrigger aria-label="Ouvrir ou fermer le menu de navigation" />
             <div className="flex-1 min-w-0">
               <h1 className="font-display text-sm md:text-base font-bold text-gradient truncate">Guichet</h1>
               <p className="text-[10px] md:text-xs text-muted-foreground truncate">Espace gestionnaire</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={signOut} title="Déconnexion">
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <SignOutConfirm onConfirm={signOut}>
+              <Button variant="ghost" size="icon" aria-label="Déconnexion">
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </SignOutConfirm>
           </header>
           <main className="flex-1 overflow-auto p-4 md:p-8">
             <Outlet />
