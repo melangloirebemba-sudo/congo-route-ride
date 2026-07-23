@@ -304,10 +304,12 @@ export type Database = {
           created_at: string
           id: string
           passenger_name: string
+          payment_deadline: string | null
           payment_method: string
           payment_status: string
           phone: string
           qr_code: string
+          sale_channel: string
           seat_number: number
           status: string
           total_amount: number
@@ -325,10 +327,12 @@ export type Database = {
           created_at?: string
           id?: string
           passenger_name: string
+          payment_deadline?: string | null
           payment_method: string
           payment_status?: string
           phone: string
           qr_code: string
+          sale_channel?: string
           seat_number: number
           status?: string
           total_amount: number
@@ -346,10 +350,12 @@ export type Database = {
           created_at?: string
           id?: string
           passenger_name?: string
+          payment_deadline?: string | null
           payment_method?: string
           payment_status?: string
           phone?: string
           qr_code?: string
+          sale_channel?: string
           seat_number?: number
           status?: string
           total_amount?: number
