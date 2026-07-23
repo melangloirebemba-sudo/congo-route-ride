@@ -137,6 +137,7 @@ const BookingDetail = () => {
 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const countdown = useCountdown(booking?.payment_status === "pending" ? booking.payment_deadline : null);
 
