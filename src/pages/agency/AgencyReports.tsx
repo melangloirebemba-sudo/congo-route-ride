@@ -11,11 +11,12 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { AlertOctagon, CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { AlertOctagon, CheckCircle2, Clock, Loader2, FileIcon, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
+type Attachment = { path: string; name: string; type: string; size: number };
 type Report = {
   id: string;
   branch_id: string;
@@ -28,6 +29,28 @@ type Report = {
   owner_notes: string | null;
   resolved_at: string | null;
   created_at: string;
+  attachments: Attachment[] | null;
+};
+
+const AttachmentLink = ({ att }: { att: Attachment }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.storage.from("report-attachments").createSignedUrl(att.path, 3600).then(({ data }) => {
+      setUrl(data?.signedUrl || null);
+    });
+  }, [att.path]);
+  const isImg = att.type.startsWith("image/");
+  return (
+    <a
+      href={url || "#"}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1.5 rounded border bg-secondary/40 px-2 py-1 text-[11px] hover:bg-secondary max-w-full"
+    >
+      {isImg ? <ImageIcon className="h-3 w-3 shrink-0" /> : <FileIcon className="h-3 w-3 shrink-0" />}
+      <span className="truncate max-w-[180px]">{att.name}</span>
+    </a>
+  );
 };
 
 type BranchMap = Record<string, string>;
@@ -193,6 +216,11 @@ const AgencyReports = () => {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 break-words">{r.message}</p>
+                    {r.attachments && r.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {r.attachments.map((a, i) => <AttachmentLink key={i} att={a} />)}
+                      </div>
+                    )}
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {branches[r.branch_id] || "Sous-agence"} · {new Date(r.created_at).toLocaleString("fr-FR")}
                     </p>
@@ -220,6 +248,14 @@ const AgencyReports = () => {
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm">{editing?.message}</p>
+            {editing?.attachments && editing.attachments.length > 0 && (
+              <div>
+                <p className="text-xs font-medium mb-1.5">Pièces jointes</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {editing.attachments.map((a, i) => <AttachmentLink key={i} att={a} />)}
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="notes">Note de la direction (optionnel)</Label>
               <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />

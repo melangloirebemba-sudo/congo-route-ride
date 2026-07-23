@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { AlertOctagon, Send, CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { AlertOctagon, Send, CheckCircle2, Clock, Loader2, Paperclip, X, FileIcon, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
+type Attachment = { path: string; name: string; type: string; size: number };
 type Report = {
   id: string;
   category: string;
@@ -22,6 +23,7 @@ type Report = {
   status: string;
   owner_notes: string | null;
   created_at: string;
+  attachments: Attachment[] | null;
 };
 
 const SEV_META: Record<string, string> = {
@@ -46,6 +48,30 @@ const SEVERITIES = [
   { value: "critical", label: "Critique" },
 ];
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILES = 5;
+
+const AttachmentLink = ({ att }: { att: Attachment }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.storage.from("report-attachments").createSignedUrl(att.path, 3600).then(({ data }) => {
+      setUrl(data?.signedUrl || null);
+    });
+  }, [att.path]);
+  const isImg = att.type.startsWith("image/");
+  return (
+    <a
+      href={url || "#"}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1.5 rounded border bg-secondary/40 px-2 py-1 text-[11px] hover:bg-secondary max-w-full"
+    >
+      {isImg ? <ImageIcon className="h-3 w-3 shrink-0" /> : <FileIcon className="h-3 w-3 shrink-0" />}
+      <span className="truncate max-w-[180px]">{att.name}</span>
+    </a>
+  );
+};
+
 const ManagerReport = () => {
   const { manager, user } = useAuth();
   const [category, setCategory] = useState("technical");
@@ -55,13 +81,15 @@ const ManagerReport = () => {
   const [sending, setSending] = useState(false);
   const [items, setItems] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [files, setFiles] = useState<File[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     if (!manager?.branch_id) return;
     setLoading(true);
     const { data } = await supabase
       .from("agency_reports" as any)
-      .select("id, category, severity, subject, message, status, owner_notes, created_at")
+      .select("id, category, severity, subject, message, status, owner_notes, created_at, attachments")
       .eq("branch_id", manager.branch_id)
       .order("created_at", { ascending: false });
     setItems(((data as any) || []) as Report[]);
@@ -83,10 +111,41 @@ const ManagerReport = () => {
     return () => { supabase.removeChannel(channel); };
   }, [manager?.branch_id, load]);
 
+  const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = Array.from(e.target.files || []);
+    const next = [...files];
+    for (const f of list) {
+      if (next.length >= MAX_FILES) { toast.error(`Maximum ${MAX_FILES} fichiers`); break; }
+      if (f.size > MAX_FILE_SIZE) { toast.error(`${f.name} dépasse 5 Mo`); continue; }
+      next.push(f);
+    }
+    setFiles(next);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const removeFile = (i: number) => setFiles((prev) => prev.filter((_, idx) => idx !== i));
+
   const submit = async () => {
     if (!manager || !user) return;
     if (!subject.trim() || !message.trim()) { toast.error("Sujet et message obligatoires"); return; }
     setSending(true);
+
+    // Upload files first
+    const uploaded: Attachment[] = [];
+    for (const f of files) {
+      const safeName = f.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${user.id}/${manager.agency_id}/${Date.now()}-${safeName}`;
+      const { error } = await supabase.storage
+        .from("report-attachments")
+        .upload(path, f, { contentType: f.type, upsert: false });
+      if (error) {
+        setSending(false);
+        toast.error(`Téléversement de ${f.name} échoué`, { description: error.message });
+        return;
+      }
+      uploaded.push({ path, name: f.name, type: f.type || "application/octet-stream", size: f.size });
+    }
+
     const { error } = await supabase.from("agency_reports" as any).insert({
       agency_id: manager.agency_id,
       branch_id: manager.branch_id,
@@ -94,11 +153,12 @@ const ManagerReport = () => {
       category, severity,
       subject: subject.trim(),
       message: message.trim(),
+      attachments: uploaded,
     } as any);
     setSending(false);
     if (error) { toast.error("Envoi impossible", { description: error.message }); return; }
     toast.success("Signalement envoyé à la direction");
-    setSubject(""); setMessage(""); setSeverity("normal"); setCategory("technical");
+    setSubject(""); setMessage(""); setSeverity("normal"); setCategory("technical"); setFiles([]);
     load();
   };
 
@@ -144,6 +204,35 @@ const ManagerReport = () => {
             <Label htmlFor="msg">Description</Label>
             <Textarea id="msg" value={message} onChange={(e) => setMessage(e.target.value)} rows={5} maxLength={2000} />
           </div>
+
+          <div className="space-y-2">
+            <Label>Pièces jointes (max {MAX_FILES}, 5 Mo chacune)</Label>
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              onChange={onPickFiles}
+              className="hidden"
+              accept="image/*,application/pdf,.doc,.docx,.txt"
+            />
+            <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+              <Paperclip className="h-4 w-4 mr-1" /> Ajouter des fichiers
+            </Button>
+            {files.length > 0 && (
+              <ul className="flex flex-wrap gap-2">
+                {files.map((f, i) => (
+                  <li key={i} className="inline-flex items-center gap-1.5 rounded border bg-secondary/40 px-2 py-1 text-[11px]">
+                    {f.type.startsWith("image/") ? <ImageIcon className="h-3 w-3" /> : <FileIcon className="h-3 w-3" />}
+                    <span className="truncate max-w-[160px]">{f.name}</span>
+                    <button type="button" onClick={() => removeFile(i)} className="text-muted-foreground hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <div className="flex justify-end">
             <Button onClick={submit} disabled={sending}>
               <Send className="h-4 w-4 mr-1" />
@@ -174,6 +263,11 @@ const ManagerReport = () => {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5 break-words">{r.message}</p>
+                  {r.attachments && r.attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {r.attachments.map((a, i) => <AttachmentLink key={i} att={a} />)}
+                    </div>
+                  )}
                   <p className="text-[10px] text-muted-foreground mt-1">
                     {new Date(r.created_at).toLocaleString("fr-FR")}
                   </p>
