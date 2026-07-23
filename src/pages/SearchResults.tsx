@@ -55,6 +55,7 @@ const SearchResults = () => {
         }
       }
 
+      const today = new Date().toISOString().slice(0, 10);
       let query = supabase
         .from("trips")
         .select("id, departure, destination, departure_time, arrival_time, date, price, available_seats, bus_type, agencies!inner(name, status)")
@@ -65,10 +66,11 @@ const SearchResults = () => {
       if (from) query = query.eq("departure", from);
       if (to) query = query.eq("destination", to);
       if (date) query = query.eq("date", date);
+      else query = query.gte("date", today);
       if (branch) query = query.eq("branch_id", branch);
       else if (branchIdsFilter) query = query.in("branch_id", branchIdsFilter);
 
-      const { data } = await query.order("departure_time");
+      const { data } = await query.order("date").order("departure_time");
       // Mélange équitable: regroupe par heure de départ puis mélange aléatoirement
       // les trajets de la même tranche horaire pour ne privilégier aucune agence.
       const rows = ((data as unknown as TripRow[]) || []);
