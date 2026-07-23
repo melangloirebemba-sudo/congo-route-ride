@@ -239,15 +239,24 @@ export const NotificationsDrawer = ({ branchId, children, bookingsPath = "/manag
                           {new Date(n.created_at).toLocaleString("fr-FR")}
                         </p>
                       </button>
-                      {link && (
-                        <div className="mt-2">
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {link && (
                           <Button asChild size="sm" variant="outline" className="h-7 text-xs" onClick={() => setOpen(false)}>
                             <Link to={link}>
                               <ExternalLink className="h-3 w-3 mr-1" /> Voir le détail
                             </Link>
                           </Button>
-                        </div>
-                      )}
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          onClick={() => archiveOne(n.id)}
+                          aria-label="Archiver la notification"
+                        >
+                          <Archive className="h-3 w-3 mr-1" /> Archiver
+                        </Button>
+                      </div>
                     </li>
                   );
                 })}
