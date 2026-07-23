@@ -224,6 +224,41 @@ const MyReservations = () => {
           </div>
           <Button size="sm" variant="outline" onClick={() => setClaimOpen(true)}>Récupérer</Button>
         </div>
+
+        {pendingRequests.length > 0 && (
+          <div className="bg-warning/10 border-2 border-warning rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-warning-foreground" />
+              <p className="text-sm font-semibold">Demande(s) de paiement Mobile Money</p>
+            </div>
+            {pendingRequests.map((req) => (
+              <div key={req.id} className="bg-card rounded-xl p-3 border border-border/50 space-y-2">
+                <p className="text-sm font-medium">{req.title}</p>
+                {req.message && <p className="text-xs text-muted-foreground whitespace-pre-line">{req.message}</p>}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => confirmRequest(req.id)}
+                    disabled={processingReq === req.id}
+                    className="flex-1 gradient-primary text-primary-foreground"
+                  >
+                    {processingReq === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Confirmer"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => refuseRequest(req.id)}
+                    disabled={processingReq === req.id}
+                    className="flex-1"
+                  >
+                    Refuser
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
         ) : items.length === 0 ? (
