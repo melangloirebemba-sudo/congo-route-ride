@@ -74,6 +74,7 @@ const App = () => (
             <Route path="/trip/:id" element={<ClientOnlyRoute><TripDetails /></ClientOnlyRoute>} />
             <Route path="/booking/:id" element={<ClientOnlyRoute><BookingPage /></ClientOnlyRoute>} />
             <Route path="/bookings" element={<ClientOnlyRoute><BookingHistory /></ClientOnlyRoute>} />
+            <Route path="/bookings/:id" element={<ClientOnlyRoute><BookingDetail /></ClientOnlyRoute>} />
             <Route path="/reservations" element={<ClientOnlyRoute><MyReservations /></ClientOnlyRoute>} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/preferences" element={<Preferences />} />
