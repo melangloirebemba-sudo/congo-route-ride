@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ListPagination, usePagination } from "@/components/ListPagination";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { PlusCircle, Ticket, Download, RotateCcw } from "lucide-react";
+import { PlusCircle, Ticket, Download, RotateCcw, RefreshCw, Wallet, Smartphone, CreditCard, Coins } from "lucide-react";
 import SeatSelector from "@/components/SeatSelector";
 import QRCode from "qrcode";
 import { jsPDF } from "jspdf";
@@ -49,6 +52,15 @@ const ManagerSale = () => {
   const [branches, setBranches] = useState<{ id: string; name: string; city: string | null }[]>([]);
   const [boardingBranchId, setBoardingBranchId] = useState<string>("");
 
+  // Sales list (same model as Boarding page)
+  const [sales, setSales] = useState<any[]>([]);
+  const [salesLoading, setSalesLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [dateTo, setDateTo] = useState<string>("");
+  const [filterTrip, setFilterTrip] = useState<string>("all");
+  const [filterPayment, setFilterPayment] = useState<string>("all");
+  const [search, setSearch] = useState("");
+
   useEffect(() => {
     if (!manager) return;
     (async () => {
@@ -75,6 +87,46 @@ const ManagerSale = () => {
       if (manager.branch_id) setBoardingBranchId(manager.branch_id);
     })();
   }, [manager]);
+
+  // Load recent sales for this manager's branch
+  const loadSales = async () => {
+    if (!manager?.branch_id) return;
+    setSalesLoading(true);
+    const { data: bA } = await supabase
+      .from("bookings")
+      .select("id, passenger_name, phone, seat_number, qr_code, payment_method, payment_status, total_amount, booking_date, created_at, boarding_status, boarding_branch_id, trip_id, trips!inner(id, departure, destination, date, departure_time, currency, branch_id)")
+      .eq("boarding_branch_id", manager.branch_id)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const { data: bB } = await supabase
+      .from("bookings")
+      .select("id, passenger_name, phone, seat_number, qr_code, payment_method, payment_status, total_amount, booking_date, created_at, boarding_status, boarding_branch_id, trip_id, trips!inner(id, departure, destination, date, departure_time, currency, branch_id)")
+      .is("boarding_branch_id", null)
+      .eq("trips.branch_id", manager.branch_id)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const map = new Map<string, any>();
+    [...(bA || []), ...(bB || [])].forEach((r: any) => map.set(r.id, r));
+    setSales(Array.from(map.values()).sort((a, b) => (a.created_at < b.created_at ? 1 : -1)));
+    setSalesLoading(false);
+  };
+
+  useEffect(() => { loadSales(); }, [manager?.branch_id]);
+
+  // Realtime refresh
+  useEffect(() => {
+    if (!manager?.branch_id) return;
+    let t: any;
+    const debounced = () => { clearTimeout(t); t = setTimeout(loadSales, 300); };
+    const channel = supabase
+      .channel(`sales-${manager.branch_id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, debounced)
+      .subscribe();
+    return () => { clearTimeout(t); supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manager?.branch_id]);
+
+
 
 
   const trip = useMemo(() => trips.find((t) => t.id === tripId), [tripId, trips]);
@@ -236,8 +288,63 @@ const ManagerSale = () => {
     doc.save(`${lastTicket.qr}.pdf`);
   };
 
+  // Sales list computations (same model as Boarding)
+  const salesTripOptions = useMemo(() => {
+    const m = new Map<string, any>();
+    sales.forEach((r) => r.trips && m.set(r.trips.id, r.trips));
+    return Array.from(m.values()).sort((a, b) => (a.date < b.date ? 1 : -1));
+  }, [sales]);
+
+  const filteredSales = useMemo(() => {
+    return sales.filter((r) => {
+      const d = (r.booking_date || (r.created_at || "").slice(0, 10)) as string;
+      if (dateFrom && d && d < dateFrom) return false;
+      if (dateTo && d && d > dateTo) return false;
+      if (filterTrip !== "all" && r.trip_id !== filterTrip) return false;
+      if (filterPayment !== "all" && r.payment_method !== filterPayment) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const hay = `${r.passenger_name} ${r.phone} ${r.qr_code} ${r.trips?.departure} ${r.trips?.destination}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [sales, dateFrom, dateTo, filterTrip, filterPayment, search]);
+
+  const salesStats = useMemo(() => {
+    const s = { count: 0, total: 0, cash: 0, mobile: 0, card: 0 };
+    filteredSales.forEach((r) => {
+      if (r.payment_status !== "paid") return;
+      s.count++;
+      s.total += Number(r.total_amount || 0);
+      if (r.payment_method === "cash") s.cash += Number(r.total_amount || 0);
+      else if (r.payment_method === "mtn_momo" || r.payment_method === "airtel_money") s.mobile += Number(r.total_amount || 0);
+      else if (r.payment_method === "card") s.card += Number(r.total_amount || 0);
+    });
+    return s;
+  }, [filteredSales]);
+
+  const pgSales = usePagination(filteredSales, 10, [dateFrom, dateTo, filterTrip, filterPayment, search], { paramKey: "" });
+
+  const paymentLabel = (m: string) => paymentMethods.find((p) => p.value === m)?.label || m;
+  const paymentBadge = (m: string) => {
+    if (m === "cash") return <Badge variant="outline">Espèces</Badge>;
+    if (m === "mtn_momo") return <Badge className="bg-yellow-500 text-black">MTN MoMo</Badge>;
+    if (m === "airtel_money") return <Badge className="bg-red-600">Airtel Money</Badge>;
+    if (m === "card") return <Badge className="bg-blue-600">Carte</Badge>;
+    return <Badge variant="outline">{m}</Badge>;
+  };
+  const boardingBadge = (bs: string | null) => {
+    const v = bs || "pending";
+    if (v === "boarded") return <Badge className="bg-green-600">Embarqué</Badge>;
+    if (v === "refused") return <Badge variant="destructive">Refusé</Badge>;
+    return <Badge variant="outline">Non scanné</Badge>;
+  };
+  const fmt = (n: number) => n.toLocaleString("fr-FR");
+  const currency = salesTripOptions[0]?.currency || "FCFA";
+
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold flex items-center gap-2">
           <PlusCircle className="h-6 w-6 text-primary" /> Vente au guichet
@@ -245,115 +352,227 @@ const ManagerSale = () => {
         <p className="text-sm text-muted-foreground">Émettez un billet pour un passager qui se présente en agence.</p>
       </div>
 
+      <div className="max-w-3xl space-y-6">
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <div>
+              <Label>Trajet</Label>
+              <Select value={tripId} onValueChange={setTripId}>
+                <SelectTrigger><SelectValue placeholder="Sélectionner un trajet" /></SelectTrigger>
+                <SelectContent>
+                  {trips.length === 0 && <SelectItem value="none" disabled>Aucun trajet à venir</SelectItem>}
+                  {trips.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.departure} → {t.destination} · {t.date} {t.departure_time} · {t.price.toLocaleString()} {t.currency} · {t.available_seats} places
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {trip && (
+              <>
+                <div className="bg-secondary/50 rounded-lg p-3 text-sm space-y-1">
+                  <p><strong>Prix :</strong> {trip.price.toLocaleString()} {trip.currency} · <strong>Places :</strong> {takenSeats.length}/{trip.total_seats}</p>
+                  {lockedSeats.length > 0 && (
+                    <p className="text-xs text-muted-foreground">🔒 Sièges verrouillés par d'autres agents : {lockedSeats.sort((a,b)=>a-b).join(", ")}</p>
+                  )}
+                  {mySeatLock && lockCountdown > 0 && (
+                    <p className="text-xs text-primary font-medium">
+                      Siège #{mySeatLock.seat} verrouillé — {Math.floor(lockCountdown/60)}:{String(lockCountdown%60).padStart(2,"0")} restant
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label className="mb-2 block">Choix du siège</Label>
+                  <SeatSelector
+                    totalSeats={trip.total_seats}
+                    bookedSeats={[...takenSeats, ...lockedSeats]}
+                    selected={seat}
+                    onSelect={handleSelectSeat}
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label>Nom du passager</Label>
+                <Input value={passengerName} onChange={(e) => setPassengerName(e.target.value)} placeholder="Prénom et nom" />
+              </div>
+              <div>
+                <Label>Téléphone</Label>
+                <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+242…" />
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Mode de paiement</Label>
+                <Select value={payment} onValueChange={setPayment}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {paymentMethods.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Lieu d'embarquement</Label>
+                <Select value={boardingBranchId} onValueChange={setBoardingBranchId}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner une sous-agence d'embarquement" /></SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}{b.city ? ` — ${b.city}` : ""}{manager?.branch_id === b.id ? " (ici)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {boardingBranchId && manager?.branch_id && boardingBranchId !== manager.branch_id && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    ⚠️ Le passager embarquera dans une autre sous-agence. Elle sera notifiée automatiquement.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <Button onClick={submit} disabled={submitting || !trip || !seat} className="w-full">
+              <Ticket className="h-4 w-4 mr-2" />
+              {submitting ? "Émission…" : `Émettre le billet${trip ? ` — ${trip.price.toLocaleString()} ${trip.currency}` : ""}`}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {lastTicket && (
+          <Card className="border-accent/40 bg-accent/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                <img src={lastTicket.qrDataUrl} alt="QR code du billet" className="w-40 h-40 rounded-lg bg-white p-2 border" />
+                <div className="flex-1 space-y-1 text-sm">
+                  <p className="font-display text-lg font-bold text-primary">Billet émis ✔</p>
+                  <p><strong>{lastTicket.passengerName}</strong> · {lastTicket.phone}</p>
+                  <p>{lastTicket.trip.departure} → {lastTicket.trip.destination}</p>
+                  <p>{lastTicket.trip.date} à {lastTicket.trip.departure_time} · Siège #{lastTicket.seat}</p>
+                  <p>{lastTicket.payment} · {lastTicket.amount.toLocaleString()} {lastTicket.currency}</p>
+                  <p className="text-xs text-muted-foreground">Code : <code>{lastTicket.qr}</code></p>
+                  <div className="flex gap-2 pt-2">
+                    <Button size="sm" onClick={downloadPdf}><Download className="h-4 w-4 mr-1" />Télécharger PDF</Button>
+                    <Button size="sm" variant="outline" onClick={resetForm}><RotateCcw className="h-4 w-4 mr-1" />Nouveau billet</Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* ===== Ventes récentes (même modèle que la page Embarquement) ===== */}
+      <div className="flex items-start justify-between gap-3 flex-wrap pt-4 border-t">
+        <div>
+          <h2 className="font-display text-xl font-bold">Ventes récentes</h2>
+          <p className="text-sm text-muted-foreground">Suivi des billets vendus par votre sous-agence</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={loadSales} disabled={salesLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${salesLoading ? "animate-spin" : ""}`} /> Actualiser
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2"><Ticket className="h-4 w-4 text-primary" /> Billets vendus</CardTitle></CardHeader>
+          <CardContent><div className="text-3xl font-bold text-primary">{salesStats.count}</div></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2"><Coins className="h-4 w-4 text-green-600" /> Total encaissé</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold text-green-600">{fmt(salesStats.total)} <span className="text-sm font-normal text-muted-foreground">{currency}</span></div></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2"><Wallet className="h-4 w-4 text-amber-600" /> Espèces</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold text-amber-600">{fmt(salesStats.cash)} <span className="text-sm font-normal text-muted-foreground">{currency}</span></div></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2"><Smartphone className="h-4 w-4 text-blue-600" /> Mobile / Carte</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold text-blue-600">{fmt(salesStats.mobile + salesStats.card)} <span className="text-sm font-normal text-muted-foreground">{currency}</span></div></CardContent>
+        </Card>
+      </div>
+
       <Card>
-        <CardContent className="p-6 space-y-4">
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-5 gap-3">
           <div>
-            <Label>Trajet</Label>
-            <Select value={tripId} onValueChange={setTripId}>
-              <SelectTrigger><SelectValue placeholder="Sélectionner un trajet" /></SelectTrigger>
+            <label className="text-xs text-muted-foreground">Du</label>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Au</label>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-xs text-muted-foreground">Trajet</label>
+            <Select value={filterTrip} onValueChange={setFilterTrip}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {trips.length === 0 && <SelectItem value="none" disabled>Aucun trajet à venir</SelectItem>}
-                {trips.map((t) => (
+                <SelectItem value="all">Tous les trajets</SelectItem>
+                {salesTripOptions.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
-                    {t.departure} → {t.destination} · {t.date} {t.departure_time} · {t.price.toLocaleString()} {t.currency} · {t.available_seats} places
+                    {t.departure} → {t.destination} — {t.date} {t.departure_time}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
-          {trip && (
-            <>
-              <div className="bg-secondary/50 rounded-lg p-3 text-sm space-y-1">
-                <p><strong>Prix :</strong> {trip.price.toLocaleString()} {trip.currency} · <strong>Places :</strong> {takenSeats.length}/{trip.total_seats}</p>
-                {lockedSeats.length > 0 && (
-                  <p className="text-xs text-muted-foreground">🔒 Sièges verrouillés par d'autres agents : {lockedSeats.sort((a,b)=>a-b).join(", ")}</p>
-                )}
-                {mySeatLock && lockCountdown > 0 && (
-                  <p className="text-xs text-primary font-medium">
-                    Siège #{mySeatLock.seat} verrouillé — {Math.floor(lockCountdown/60)}:{String(lockCountdown%60).padStart(2,"0")} restant
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label className="mb-2 block">Choix du siège</Label>
-                <SeatSelector
-                  totalSeats={trip.total_seats}
-                  bookedSeats={[...takenSeats, ...lockedSeats]}
-                  selected={seat}
-                  onSelect={handleSelectSeat}
-                />
-              </div>
-            </>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Label>Nom du passager</Label>
-              <Input value={passengerName} onChange={(e) => setPassengerName(e.target.value)} placeholder="Prénom et nom" />
-            </div>
-            <div>
-              <Label>Téléphone</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+242…" />
-            </div>
-            <div className="sm:col-span-2">
-              <Label>Mode de paiement</Label>
-              <Select value={payment} onValueChange={setPayment}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {paymentMethods.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="sm:col-span-2">
-              <Label>Lieu d'embarquement</Label>
-              <Select value={boardingBranchId} onValueChange={setBoardingBranchId}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner une sous-agence d'embarquement" /></SelectTrigger>
-                <SelectContent>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}{b.city ? ` — ${b.city}` : ""}{manager?.branch_id === b.id ? " (ici)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {boardingBranchId && manager?.branch_id && boardingBranchId !== manager.branch_id && (
-                <p className="text-xs text-amber-700 mt-1">
-                  ⚠️ Le passager embarquera dans une autre sous-agence. Elle sera notifiée automatiquement.
-                </p>
-              )}
-            </div>
-
+          <div>
+            <label className="text-xs text-muted-foreground">Paiement</label>
+            <Select value={filterPayment} onValueChange={setFilterPayment}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {paymentMethods.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
-
-          <Button onClick={submit} disabled={submitting || !trip || !seat} className="w-full">
-            <Ticket className="h-4 w-4 mr-2" />
-            {submitting ? "Émission…" : `Émettre le billet${trip ? ` — ${trip.price.toLocaleString()} ${trip.currency}` : ""}`}
-          </Button>
+          <div className="md:col-span-5">
+            <Input placeholder="Rechercher passager, téléphone, code TC-…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
         </CardContent>
       </Card>
 
-      {lastTicket && (
-        <Card className="border-accent/40 bg-accent/5">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row gap-4 items-start">
-              <img src={lastTicket.qrDataUrl} alt="QR code du billet" className="w-40 h-40 rounded-lg bg-white p-2 border" />
-              <div className="flex-1 space-y-1 text-sm">
-                <p className="font-display text-lg font-bold text-primary">Billet émis ✔</p>
-                <p><strong>{lastTicket.passengerName}</strong> · {lastTicket.phone}</p>
-                <p>{lastTicket.trip.departure} → {lastTicket.trip.destination}</p>
-                <p>{lastTicket.trip.date} à {lastTicket.trip.departure_time} · Siège #{lastTicket.seat}</p>
-                <p>{lastTicket.payment} · {lastTicket.amount.toLocaleString()} {lastTicket.currency}</p>
-                <p className="text-xs text-muted-foreground">Code : <code>{lastTicket.qr}</code></p>
-                <div className="flex gap-2 pt-2">
-                  <Button size="sm" onClick={downloadPdf}><Download className="h-4 w-4 mr-1" />Télécharger PDF</Button>
-                  <Button size="sm" variant="outline" onClick={resetForm}><RotateCcw className="h-4 w-4 mr-1" />Nouveau billet</Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Passager</TableHead>
+                  <TableHead>Trajet</TableHead>
+                  <TableHead>Date / Heure</TableHead>
+                  <TableHead>Siège</TableHead>
+                  <TableHead>Paiement</TableHead>
+                  <TableHead>Montant</TableHead>
+                  <TableHead>Embarquement</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSales.length === 0 ? (
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Aucune vente trouvée</TableCell></TableRow>
+                ) : pgSales.paginated.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-mono text-xs">{r.qr_code}</TableCell>
+                    <TableCell>
+                      <div className="font-medium text-sm">{r.passenger_name}</div>
+                      <div className="text-xs text-muted-foreground">{r.phone}</div>
+                    </TableCell>
+                    <TableCell className="text-sm">{r.trips?.departure} → {r.trips?.destination}</TableCell>
+                    <TableCell className="text-sm">{r.trips?.date} <span className="text-muted-foreground">{r.trips?.departure_time}</span></TableCell>
+                    <TableCell className="text-sm">#{r.seat_number}</TableCell>
+                    <TableCell>{paymentBadge(r.payment_method)}</TableCell>
+                    <TableCell className="text-sm font-medium">{fmt(Number(r.total_amount || 0))} {r.trips?.currency || currency}</TableCell>
+                    <TableCell>{boardingBadge(r.boarding_status)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="p-4 border-t"><ListPagination {...pgSales} /></div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
