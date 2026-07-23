@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Bus, Ticket, QrCode, LogOut, PlusCircle, Bell } from "lucide-react";
+import { LayoutDashboard, Bus, Ticket, QrCode, LogOut, PlusCircle, Bell, ClipboardCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +54,8 @@ const ManagerLayout = () => {
     { to: "/manager/notifications", icon: Bell, label: "Notifications", show: true, badge: unread },
     { to: "/manager/sale", icon: PlusCircle, label: "Vente guichet", show: managerPermissions.can_sell_counter, badge: 0 },
     { to: "/manager/scan", icon: QrCode, label: "Scan billets", show: managerPermissions.can_scan, badge: 0 },
+    { to: "/manager/boarding", icon: ClipboardCheck, label: "Embarquement", show: true, badge: 0 },
+
   ].filter(i => i.show);
 
 
