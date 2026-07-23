@@ -52,6 +52,15 @@ const ManagerSale = () => {
   const [branches, setBranches] = useState<{ id: string; name: string; city: string | null }[]>([]);
   const [boardingBranchId, setBoardingBranchId] = useState<string>("");
 
+  // Sales list (same model as Boarding page)
+  const [sales, setSales] = useState<any[]>([]);
+  const [salesLoading, setSalesLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [dateTo, setDateTo] = useState<string>("");
+  const [filterTrip, setFilterTrip] = useState<string>("all");
+  const [filterPayment, setFilterPayment] = useState<string>("all");
+  const [search, setSearch] = useState("");
+
   useEffect(() => {
     if (!manager) return;
     (async () => {
