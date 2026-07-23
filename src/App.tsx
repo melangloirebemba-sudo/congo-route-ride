@@ -50,6 +50,7 @@ import ManagerBookings from "./pages/manager/ManagerBookings";
 import ManagerSale from "./pages/manager/ManagerSale";
 import ManagerNotifications from "./pages/manager/ManagerNotifications";
 import ManagerBoarding from "./pages/manager/ManagerBoarding";
+import ManagerOnlineSales from "./pages/manager/ManagerOnlineSales";
 
 import AgencyCounterSale from "./pages/agency/AgencyCounterSale";
 
