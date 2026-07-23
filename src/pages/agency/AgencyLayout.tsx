@@ -86,8 +86,14 @@ const AgencySidebar = ({
                           : "hover:bg-secondary"
                       }
                     >
-                      <NavLink to={to} end={end} className="flex items-center gap-3">
-                        <Icon className="h-4 w-4 shrink-0" />
+                      <NavLink
+                        to={to}
+                        end={end}
+                        aria-label={label}
+                        aria-current={active ? "page" : undefined}
+                        className="flex items-center gap-3"
+                      >
+                        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                         {!collapsed && <span className="truncate">{label}</span>}
                       </NavLink>
                     </SidebarMenuButton>
@@ -100,15 +106,16 @@ const AgencySidebar = ({
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          onClick={onSignOut}
-          className={`w-full text-muted-foreground ${collapsed ? "justify-center px-0" : "justify-start"}`}
-          title="Déconnexion"
-        >
-          <LogOut className="h-4 w-4" />
-          {!collapsed && <span className="ml-2">Déconnexion</span>}
-        </Button>
+        <SignOutConfirm onConfirm={onSignOut}>
+          <Button
+            variant="ghost"
+            aria-label="Déconnexion"
+            className={`w-full text-muted-foreground ${collapsed ? "justify-center px-0" : "justify-start"}`}
+          >
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            {!collapsed && <span className="ml-2">Déconnexion</span>}
+          </Button>
+        </SignOutConfirm>
       </SidebarFooter>
     </Sidebar>
   );
