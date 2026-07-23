@@ -70,8 +70,6 @@ type BookingRow = {
   } | null;
 };
 
-const parseDeparture = (b: BookingRow): number | null => {
-  const t = b.trips;
 /** IANA timezone of the departure city — Republic of Congo (UTC+1, no DST).
  *  Using Intl below makes any future DST-aware zone Just Work. */
 export const DEPARTURE_TZ = "Africa/Brazzaville";
