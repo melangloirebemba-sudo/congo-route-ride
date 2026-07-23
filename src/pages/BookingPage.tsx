@@ -58,6 +58,7 @@ const BookingPage = () => {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
+  const [signupDone, setSignupDone] = useState(false);
   const [momoPhone, setMomoPhone] = useState("");
   const [awaitingConfirm, setAwaitingConfirm] = useState(false);
   const [awaitingBookingId, setAwaitingBookingId] = useState<string | null>(null);
