@@ -33,6 +33,7 @@ import AgencyDashboard from "./pages/agency/AgencyDashboard";
 import AgencyTrips from "./pages/agency/AgencyTrips";
 import AgencyBookings from "./pages/agency/AgencyBookings";
 import AgencyBranches from "./pages/agency/AgencyBranches";
+import AgencySubAgencies from "./pages/agency/AgencySubAgencies";
 import AgencyManagers from "./pages/agency/AgencyManagers";
 import AgencySettings from "./pages/agency/AgencySettings";
 import AgencyAudit from "./pages/agency/AgencyAudit";
