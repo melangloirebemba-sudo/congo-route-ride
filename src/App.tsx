@@ -103,7 +103,9 @@ const App = () => (
               <Route path="managers" element={<AgencyManagers />} />
               <Route path="trips" element={<AgencyTrips />} />
               <Route path="bookings" element={<AgencyBookings />} />
+              <Route path="audit" element={<AgencyAudit />} />
               <Route path="settings" element={<AgencySettings />} />
+
             </Route>
 
             {/* Manager routes */}
