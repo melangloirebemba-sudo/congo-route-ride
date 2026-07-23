@@ -417,6 +417,23 @@ const ScanAdmin = () => {
         </Badge>
       </div>
 
+      {hasFilters && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm flex items-start gap-2 flex-wrap">
+          <Search className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-primary">Filtres actifs depuis l'embarquement</div>
+            <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 mt-1">
+              {filterTrip && <span>Trajet : {filterTrip.departure} → {filterTrip.destination} · {filterTrip.date} {filterTrip.departure_time?.slice(0,5)}</span>}
+              {filterDateFrom && <span>Du : {filterDateFrom}</span>}
+              {filterDateTo && <span>Au : {filterDateTo}</span>}
+              {filterStatus && <span>Statut : {filterStatus}</span>}
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
