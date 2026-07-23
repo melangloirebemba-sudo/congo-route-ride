@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import BottomNav from "@/components/BottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ClientOnlyRoute from "@/components/ClientOnlyRoute";
 import Index from "./pages/Index";
 import SearchResults from "./pages/SearchResults";
 import TripDetails from "./pages/TripDetails";
@@ -63,14 +64,15 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/search" element={<SearchResults />} />
-            <Route path="/trip/:id" element={<TripDetails />} />
-            <Route path="/booking/:id" element={<BookingPage />} />
-            <Route path="/bookings" element={<BookingHistory />} />
+            <Route path="/search" element={<ClientOnlyRoute><SearchResults /></ClientOnlyRoute>} />
+            <Route path="/trip/:id" element={<ClientOnlyRoute><TripDetails /></ClientOnlyRoute>} />
+            <Route path="/booking/:id" element={<ClientOnlyRoute><BookingPage /></ClientOnlyRoute>} />
+            <Route path="/bookings" element={<ClientOnlyRoute><BookingHistory /></ClientOnlyRoute>} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/preferences" element={<Preferences />} />
-            <Route path="/agencies" element={<Agencies />} />
-            <Route path="/agencies/:id" element={<AgencyDetail />} />
+            <Route path="/agencies" element={<ClientOnlyRoute><Agencies /></ClientOnlyRoute>} />
+            <Route path="/agencies/:id" element={<ClientOnlyRoute><AgencyDetail /></ClientOnlyRoute>} />
+            
             
             {/* Scan billets — accessible aux admins et aux agences actives */}
             <Route
