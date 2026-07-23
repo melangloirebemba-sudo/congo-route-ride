@@ -18,16 +18,31 @@ const ManagerBookings = () => {
   useEffect(() => {
     if (!manager) return;
     (async () => {
-      let q = supabase
+      const select = "*, trips!inner(departure, destination, date, departure_time, agency_id, branch_id)";
+      // Bookings whose trip belongs to this branch
+      const tripBranchQuery = supabase
         .from("bookings")
-        .select("*, trips!inner(departure, destination, date, departure_time, agency_id, branch_id)")
+        .select(select)
         .eq("trips.agency_id", manager.agency_id)
         .order("created_at", { ascending: false });
-      if (manager.branch_id) q = q.eq("trips.branch_id", manager.branch_id);
-      const { data } = await q;
-      setBookings(data || []);
+      const q1 = manager.branch_id ? tripBranchQuery.eq("trips.branch_id", manager.branch_id) : tripBranchQuery;
+
+      // Bookings assigned to this branch for boarding (created by the agency owner)
+      const q2 = manager.branch_id
+        ? supabase
+            .from("bookings")
+            .select(select)
+            .eq("boarding_branch_id" as any, manager.branch_id)
+            .order("created_at", { ascending: false })
+        : null;
+
+      const [{ data: d1 }, r2] = await Promise.all([q1, q2 ?? Promise.resolve({ data: [] as any[] })]);
+      const map = new Map<string, any>();
+      [...(d1 || []), ...((r2 as any).data || [])].forEach((b) => map.set(b.id, b));
+      setBookings(Array.from(map.values()).sort((a, b) => (a.created_at < b.created_at ? 1 : -1)));
     })();
   }, [manager]);
+
 
   const filtered = bookings.filter((b) => {
     const q = search.toLowerCase();
