@@ -77,8 +77,11 @@ const boardingLabel = (s?: string | null) =>
 
 
 const ScanAdmin = () => {
-  const { isAdmin, agencyId } = useAuth();
+  const { isAdmin, agencyId, manager } = useAuth();
   const scope: "admin" | "agency" = isAdmin ? "admin" : "agency";
+  // Effective agency for scoping: agency owners use their agency, branch managers use their parent agency
+  const effectiveAgencyId = agencyId || manager?.agency_id || null;
+  const managerBranchId = manager?.branch_id || null;
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
