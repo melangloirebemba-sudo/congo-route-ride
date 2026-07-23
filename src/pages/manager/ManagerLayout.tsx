@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { SignOutConfirm } from "@/components/SignOutConfirm";
+import { NotificationsDrawer } from "@/components/NotificationsDrawer";
 import {
   Sidebar,
   SidebarContent,
