@@ -194,6 +194,12 @@ const BookingPage = () => {
     });
     setSignupLoading(false);
     if (error) {
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("registered") || msg.includes("exists") || msg.includes("taken") || msg.includes("already")) {
+        toast.error("Cet email est déjà utilisé. Connectez-vous pour rattacher ce billet.");
+        navigate(`/auth?claim=${encodeURIComponent(bookingRef)}&phone=${encodeURIComponent(phone)}&email=${encodeURIComponent(signupEmail)}`);
+        return;
+      }
       toast.error(error.message || "Impossible de créer le compte");
       return;
     }
