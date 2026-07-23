@@ -35,6 +35,12 @@ const ManagerBoarding = () => {
   const [scheduledAt, setScheduledAt] = useState<string>("");
   const [scheduled, setScheduled] = useState<any[]>([]);
   const [scheduledOpen, setScheduledOpen] = useState(false);
+  const [editItem, setEditItem] = useState<any>(null);
+  const [editAt, setEditAt] = useState<string>("");
+  const [editMsg, setEditMsg] = useState<string>("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editConfirmOpen, setEditConfirmOpen] = useState(false);
+  const [editMode, setEditMode] = useState<"edit" | "duplicate">("edit");
 
   useEffect(() => {
     if (!manager?.branch_id) return;
