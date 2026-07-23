@@ -63,11 +63,11 @@ const MyReservations = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const load = async () => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("bookings")
       .select("id, qr_code, seat_number, total_amount, payment_status, payment_deadline, passenger_name, boarding_branch_id, trips(departure, destination, date, departure_time, agencies(name))")
       .eq("payment_status", "pending")
-      .eq("sale_channel" as any, "online")
+      .eq("sale_channel", "online")
       .order("created_at", { ascending: false });
     const rows = (data as any) || [];
     const branchIds = Array.from(new Set(rows.map((r: any) => r.boarding_branch_id).filter(Boolean)));
