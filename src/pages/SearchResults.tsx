@@ -29,7 +29,15 @@ const SearchResults = () => {
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [branchLabel, setBranchLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const pg = usePagination(trips, 5, [], { paramKey: "" });
+  const [when, setWhen] = useState<"all" | "today" | "tomorrow">("all");
+  const filteredTrips = trips.filter((t) => {
+    if (when === "all") return true;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const td = new Date(t.date); td.setHours(0, 0, 0, 0);
+    if (when === "today") return td.getTime() === today.getTime();
+    return td.getTime() > today.getTime();
+  });
+  const pg = usePagination(filteredTrips, 5, [when], { paramKey: "" });
 
   useEffect(() => {
     const fetch = async () => {
@@ -133,11 +141,52 @@ const SearchResults = () => {
           </div>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">{trips.length} trajet(s) trouvé(s)</p>
+            {!date && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {([
+                  { k: "all", label: "Tous à venir" },
+                  { k: "today", label: "Aujourd'hui" },
+                  { k: "tomorrow", label: "À partir de demain" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.k}
+                    onClick={() => setWhen(opt.k)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                      when === opt.k ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground">{filteredTrips.length} trajet(s) trouvé(s)</p>
 
-            {trips.length === 0 && (
-              <div className="text-center py-16">
-                <p className="text-muted-foreground">Aucun trajet disponible pour cette recherche.</p>
+            {filteredTrips.length === 0 && (
+              <div className="text-center py-12 space-y-4">
+                <Clock className="h-12 w-12 mx-auto text-muted-foreground/60" />
+                <div className="space-y-1">
+                  <p className="font-display font-semibold">Aucun trajet à venir</p>
+                  <p className="text-sm text-muted-foreground">
+                    Aucun trajet disponible pour ces critères. Essayez d'autres villes ou une autre date.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 max-w-xs mx-auto">
+                  {when !== "all" && (
+                    <button
+                      onClick={() => setWhen("all")}
+                      className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium"
+                    >
+                      Voir tous les trajets à venir
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate("/")}
+                    className="px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-display font-semibold"
+                  >
+                    Modifier ma recherche
+                  </button>
+                </div>
               </div>
             )}
 
@@ -186,7 +235,8 @@ const SearchResults = () => {
                 </div>
               </motion.div>
             ))}
-            {trips.length > 0 && <ListPagination {...pg} className="pt-2" />}
+            {filteredTrips.length > 0 && <ListPagination {...pg} className="pt-2" />}
+
           </>
         )}
       </div>

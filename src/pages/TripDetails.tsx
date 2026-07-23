@@ -65,6 +65,26 @@ const TripDetails = () => {
     );
   }
 
+  const departDateTime = new Date(`${trip.date}T${trip.departure_time || "00:00"}`);
+  const isPast = departDateTime.getTime() < Date.now();
+
+  if (isPast) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-md w-full text-center space-y-4">
+          <Clock className="h-12 w-12 mx-auto text-muted-foreground" />
+          <h1 className="font-display text-xl font-bold">Trajet expiré</h1>
+          <p className="text-sm text-muted-foreground">
+            Ce trajet est déjà passé et ne peut plus être réservé.
+          </p>
+          <Button onClick={() => navigate("/search")} className="gradient-primary text-primary-foreground rounded-xl w-full h-11">
+            Rechercher un autre trajet
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const agencyName = trip.agencies?.name || "Agence";
 
   return (
