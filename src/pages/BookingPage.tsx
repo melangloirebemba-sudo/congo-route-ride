@@ -131,6 +131,20 @@ const BookingPage = () => {
   if (!trip) {
     return <div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Trajet introuvable</p></div>;
   }
+  if (hoursUntilTrip < 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-md w-full text-center space-y-4">
+          <AlertTriangle className="h-12 w-12 mx-auto text-destructive" />
+          <h1 className="font-display text-xl font-bold">Trajet expiré</h1>
+          <p className="text-sm text-muted-foreground">Ce trajet est déjà passé, la réservation n'est plus possible.</p>
+          <Button onClick={() => navigate("/search")} className="gradient-primary text-primary-foreground rounded-xl w-full h-11">
+            Rechercher un autre trajet
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const agencyName = trip.agencies?.name || "Agence";
   const branchAllowed = boardingBranchId && allowedBranchIds.includes(boardingBranchId);
