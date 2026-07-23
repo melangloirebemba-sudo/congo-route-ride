@@ -48,8 +48,9 @@ const ManagerLayout = () => {
 
   const navItems = [
     { to: "/manager", icon: LayoutDashboard, label: "Tableau de bord", end: true, show: true, badge: 0 },
-    { to: "/manager/trips", icon: Bus, label: "Trajets", show: managerPermissions.can_create_trips, badge: 0 },
+    { to: "/manager/trips", icon: Bus, label: "Trajets", show: true, badge: 0 },
     { to: "/manager/bookings", icon: Ticket, label: "Réservations", show: true, badge: 0 },
+
     { to: "/manager/notifications", icon: Bell, label: "Notifications", show: true, badge: unread },
     { to: "/manager/sale", icon: PlusCircle, label: "Vente guichet", show: managerPermissions.can_sell_counter, badge: 0 },
     { to: "/manager/scan", icon: QrCode, label: "Scan billets", show: managerPermissions.can_scan, badge: 0 },
