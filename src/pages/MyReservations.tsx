@@ -151,13 +151,33 @@ const MyReservations = () => {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadPendingRequests(); }, []);
 
   const paymentLabels: Record<string, string> = { mtn: "MTN MoMo", airtel: "Airtel Money", card: "Carte bancaire" };
 
   const handlePay = async () => {
     if (!payFor) return;
     setSubmitting(true);
+    const isMomo = method === "mtn" || method === "airtel";
+
+    if (isMomo) {
+      const { data, error } = await (supabase as any).rpc("init_payment_simulation", {
+        _booking_id: payFor.id,
+        _momo_phone: (momoPhone || payFor.passenger_name || "").trim() || "unknown",
+        _provider: method === "mtn" ? "MTN MoMo" : "Airtel Money",
+      });
+      setSubmitting(false);
+      if (error || (data && data.ok === false)) {
+        toast.error(data?.message || error?.message || "Erreur lors de l'initialisation du paiement");
+        return;
+      }
+      toast.success("Demande envoyée. Confirmez la transaction ci-dessous.");
+      setPayFor(null);
+      await loadPendingRequests();
+      return;
+    }
+
+    // Card = simulated instant success
     const { error } = await supabase
       .from("bookings")
       .update({ payment_status: "paid", payment_method: paymentLabels[method] || method })
