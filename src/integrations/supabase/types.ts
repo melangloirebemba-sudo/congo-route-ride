@@ -224,6 +224,72 @@ export type Database = {
           },
         ]
       }
+      agency_reports: {
+        Row: {
+          agency_id: string
+          branch_id: string
+          category: string
+          created_at: string
+          id: string
+          message: string
+          owner_notes: string | null
+          reported_by: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          branch_id: string
+          category?: string
+          created_at?: string
+          id?: string
+          message: string
+          owner_notes?: string | null
+          reported_by: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          branch_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          owner_notes?: string | null
+          reported_by?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_reports_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_reports_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "agency_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           boarded_at: string | null
