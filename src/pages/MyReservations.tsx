@@ -153,6 +153,20 @@ const MyReservations = () => {
 
   useEffect(() => { load(); loadPendingRequests(); }, []);
 
+  useEffect(() => {
+    let ch: any;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u?.user?.id;
+      if (!uid) return;
+      ch = supabase
+        .channel(`passenger-notifs-${uid}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "passenger_notifications", filter: `user_id=eq.${uid}` }, () => { loadPendingRequests(); load(); })
+        .subscribe();
+    })();
+    return () => { if (ch) supabase.removeChannel(ch); };
+  }, []);
+
   const paymentLabels: Record<string, string> = { mtn: "MTN MoMo", airtel: "Airtel Money", card: "Carte bancaire" };
 
   const handlePay = async () => {
