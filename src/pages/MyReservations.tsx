@@ -61,6 +61,36 @@ const MyReservations = () => {
   const [payFor, setPayFor] = useState<Reservation | null>(null);
   const [method, setMethod] = useState("mtn");
   const [submitting, setSubmitting] = useState(false);
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimQr, setClaimQr] = useState("");
+  const [claimPhone, setClaimPhone] = useState("");
+  const [claiming, setClaiming] = useState(false);
+  const [isAnon, setIsAnon] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setIsAnon(!!data.user?.is_anonymous));
+  }, []);
+
+  const handleClaim = async () => {
+    if (!claimQr.trim() || !claimPhone.trim()) {
+      toast.error("Renseignez le code du billet et le téléphone");
+      return;
+    }
+    setClaiming(true);
+    const { data, error } = await supabase.rpc("claim_booking_by_ref", {
+      _qr: claimQr.trim(),
+      _phone: claimPhone.trim(),
+    });
+    setClaiming(false);
+    if (error) { toast.error(error.message); return; }
+    const r: any = data;
+    if (!r?.ok) { toast.error(r?.message || "Impossible de récupérer"); return; }
+    toast.success(r.message || "Billet rattaché");
+    setClaimOpen(false);
+    setClaimQr(""); setClaimPhone("");
+    if (r.booking_id) navigate(`/bookings/${r.booking_id}`);
+    else load();
+  };
 
   const load = async () => {
     const { data } = await (supabase as any)
