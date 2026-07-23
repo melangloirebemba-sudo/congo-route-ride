@@ -24,6 +24,26 @@ const ManagerBoarding = () => {
   const [tripId, setTripId] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
+  const [broadcastTrip, setBroadcastTrip] = useState<string>("");
+  const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [broadcasting, setBroadcasting] = useState(false);
+
+  const sendBroadcast = async () => {
+    if (!broadcastTrip) { toast.error("Sélectionnez un trajet"); return; }
+    setBroadcasting(true);
+    const { data, error } = await supabase.rpc("broadcast_boarding_info", {
+      _trip_id: broadcastTrip,
+      _extra_message: broadcastMsg?.trim() || null,
+    });
+    setBroadcasting(false);
+    if (error) { toast.error(error.message); return; }
+    const res: any = data;
+    if (!res?.ok) { toast.error(res?.message || "Diffusion impossible"); return; }
+    toast.success(`Diffusion envoyée à ${res.sent} passager(s)`);
+    setBroadcastOpen(false);
+    setBroadcastMsg("");
+  };
 
   const load = async () => {
     if (!manager?.branch_id) return;
