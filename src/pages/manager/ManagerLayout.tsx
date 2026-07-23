@@ -36,7 +36,8 @@ const ManagerLayout = () => {
         .from("branch_notifications" as any)
         .select("id", { count: "exact", head: true })
         .eq("branch_id", branchId)
-        .is("read_at", null);
+        .is("read_at", null)
+        .is("archived_at", null);
       if (!cancelled) setUnread(count || 0);
     };
     load();
