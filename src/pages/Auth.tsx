@@ -14,14 +14,32 @@ type RoleTab = "client" | "agency" | "manager" | "admin";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const claimQr = params.get("claim");
+  const claimPhone = params.get("phone");
+  const prefillEmail = params.get("email") || "";
   const [role, setRole] = useState<RoleTab>("client");
   const [mode, setMode] = useState<AuthMode>("login");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const tryClaim = async () => {
+    if (!claimQr || !claimPhone) return false;
+    const { data, error } = await supabase.rpc("claim_booking_by_ref", { _qr: claimQr, _phone: claimPhone });
+    if (error) { toast.error(error.message); return false; }
+    const r: any = data;
+    if (r?.ok) {
+      toast.success(r.message || "Billet rattaché à votre compte");
+      navigate(r.booking_id ? `/bookings/${r.booking_id}` : "/reservations");
+      return true;
+    }
+    toast.error(r?.message || "Impossible de récupérer le billet");
+    return false;
+  };
 
   const redirectByRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
