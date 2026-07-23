@@ -108,6 +108,7 @@ const App = () => (
               <Route path="managers" element={<AgencyManagers />} />
               <Route path="trips" element={<AgencyTrips />} />
               <Route path="bookings" element={<AgencyBookings />} />
+              <Route path="counter-sale" element={<AgencyCounterSale />} />
               <Route path="audit" element={<AgencyAudit />} />
               <Route path="settings" element={<AgencySettings />} />
 
@@ -119,8 +120,10 @@ const App = () => (
               <Route path="trips" element={<ManagerTrips />} />
               <Route path="bookings" element={<ManagerBookings />} />
               <Route path="sale" element={<ManagerSale />} />
+              <Route path="notifications" element={<ManagerNotifications />} />
               <Route path="scan" element={<ScanAdmin />} />
             </Route>
+
 
             <Route path="*" element={<NotFound />} />
           </Routes>
