@@ -406,7 +406,7 @@ const ManagerSale = () => {
     doc.text("Ventes récentes", 10, y); y += 6;
     doc.setFontSize(9); doc.setFont("helvetica","normal");
     doc.text(filterSummary(), 10, y); y += 5;
-    doc.text(`Billets: ${salesStats.count}  ·  Total: ${fmt(salesStats.total)} ${currency}  ·  Espèces: ${fmt(salesStats.cash)}  ·  Mobile/Carte: ${fmt(salesStats.digital)}`, 10, y);
+    doc.text(`Billets: ${salesStats.count}  ·  Total: ${fmt(salesStats.total)} ${currency}  ·  Espèces: ${fmt(salesStats.cash)}  ·  Mobile/Carte: ${fmt(salesStats.mobile + salesStats.card)}`, 10, y);
     y += 6;
     doc.setFont("helvetica","bold"); doc.setFontSize(8);
     const cols = [
