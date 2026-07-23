@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, CheckCheck, Ticket } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Bell, CheckCheck, Ticket, ArrowUpDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -23,6 +24,8 @@ const ManagerNotifications = () => {
   const { manager } = useAuth();
   const [items, setItems] = useState<Notif[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"unread" | "all">("all");
+  const [sortDesc, setSortDesc] = useState(true);
 
   const load = useCallback(async () => {
     if (!manager?.branch_id) return;
@@ -62,22 +65,36 @@ const ManagerNotifications = () => {
     return () => { supabase.removeChannel(channel); };
   }, [manager?.branch_id, load]);
 
-
   const markOne = async (id: string) => {
-    await supabase.from("branch_notifications" as any).update({ read_at: new Date().toISOString() }).eq("id", id);
-    load();
+    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)));
+    const { error } = await supabase
+      .from("branch_notifications" as any)
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) { toast.error("Erreur"); load(); }
   };
 
   const markAll = async () => {
     const unread = items.filter((n) => !n.read_at).map((n) => n.id);
     if (unread.length === 0) return;
-    await supabase.from("branch_notifications" as any).update({ read_at: new Date().toISOString() }).in("id", unread);
-    toast.success("Toutes les notifications marquées comme lues");
-    load();
+    const now = new Date().toISOString();
+    setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: now })));
+    const { error } = await supabase
+      .from("branch_notifications" as any)
+      .update({ read_at: now })
+      .in("id", unread);
+    if (error) { toast.error("Erreur"); load(); }
+    else toast.success("Toutes les notifications marquées comme lues");
   };
 
-  const pg = usePagination(items, 10, [items.length]);
   const unreadCount = items.filter((n) => !n.read_at).length;
+  const filtered = tab === "unread" ? items.filter((n) => !n.read_at) : items;
+  const sorted = [...filtered].sort((a, b) => {
+    const da = new Date(a.created_at).getTime();
+    const db = new Date(b.created_at).getTime();
+    return sortDesc ? db - da : da - db;
+  });
+  const pg = usePagination(sorted, 10, [sorted.length, tab, sortDesc]);
 
   return (
     <div className="space-y-6">
@@ -91,12 +108,24 @@ const ManagerNotifications = () => {
             Réservations assignées à votre sous-agence pour embarquement.
           </p>
         </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={markAll}>
-            <CheckCheck className="h-4 w-4 mr-1" /> Tout marquer comme lu
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setSortDesc((s) => !s)}>
+            <ArrowUpDown className="h-4 w-4 mr-1" /> {sortDesc ? "Plus récentes" : "Plus anciennes"}
           </Button>
-        )}
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" onClick={markAll}>
+              <CheckCheck className="h-4 w-4 mr-1" /> Tout marquer comme lu
+            </Button>
+          )}
+        </div>
       </div>
+
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "unread" | "all")}>
+        <TabsList>
+          <TabsTrigger value="all">Toutes ({items.length})</TabsTrigger>
+          <TabsTrigger value="unread">Non lues ({unreadCount})</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <Card>
         <CardHeader><CardTitle className="text-base">Historique</CardTitle></CardHeader>
@@ -105,9 +134,9 @@ const ManagerNotifications = () => {
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
             </div>
-          ) : items.length === 0 ? (
+          ) : sorted.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">
-              Aucune notification pour l'instant.
+              {tab === "unread" ? "Aucune notification non lue." : "Aucune notification pour l'instant."}
             </p>
           ) : (
             <>
@@ -119,10 +148,15 @@ const ManagerNotifications = () => {
                       !n.read_at ? "bg-primary/5 -mx-2 sm:-mx-4 px-2 sm:px-4 rounded" : ""
                     }`}
                   >
-                    <div className="min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => { if (!n.read_at) markOne(n.id); }}
+                      className="min-w-0 flex-1 text-left"
+                      aria-label={n.read_at ? n.title : `${n.title} — marquer comme lue`}
+                    >
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-sm">{n.title}</p>
-                        {!n.read_at && <span className="h-2 w-2 rounded-full bg-primary" aria-label="non lue" />}
+                        {!n.read_at && <span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />}
                       </div>
                       {n.message && (
                         <p className="text-xs text-muted-foreground mt-0.5 break-words">{n.message}</p>
@@ -130,7 +164,7 @@ const ManagerNotifications = () => {
                       <p className="text-[10px] text-muted-foreground mt-1">
                         {new Date(n.created_at).toLocaleString("fr-FR")}
                       </p>
-                    </div>
+                    </button>
                     <div className="flex gap-2 shrink-0">
                       {n.booking_id && (
                         <Button asChild size="sm" variant="outline">
@@ -140,7 +174,7 @@ const ManagerNotifications = () => {
                         </Button>
                       )}
                       {!n.read_at && (
-                        <Button size="sm" variant="ghost" onClick={() => markOne(n.id)}>
+                        <Button size="sm" variant="ghost" onClick={() => markOne(n.id)} aria-label="Marquer comme lue">
                           <CheckCheck className="h-3.5 w-3.5" />
                         </Button>
                       )}
