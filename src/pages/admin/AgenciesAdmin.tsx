@@ -184,7 +184,9 @@ const AgenciesAdmin = () => {
             </DialogHeader>
             <div className="space-y-3 pt-2">
               <Input placeholder="Nom de l'agence *" value={newAgency.name} onChange={e => setNewAgency(p => ({ ...p, name: e.target.value }))} />
+              <LogoUploader value={newAgency.logo} name={newAgency.name} onChange={(v) => setNewAgency(p => ({ ...p, logo: v || "" }))} />
               <Input placeholder="Email de connexion *" type="email" value={newAgency.email} onChange={e => setNewAgency(p => ({ ...p, email: e.target.value }))} />
+
               <div className="flex gap-2">
                 <Input placeholder="Mot de passe temporaire *" value={newAgency.password} onChange={e => setNewAgency(p => ({ ...p, password: e.target.value }))} />
                 <Button type="button" variant="outline" onClick={generatePassword}>Générer</Button>
