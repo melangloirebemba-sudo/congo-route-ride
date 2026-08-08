@@ -415,14 +415,58 @@ const AgencyTrips = () => {
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editId ? "Modifier le trajet" : "Nouveau trajet"}</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-2">
+            {editId && (
+              <div className="rounded-lg border p-3 space-y-2 bg-secondary/30">
+                <label className="text-sm font-medium">Portée de la modification</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={scope === "one"}
+                    onClick={() => setScope("one")}
+                    className={`text-left rounded-md border p-2 text-xs transition-colors ${scope === "one" ? "border-primary bg-primary/10" : "hover:bg-background"}`}
+                  >
+                    <span className="block font-medium">Cette date uniquement</span>
+                    <span className="text-muted-foreground">{form.date || editTrip?.date}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={scope === "series"}
+                    onClick={() => setScope("series")}
+                    className={`text-left rounded-md border p-2 text-xs transition-colors ${scope === "series" ? "border-primary bg-primary/10" : "hover:bg-background"}`}
+                  >
+                    <span className="block font-medium">Toute la série à venir</span>
+                    <span className="text-muted-foreground">{series.ids.length} date(s)</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {scope === "series"
+                    ? `Les modifications s'appliquent aux ${series.ids.length} occurrence(s) à venir (les dates restent inchangées). ${series.bookingsSeries} réservation(s) active(s) concernée(s) : les passagers gardent leur siège, mais l'horaire et le prix affichés sur leur billet seront mis à jour.`
+                    : `Seule l'occurrence du ${form.date || editTrip?.date} est modifiée. ${series.bookingsOne} réservation(s) active(s) concernée(s).`}
+                </p>
+                {parseInt(form.total_seats || "0") < (scope === "series" ? series.bookingsSeries : series.bookingsOne) && (
+                  <p className="text-[11px] text-destructive">
+                    Attention : le nombre de places est inférieur aux réservations déjà enregistrées.
+                  </p>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  Aucun doublon ne sera créé : si un trajet identique existe déjà sur une date visée, l'enregistrement est bloqué.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Input placeholder="Départ *" value={form.departure} onChange={e => setForm(p => ({ ...p, departure: e.target.value }))} />
               <Input placeholder="Destination *" value={form.destination} onChange={e => setForm(p => ({ ...p, destination: e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Date de début *</label>
-              <Input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
+              <label className="text-xs text-muted-foreground">{editId ? "Date" : "Date de début *"}</label>
+              <Input
+                type="date"
+                value={form.date}
+                disabled={!!editId && scope === "series"}
+                onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+              />
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <Input type="time" placeholder="Heure départ" value={form.departure_time} onChange={e => setForm(p => ({ ...p, departure_time: e.target.value }))} />
               <Input type="time" placeholder="Heure arrivée" value={form.arrival_time} onChange={e => setForm(p => ({ ...p, arrival_time: e.target.value }))} />
