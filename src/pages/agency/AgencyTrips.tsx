@@ -250,7 +250,7 @@ const AgencyTrips = () => {
     fetchTrips();
   };
 
-  const openEdit = (trip: Trip) => {
+  const openEdit = async (trip: Trip) => {
     const linked = tripBranchMap[trip.id] || [];
     const allSelected = branches.length > 0 && linked.length === branches.length;
     setForm({
@@ -270,14 +270,46 @@ const AgencyTrips = () => {
     });
 
     setEditId(trip.id);
+    setEditTrip(trip);
+    setScope("one");
+    setSeries({ ids: [trip.id], dates: [trip.date], bookingsSeries: 0, bookingsOne: 0 });
     setDialogOpen(true);
+
+    // Série = mêmes départ/destination/heure, occurrences à venir
+    const today = toISO(new Date());
+    const { data: sib } = await supabase
+      .from("trips")
+      .select("id, date")
+      .eq("agency_id", trip.agency_id)
+      .eq("departure", trip.departure)
+      .eq("destination", trip.destination)
+      .eq("departure_time", trip.departure_time)
+      .gte("date", today)
+      .order("date");
+    const ids = Array.from(new Set([...(sib || []).map((s: any) => s.id), trip.id]));
+    const dates = Array.from(new Set([...(sib || []).map((s: any) => s.date), trip.date])).sort();
+
+    const { count: cSeries } = await supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .in("trip_id", ids)
+      .neq("status", "cancelled");
+    const { count: cOne } = await supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("trip_id", trip.id)
+      .neq("status", "cancelled");
+
+    setSeries({ ids, dates, bookingsSeries: cSeries || 0, bookingsOne: cOne || 0 });
   };
 
   const openNew = () => {
     setForm({ ...emptyForm, assignAll: true, branchIds: [] });
     setEditId(null);
+    setEditTrip(null);
     setDialogOpen(true);
   };
+
 
   const toggleBranch = (id: string) => {
     setForm((p) => ({
