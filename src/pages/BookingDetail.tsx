@@ -575,8 +575,19 @@ const BookingDetail = () => {
             <div><p className="text-muted-foreground">Siège</p><p className="font-medium">#{booking.seat_number}</p></div>
             <div><p className="text-muted-foreground">Agence</p><p className="font-medium">{booking.trips?.agencies?.name || "—"}</p></div>
             {branch && (
-              <div className="col-span-2"><p className="text-muted-foreground">Embarquement</p><p className="font-medium flex items-center gap-1"><Building2 className="h-3 w-3" />{branch.name}{branch.city ? ` (${branch.city})` : ""}</p></div>
+              <div className="col-span-2">
+                <p className="text-muted-foreground">Lieu d'embarquement</p>
+                <p className="font-medium flex items-start gap-1">
+                  <Building2 className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span className="break-words">
+                    {[branch.name, [branch.address, branch.district, branch.city].filter(Boolean).join(", ")]
+                      .filter(Boolean)
+                      .join(" — ")}
+                  </span>
+                </p>
+              </div>
             )}
+
           </div>
           <div className="flex items-center justify-between pt-3 border-t border-border/50">
             <span className="text-xs text-muted-foreground">Montant</span>
