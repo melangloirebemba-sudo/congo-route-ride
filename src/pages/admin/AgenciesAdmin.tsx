@@ -18,7 +18,7 @@ const AgenciesAdmin = () => {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [newAgency, setNewAgency] = useState({ name: "", email: "", password: "", phone: "", address: "", commission_rate: "10" });
+  const [newAgency, setNewAgency] = useState({ name: "", email: "", password: "", phone: "", address: "", commission_rate: "10", logo: "" as string | null });
   const [creating, setCreating] = useState(false);
   const [createdCreds, setCreatedCreds] = useState<{ email: string; password: string } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
