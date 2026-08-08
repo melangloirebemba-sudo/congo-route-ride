@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { useWebPushListener } from "@/hooks/useWebPush";
 import { useTripReminders } from "@/hooks/useTripReminders";
 import BottomNav from "@/components/BottomNav";
+import InstallPrompt from "@/components/InstallPrompt";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ClientOnlyRoute from "@/components/ClientOnlyRoute";
 import Index from "./pages/Index";
@@ -156,6 +157,8 @@ const App = () => (
             <Route path="/manager/*" element={null} />
             <Route path="*" element={<BottomNav />} />
           </Routes>
+          <InstallPrompt />
+
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
