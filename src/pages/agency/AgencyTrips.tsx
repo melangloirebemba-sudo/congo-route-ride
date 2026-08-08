@@ -161,13 +161,48 @@ const AgencyTrips = () => {
       branch_id: homeBranch,
     };
 
-    if (editId) {
+    if (editId && editTrip) {
+      setSaving(true);
       const { available_seats, ...updatePayload } = payload;
-      const { error } = await supabase.from("trips").update(updatePayload).eq("id", editId);
-      if (error) { toast.error(error.message); return; }
-      await syncTripBranches(editId);
-      toast.success("Trajet mis à jour");
+      const targetIds = scope === "series" ? series.ids : [editId];
+
+      // Anti-doublons : un trajet identique (départ, destination, heure, date)
+      // ne doit pas déjà exister en dehors des trajets modifiés.
+      const targetDates = scope === "series"
+        ? series.dates
+        : [form.date];
+      const { data: clashes } = await supabase
+        .from("trips")
+        .select("id, date")
+        .eq("agency_id", agencyId!)
+        .eq("departure", form.departure)
+        .eq("destination", form.destination)
+        .eq("departure_time", form.departure_time)
+        .in("date", targetDates);
+      const conflicting = (clashes || []).filter((c: any) => !targetIds.includes(c.id));
+      if (conflicting.length > 0) {
+        setSaving(false);
+        toast.error(
+          `Un trajet identique existe déjà sur : ${conflicting.map((c: any) => c.date).join(", ")}`,
+        );
+        return;
+      }
+
+      // En série, on ne touche pas aux dates : chaque occurrence garde la sienne.
+      const { date, ...seriesPayload } = updatePayload;
+      const body = scope === "series" ? seriesPayload : updatePayload;
+
+      const { error } = await supabase.from("trips").update(body).in("id", targetIds);
+      if (error) { setSaving(false); toast.error(error.message); return; }
+      for (const id of targetIds) await syncTripBranches(id);
+      setSaving(false);
+      toast.success(
+        scope === "series"
+          ? `Série mise à jour (${targetIds.length} date(s))`
+          : "Trajet mis à jour",
+      );
     } else {
+
       const dates = buildRecurrenceDates(form.date, form.until ? "weekly" : "none", form.weekDays, form.until);
 
       // Anti-doublons : on ignore les dates où ce même trajet (même départ,
