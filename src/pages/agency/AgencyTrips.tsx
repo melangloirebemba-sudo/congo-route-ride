@@ -22,7 +22,56 @@ const emptyForm = {
   price: "", total_seats: "", bus_type: "Standard",
   assignAll: true as boolean,
   branchIds: [] as string[],
+  repeat: "none" as "none" | "daily" | "weekly" | "monthly",
+  weekDays: [] as number[],
+  until: "",
 };
+
+const WEEK_DAYS = [
+  { value: 1, label: "Lun" },
+  { value: 2, label: "Mar" },
+  { value: 3, label: "Mer" },
+  { value: 4, label: "Jeu" },
+  { value: 5, label: "Ven" },
+  { value: 6, label: "Sam" },
+  { value: 0, label: "Dim" },
+];
+
+const toISO = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/** Builds the list of trip dates from the recurrence settings (max 120 occurrences). */
+export const buildRecurrenceDates = (
+  startISO: string,
+  repeat: "none" | "daily" | "weekly" | "monthly",
+  weekDays: number[],
+  untilISO: string,
+): string[] => {
+  if (!startISO) return [];
+  if (repeat === "none" || !untilISO) return [startISO];
+  const start = new Date(`${startISO}T00:00:00`);
+  const end = new Date(`${untilISO}T00:00:00`);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return [startISO];
+
+  const dates: string[] = [];
+  if (repeat === "monthly") {
+    const cursor = new Date(start);
+    while (cursor <= end && dates.length < 120) {
+      dates.push(toISO(cursor));
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return dates;
+  }
+
+  const days = repeat === "weekly" && weekDays.length ? weekDays : null;
+  const cursor = new Date(start);
+  while (cursor <= end && dates.length < 120) {
+    if (repeat === "daily" || !days || days.includes(cursor.getDay())) dates.push(toISO(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates.length ? dates : [startISO];
+};
+
 
 const AgencyTrips = () => {
   const { agencyId } = useAuth();
