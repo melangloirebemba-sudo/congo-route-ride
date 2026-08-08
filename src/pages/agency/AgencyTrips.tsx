@@ -155,7 +155,7 @@ const AgencyTrips = () => {
       await syncTripBranches(editId);
       toast.success("Trajet mis à jour");
     } else {
-      const dates = buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until);
+      const dates = buildRecurrenceDates(form.date, form.until ? "weekly" : "none", form.weekDays, form.until);
 
       // Anti-doublons : on ignore les dates où ce même trajet (même départ,
       // destination et heure) existe déjà pour l'agence.
