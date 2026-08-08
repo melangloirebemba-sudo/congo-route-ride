@@ -361,29 +361,20 @@ const AgencyTrips = () => {
 
             {!editId && (
               <div className="rounded-lg border p-3 space-y-3 bg-secondary/30">
-                <label className="text-sm font-medium">Périodicité du trajet</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Select value={form.repeat} onValueChange={(v: any) => setForm(p => ({ ...p, repeat: v }))}>
-                    <SelectTrigger aria-label="Périodicité"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Une seule date</SelectItem>
-                      <SelectItem value="daily">Tous les jours</SelectItem>
-                      <SelectItem value="weekly">Certains jours de la semaine</SelectItem>
-                      <SelectItem value="monthly">Une fois par mois</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {form.repeat !== "none" && (
-                    <Input
-                      type="date"
-                      aria-label="Répéter jusqu'au"
-                      value={form.until}
-                      min={form.date || undefined}
-                      onChange={e => setForm(p => ({ ...p, until: e.target.value }))}
-                    />
-                  )}
+                <label className="text-sm font-medium">Trajet récurrent (hebdomadaire)</label>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Date de fin (laisser vide pour une seule date)</label>
+                  <Input
+                    type="date"
+                    aria-label="Date de fin"
+                    value={form.until}
+                    min={form.date || undefined}
+                    onChange={e => setForm(p => ({ ...p, until: e.target.value }))}
+                  />
                 </div>
 
-                {form.repeat === "weekly" && (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Jours de circulation (aucun = tous les jours)</label>
                   <div className="flex flex-wrap gap-2">
                     {WEEK_DAYS.map((d) => {
                       const on = form.weekDays.includes(d.value);
@@ -405,22 +396,22 @@ const AgencyTrips = () => {
                       );
                     })}
                   </div>
-                )}
+                </div>
 
-                {form.repeat !== "none" && form.date && form.until && (
+                {form.date && form.until ? (
                   <p className="text-[11px] text-muted-foreground">
-                    {buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until).length} trajet(s) seront créés
-                    (max 120), du {form.date} au {form.until}.
+                    {buildRecurrenceDates(form.date, "weekly", form.weekDays, form.until).length} date(s) programmée(s)
+                    (max 120), du {form.date} au {form.until}. Les dates déjà existantes pour ce trajet seront ignorées.
                   </p>
-                )}
-                {form.repeat !== "none" && !form.until && (
-                  <p className="text-[11px] text-muted-foreground">Choisissez une date de fin pour générer la série.</p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    Sans date de fin, un seul départ sera créé à la date de début.
+                  </p>
                 )}
               </div>
             )}
 
 
-            <div className="rounded-lg border p-3 space-y-3 bg-secondary/30">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Sous-agences autorisées à vendre ce trajet</label>
                 <label className="flex items-center gap-2 text-xs cursor-pointer">
