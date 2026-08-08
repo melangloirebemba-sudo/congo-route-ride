@@ -192,7 +192,11 @@ const AgencyTrips = () => {
       bus_type: trip.bus_type || "Standard",
       assignAll: allSelected || linked.length === 0,
       branchIds: linked,
+      repeat: "none" as const,
+      weekDays: [],
+      until: "",
     });
+
     setEditId(trip.id);
     setDialogOpen(true);
   };
