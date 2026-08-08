@@ -334,6 +334,67 @@ const AgencyTrips = () => {
               </SelectContent>
             </Select>
 
+            {!editId && (
+              <div className="rounded-lg border p-3 space-y-3 bg-secondary/30">
+                <label className="text-sm font-medium">Périodicité du trajet</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Select value={form.repeat} onValueChange={(v: any) => setForm(p => ({ ...p, repeat: v }))}>
+                    <SelectTrigger aria-label="Périodicité"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Une seule date</SelectItem>
+                      <SelectItem value="daily">Tous les jours</SelectItem>
+                      <SelectItem value="weekly">Certains jours de la semaine</SelectItem>
+                      <SelectItem value="monthly">Une fois par mois</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.repeat !== "none" && (
+                    <Input
+                      type="date"
+                      aria-label="Répéter jusqu'au"
+                      value={form.until}
+                      min={form.date || undefined}
+                      onChange={e => setForm(p => ({ ...p, until: e.target.value }))}
+                    />
+                  )}
+                </div>
+
+                {form.repeat === "weekly" && (
+                  <div className="flex flex-wrap gap-2">
+                    {WEEK_DAYS.map((d) => {
+                      const on = form.weekDays.includes(d.value);
+                      return (
+                        <button
+                          key={d.value}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => setForm(p => ({
+                            ...p,
+                            weekDays: on ? p.weekDays.filter(x => x !== d.value) : [...p.weekDays, d.value],
+                          }))}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                            on ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-secondary"
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {form.repeat !== "none" && form.date && form.until && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until).length} trajet(s) seront créés
+                    (max 120), du {form.date} au {form.until}.
+                  </p>
+                )}
+                {form.repeat !== "none" && !form.until && (
+                  <p className="text-[11px] text-muted-foreground">Choisissez une date de fin pour générer la série.</p>
+                )}
+              </div>
+            )}
+
+
             <div className="rounded-lg border p-3 space-y-3 bg-secondary/30">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Sous-agences autorisées à vendre ce trajet</label>
