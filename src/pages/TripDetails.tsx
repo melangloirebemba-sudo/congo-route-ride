@@ -172,6 +172,46 @@ const TripDetails = () => {
           </div>
         </motion.div>
 
+        {occurrences.length > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-card rounded-2xl p-4 border border-border/50"
+          >
+            <h2 className="font-display font-semibold mb-1">Choisir la date de départ</h2>
+            <p className="text-xs text-muted-foreground mb-3">
+              Ce trajet circule à plusieurs dates. Sélectionnez celle qui vous convient.
+            </p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {occurrences.map((o) => {
+                const active = o.id === trip.id;
+                const full = o.available_seats <= 0;
+                return (
+                  <button
+                    key={o.id}
+                    disabled={full}
+                    onClick={() => navigate(`/trip/${o.id}`, { replace: true })}
+                    className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap border transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : full
+                          ? "bg-muted text-muted-foreground border-border opacity-60"
+                          : "bg-background text-foreground border-border hover:bg-secondary"
+                    }`}
+                  >
+                    {new Date(o.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
+                    <span className="block text-[10px] opacity-80">
+                      {full ? "Complet" : `${o.available_seats} places`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+
+
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
