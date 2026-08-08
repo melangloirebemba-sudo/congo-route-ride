@@ -73,6 +73,13 @@ export const buildRecurrenceDates = (
 };
 
 
+type SeriesInfo = {
+  ids: string[];
+  dates: string[];
+  bookingsSeries: number;
+  bookingsOne: number;
+};
+
 const AgencyTrips = () => {
   const { agencyId } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -81,6 +88,12 @@ const AgencyTrips = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
+  const [editTrip, setEditTrip] = useState<Trip | null>(null);
+  const [scope, setScope] = useState<"one" | "series">("one");
+  const [series, setSeries] = useState<SeriesInfo>({ ids: [], dates: [], bookingsSeries: 0, bookingsOne: 0 });
+  const [saving, setSaving] = useState(false);
+
+
 
   const fetchTrips = async () => {
     if (!agencyId) return;
