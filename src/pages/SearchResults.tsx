@@ -7,6 +7,7 @@ import { ListPagination, usePagination } from "@/components/ListPagination";
 
 interface TripRow {
   id: string;
+  agency_id: string;
   departure: string;
   destination: string;
   departure_time: string;
@@ -16,6 +17,8 @@ interface TripRow {
   available_seats: number;
   bus_type: string | null;
   agencies: { name: string } | null;
+  /** Nombre de dates disponibles pour ce même trajet récurrent. */
+  occurrences?: number;
 }
 
 const SearchResults = () => {
@@ -66,7 +69,7 @@ const SearchResults = () => {
       const today = new Date().toISOString().slice(0, 10);
       let query = supabase
         .from("trips")
-        .select("id, departure, destination, departure_time, arrival_time, date, price, available_seats, bus_type, agencies!inner(name, status)")
+        .select("id, agency_id, departure, destination, departure_time, arrival_time, date, price, available_seats, bus_type, agencies!inner(name, status)")
         .eq("status", "active")
         .eq("agencies.status", "active")
         .gt("available_seats", 0);
@@ -79,9 +82,26 @@ const SearchResults = () => {
       else if (branchIdsFilter) query = query.in("branch_id", branchIdsFilter);
 
       const { data } = await query.order("date").order("departure_time");
+      const raw = ((data as unknown as TripRow[]) || []);
+
+      // Déduplication des trajets récurrents : un même trajet (agence, départ,
+      // destination, heure) n'apparaît qu'une fois, sur son prochain départ.
+      const seriesMap = new Map<string, TripRow>();
+      raw.forEach((t) => {
+        const key = `${t.agency_id}|${t.departure}|${t.destination}|${t.departure_time}`;
+        const existing = seriesMap.get(key);
+        if (!existing) seriesMap.set(key, { ...t, occurrences: 1 });
+        else {
+          existing.occurrences = (existing.occurrences || 1) + 1;
+          if (t.date < existing.date) {
+            seriesMap.set(key, { ...t, occurrences: existing.occurrences });
+          }
+        }
+      });
+      const rows = Array.from(seriesMap.values());
+
       // Mélange équitable: regroupe par heure de départ puis mélange aléatoirement
       // les trajets de la même tranche horaire pour ne privilégier aucune agence.
-      const rows = ((data as unknown as TripRow[]) || []);
       const groups = new Map<string, TripRow[]>();
       rows.forEach((t) => {
         const key = t.departure_time || "";
@@ -203,7 +223,14 @@ const SearchResults = () => {
                   <span className="text-xs font-medium bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
                     {trip.agencies?.name || "Agence"}
                   </span>
-                  <span className="text-xs text-muted-foreground">{trip.bus_type}</span>
+                  <div className="flex items-center gap-2">
+                    {(trip.occurrences || 1) > 1 && (
+                      <span className="text-[10px] font-medium bg-accent/20 text-accent px-2 py-1 rounded-full whitespace-nowrap">
+                        {trip.occurrences} dates
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground">{trip.bus_type}</span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-3 mb-3">
@@ -233,6 +260,11 @@ const SearchResults = () => {
                     {trip.price.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">FCFA</span>
                   </p>
                 </div>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  Prochain départ&nbsp;:{" "}
+                  {new Date(trip.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
+                  {(trip.occurrences || 1) > 1 && " · autres dates disponibles"}
+                </p>
               </motion.div>
             ))}
             {filteredTrips.length > 0 && <ListPagination {...pg} className="pt-2" />}

@@ -8,6 +8,7 @@ import SeatSelector from "@/components/SeatSelector";
 
 interface TripData {
   id: string;
+  agency_id: string;
   departure: string;
   destination: string;
   departure_time: string;
@@ -27,13 +28,16 @@ const TripDetails = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
   const [bookedSeats, setBookedSeats] = useState<number[]>([]);
+  const [occurrences, setOccurrences] = useState<{ id: string; date: string; available_seats: number }[]>([]);
 
   useEffect(() => {
     const fetch = async () => {
+      setLoading(true);
+      setSelectedSeat(null);
       const [tripRes, seatsRes] = await Promise.all([
         supabase
           .from("trips")
-          .select("id, departure, destination, departure_time, arrival_time, date, price, available_seats, total_seats, bus_type, agencies(name)")
+          .select("id, agency_id, departure, destination, departure_time, arrival_time, date, price, available_seats, total_seats, bus_type, agencies(name)")
           .eq("id", id!)
           .maybeSingle(),
         supabase
@@ -42,9 +46,29 @@ const TripDetails = () => {
           .eq("trip_id", id!)
           .neq("status", "cancelled"),
       ]);
-      setTrip(tripRes.data as unknown as TripData);
+      const t = tripRes.data as unknown as TripData | null;
+      setTrip(t);
       setBookedSeats(seatsRes.data?.map((b) => b.seat_number) || []);
       setLoading(false);
+
+      // Autres dates du même trajet récurrent (même agence, trajet et heure).
+      if (t) {
+        const today = new Date().toISOString().slice(0, 10);
+        const { data: occ } = await supabase
+          .from("trips")
+          .select("id, date, available_seats")
+          .eq("agency_id", t.agency_id)
+          .eq("departure", t.departure)
+          .eq("destination", t.destination)
+          .eq("departure_time", t.departure_time)
+          .eq("status", "active")
+          .gte("date", today)
+          .order("date")
+          .limit(30);
+        setOccurrences((occ as any[]) || []);
+      } else {
+        setOccurrences([]);
+      }
     };
     fetch();
   }, [id]);
@@ -147,6 +171,46 @@ const TripDetails = () => {
             </div>
           </div>
         </motion.div>
+
+        {occurrences.length > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-card rounded-2xl p-4 border border-border/50"
+          >
+            <h2 className="font-display font-semibold mb-1">Choisir la date de départ</h2>
+            <p className="text-xs text-muted-foreground mb-3">
+              Ce trajet circule à plusieurs dates. Sélectionnez celle qui vous convient.
+            </p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {occurrences.map((o) => {
+                const active = o.id === trip.id;
+                const full = o.available_seats <= 0;
+                return (
+                  <button
+                    key={o.id}
+                    disabled={full}
+                    onClick={() => navigate(`/trip/${o.id}`, { replace: true })}
+                    className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap border transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : full
+                          ? "bg-muted text-muted-foreground border-border opacity-60"
+                          : "bg-background text-foreground border-border hover:bg-secondary"
+                    }`}
+                  >
+                    {new Date(o.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
+                    <span className="block text-[10px] opacity-80">
+                      {full ? "Complet" : `${o.available_seats} places`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
