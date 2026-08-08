@@ -264,7 +264,11 @@ const BookingDetail = () => {
       line("Date / Heure", `${booking.trips.date} ${booking.trips.departure_time?.slice(0,5) || ""}`);
       if (booking.trips.agencies?.name) line("Agence", booking.trips.agencies.name);
     }
-    if (branch) line("Embarquement", `${branch.name}${branch.city ? ` (${branch.city})` : ""}`);
+    if (branch) {
+      const detail = [branch.address, branch.district, branch.city].filter(Boolean).join(", ");
+      line("Embarquement", [branch.name, detail].filter(Boolean).join(" — "));
+    }
+
     line("Siège", `#${booking.seat_number}`);
     line("Paiement", `${booking.payment_status}${booking.payment_method ? ` · ${booking.payment_method}` : ""}`);
     line("Montant", `${booking.total_amount.toLocaleString("fr-FR")} FCFA`);
