@@ -235,7 +235,9 @@ const AgencyTrips = () => {
 
     setForm(emptyForm);
     setEditId(null);
+    setEditTrip(null);
     setDialogOpen(false);
+
     fetchTrips();
   };
 
