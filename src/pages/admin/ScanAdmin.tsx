@@ -644,7 +644,8 @@ const ScanAdmin = () => {
                         Motif du refus : {booking.boarding_notes}
                       </div>
                     )}
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
+
                       {verdict === "valid" ? (
                         <>
                           <Button onClick={() => setConfirmOpen(true)} disabled={validating} className="flex-1">
