@@ -39,6 +39,7 @@ type BookingResult = {
   booking_date: string;
   boarding_status?: string | null;
   boarding_notes?: string | null;
+  boarding_branch?: { name: string; city: string | null; district: string | null; address: string | null } | null;
   trip: {
     id: string;
     departure: string;
