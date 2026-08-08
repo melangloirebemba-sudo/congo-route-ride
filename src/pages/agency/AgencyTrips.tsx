@@ -148,25 +148,27 @@ const AgencyTrips = () => {
       branch_id: homeBranch,
     };
 
-    let tripId = editId;
-    let error;
     if (editId) {
       const { available_seats, ...updatePayload } = payload;
-      ({ error } = await supabase.from("trips").update(updatePayload).eq("id", editId));
+      const { error } = await supabase.from("trips").update(updatePayload).eq("id", editId);
+      if (error) { toast.error(error.message); return; }
+      await syncTripBranches(editId);
+      toast.success("Trajet mis à jour");
     } else {
-      const res = await supabase.from("trips").insert(payload).select("id").single();
-      error = res.error; tripId = res.data?.id ?? null;
+      const dates = buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until);
+      const rows = dates.map((d) => ({ ...payload, date: d }));
+      const { data, error } = await supabase.from("trips").insert(rows).select("id");
+      if (error) { toast.error(error.message); return; }
+      for (const t of (data || [])) await syncTripBranches(t.id);
+      toast.success(dates.length > 1 ? `${dates.length} trajets créés` : "Trajet créé");
     }
 
-    if (error) { toast.error(error.message); return; }
-    if (tripId) await syncTripBranches(tripId);
-
-    toast.success(editId ? "Trajet mis à jour" : "Trajet créé");
     setForm(emptyForm);
     setEditId(null);
     setDialogOpen(false);
     fetchTrips();
   };
+
 
   const deleteTrip = async (id: string) => {
     if (!confirm("Supprimer ce trajet ?")) return;
