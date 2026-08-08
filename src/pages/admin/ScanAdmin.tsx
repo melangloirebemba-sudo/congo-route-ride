@@ -392,6 +392,8 @@ const ScanAdmin = () => {
       line("Date / Heure", `${booking.trip.date} ${booking.trip.departure_time?.slice(0,5) || ""}`);
       if (booking.trip.agency?.name) line("Agence", booking.trip.agency.name);
     }
+    const loc = formatBoardingLocation(booking.boarding_branch);
+    if (loc) line("Lieu d'embarquement", loc);
     line("Siège", `#${booking.seat_number}`);
     line("Paiement", `${booking.payment_status}${booking.payment_method ? ` · ${booking.payment_method}` : ""}`);
     line("Montant", `${booking.total_amount.toLocaleString("fr-FR")} FCFA`);
