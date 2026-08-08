@@ -76,6 +76,14 @@ const boardingBadgeTone = (s?: string | null) =>
 const boardingLabel = (s?: string | null) =>
   s === "boarded" ? "Embarqué" : s === "refused" ? "Refusé" : "Non scanné";
 
+export const formatBoardingLocation = (
+  b?: { name?: string | null; city?: string | null; district?: string | null; address?: string | null } | null
+) => {
+  if (!b) return null;
+  const detail = [b.address, b.district, b.city].filter(Boolean).join(", ");
+  return [b.name, detail].filter(Boolean).join(" — ") || null;
+};
+
 
 const ScanAdmin = () => {
   const { isAdmin, agencyId, manager } = useAuth();
