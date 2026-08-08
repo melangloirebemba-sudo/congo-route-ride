@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { Save, Send, ShieldCheck, Clock, AlertTriangle, KeyRound } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
+import { LogoUploader } from "@/components/LogoUploader";
+
 
 type Agency = Tables<"agencies">;
 
@@ -170,10 +172,14 @@ const AgencySettings = () => {
             <label className="text-sm font-medium">Nom de l'agence</label>
             <Input disabled={readOnly} value={agency.name || ""} onChange={e => setAgency(p => ({ ...p, name: e.target.value }))} />
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Logo (emoji)</label>
-            <Input disabled={readOnly} value={agency.logo || ""} onChange={e => setAgency(p => ({ ...p, logo: e.target.value }))} />
+          <div className={readOnly ? "opacity-60 pointer-events-none" : ""}>
+            <LogoUploader
+              value={agency.logo}
+              name={agency.name}
+              onChange={(v) => setAgency(p => ({ ...p, logo: v }))}
+            />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Email</label>

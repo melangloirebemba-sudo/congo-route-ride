@@ -5,6 +5,7 @@ import { ArrowLeft, MapPin, Phone, Mail, Star, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ListPagination, usePagination } from "@/components/ListPagination";
+import { AgencyLogo } from "@/components/LogoUploader";
 
 type Agency = {
   id: string;
@@ -83,7 +84,7 @@ const AgencyDetail = () => {
           className="bg-card rounded-2xl p-5 border border-border/50"
         >
           <div className="flex items-center gap-4 mb-4">
-            <span className="text-5xl">{agency.logo || "🚌"}</span>
+            <AgencyLogo logo={agency.logo} name={agency.name} className="h-16 w-16" />
             <div className="flex-1">
               <h2 className="font-display font-bold text-xl">{agency.name}</h2>
               <div className="flex items-center gap-1 text-sm">

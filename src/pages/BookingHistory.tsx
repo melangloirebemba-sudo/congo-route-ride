@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, QrCode, MapPin, Calendar, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { ListPagination, usePagination } from "@/components/ListPagination";
 
 interface BookingRow {
@@ -35,21 +36,25 @@ const statusLabels: Record<string, string> = {
 
 const BookingHistory = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const pg = usePagination(bookings, 5, [], { paramKey: "" });
 
   useEffect(() => {
     const fetch = async () => {
+      if (!user) { setBookings([]); setLoading(false); return; }
       const { data } = await supabase
         .from("bookings")
         .select("id, status, qr_code, seat_number, total_amount, booking_date, trips(departure, destination, departure_time, date, agencies(name))")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setBookings((data as unknown as BookingRow[]) || []);
       setLoading(false);
     };
     fetch();
-  }, []);
+  }, [user?.id]);
+
 
   return (
     <div className="min-h-screen pb-24">

@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { ListPagination, usePagination } from "@/components/ListPagination";
+import { LogoUploader, AgencyLogo } from "@/components/LogoUploader";
+
 
 type Agency = Tables<"agencies">;
 
@@ -18,7 +20,7 @@ const AgenciesAdmin = () => {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [newAgency, setNewAgency] = useState({ name: "", email: "", password: "", phone: "", address: "", commission_rate: "10" });
+  const [newAgency, setNewAgency] = useState({ name: "", email: "", password: "", phone: "", address: "", commission_rate: "10", logo: "" as string | null });
   const [creating, setCreating] = useState(false);
   const [createdCreds, setCreatedCreds] = useState<{ email: string; password: string } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -89,6 +91,8 @@ const AgenciesAdmin = () => {
         phone: newAgency.phone || null,
         address: newAgency.address || null,
         commission_rate: parseFloat(newAgency.commission_rate) || 10,
+        logo: newAgency.logo || null,
+
       },
     });
     setCreating(false);
@@ -98,7 +102,7 @@ const AgenciesAdmin = () => {
     }
     toast.success("Compte agence créé");
     setCreatedCreds({ email: newAgency.email, password: newAgency.password });
-    setNewAgency({ name: "", email: "", password: "", phone: "", address: "", commission_rate: "10" });
+    setNewAgency({ name: "", email: "", password: "", phone: "", address: "", commission_rate: "10", logo: "" });
     setDialogOpen(false);
     fetchAgencies();
   };
@@ -182,7 +186,9 @@ const AgenciesAdmin = () => {
             </DialogHeader>
             <div className="space-y-3 pt-2">
               <Input placeholder="Nom de l'agence *" value={newAgency.name} onChange={e => setNewAgency(p => ({ ...p, name: e.target.value }))} />
+              <LogoUploader value={newAgency.logo} name={newAgency.name} onChange={(v) => setNewAgency(p => ({ ...p, logo: v || "" }))} />
               <Input placeholder="Email de connexion *" type="email" value={newAgency.email} onChange={e => setNewAgency(p => ({ ...p, email: e.target.value }))} />
+
               <div className="flex gap-2">
                 <Input placeholder="Mot de passe temporaire *" value={newAgency.password} onChange={e => setNewAgency(p => ({ ...p, password: e.target.value }))} />
                 <Button type="button" variant="outline" onClick={generatePassword}>Générer</Button>
@@ -261,7 +267,7 @@ const AgenciesAdmin = () => {
                     <TableRow key={agency.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="text-xl">{agency.logo}</span>
+                          <AgencyLogo logo={agency.logo} name={agency.name} className="h-8 w-8" />
                           <div>
                             <p className="font-display font-semibold text-sm">{agency.name}</p>
                             <p className="text-xs text-muted-foreground">{agency.address || "—"}</p>
@@ -340,7 +346,7 @@ const AgenciesAdmin = () => {
               <Input placeholder="Email" value={editAgency.email || ""} onChange={e => setEditAgency(p => p ? { ...p, email: e.target.value } : null)} />
               <Input placeholder="Téléphone" value={editAgency.phone || ""} onChange={e => setEditAgency(p => p ? { ...p, phone: e.target.value } : null)} />
               <Input placeholder="Adresse" value={editAgency.address || ""} onChange={e => setEditAgency(p => p ? { ...p, address: e.target.value } : null)} />
-              <Input placeholder="Logo (emoji)" value={editAgency.logo || ""} onChange={e => setEditAgency(p => p ? { ...p, logo: e.target.value } : null)} />
+              <LogoUploader value={editAgency.logo} name={editAgency.name} onChange={(v) => setEditAgency(p => p ? { ...p, logo: v } : null)} />
               <Input placeholder="Commission (%)" type="number" value={editAgency.commission_rate ?? ""} onChange={e => setEditAgency(p => p ? { ...p, commission_rate: parseFloat(e.target.value) } : null)} />
               <Button onClick={saveEdit} className="w-full gradient-primary text-primary-foreground">Enregistrer</Button>
             </div>
@@ -355,7 +361,7 @@ const AgenciesAdmin = () => {
           {detailAgency && (
             <div className="space-y-4 pt-2">
               <div className="flex items-center gap-3">
-                <span className="text-3xl">{detailAgency.logo}</span>
+                <AgencyLogo logo={detailAgency.logo} name={detailAgency.name} className="h-12 w-12" />
                 <div>
                   <h3 className="font-display font-bold text-lg">{detailAgency.name}</h3>
                   {statusBadge(detailAgency.status)}

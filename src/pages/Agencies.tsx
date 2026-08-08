@@ -5,6 +5,7 @@ import { ArrowLeft, Search, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { ListPagination, usePagination } from "@/components/ListPagination";
+import { AgencyLogo } from "@/components/LogoUploader";
 
 type Agency = {
   id: string;
@@ -74,7 +75,7 @@ const Agencies = () => {
                 onClick={() => navigate(`/agencies/${agency.id}`)}
                 className="w-full flex items-center gap-4 bg-card rounded-xl p-4 border border-border/50 hover:border-primary/50 transition text-left"
               >
-                <span className="text-3xl">{agency.logo || "🚌"}</span>
+                <AgencyLogo logo={agency.logo} name={agency.name} className="h-12 w-12" />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-display font-semibold text-sm truncate">{agency.name}</h3>
                   <p className="text-xs text-muted-foreground truncate">

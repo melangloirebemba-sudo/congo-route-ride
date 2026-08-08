@@ -134,9 +134,13 @@ const MyReservations = () => {
   };
 
   const load = async () => {
+    const { data: u } = await supabase.auth.getUser();
+    const uid = u?.user?.id;
+    if (!uid) { setItems([]); setLoading(false); return; }
     const { data } = await (supabase as any)
       .from("bookings")
       .select("id, qr_code, seat_number, total_amount, payment_status, payment_deadline, passenger_name, boarding_branch_id, trips(departure, destination, date, departure_time, agencies(name))")
+      .eq("user_id", uid)
       .eq("payment_status", "pending")
       .eq("sale_channel", "online")
       .order("created_at", { ascending: false });

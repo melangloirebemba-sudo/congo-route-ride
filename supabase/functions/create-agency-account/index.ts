@@ -78,6 +78,8 @@ Deno.serve(async (req) => {
         phone: body.phone || null,
         address: body.address || null,
         commission_rate: body.commission_rate ?? 10,
+        logo: body.logo || null,
+
         status: "pending_setup",
         owner_id: created.user.id,
       })

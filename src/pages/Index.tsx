@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useDistricts } from "@/hooks/useDistricts";
 import { useAuth } from "@/hooks/useAuth";
+import { AgencyLogo } from "@/components/LogoUploader";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -221,7 +222,7 @@ const Index = () => {
               onClick={() => navigate(`/agencies/${agency.id}`)}
               className="w-full flex items-center gap-4 bg-card rounded-xl p-4 border border-border/50 hover:border-primary/50 transition text-left"
             >
-              <span className="text-3xl">{agency.logo || "🚌"}</span>
+              <AgencyLogo logo={agency.logo} name={agency.name} className="h-12 w-12" />
               <div className="flex-1">
                 <h3 className="font-display font-semibold text-sm">{agency.name}</h3>
                 <p className="text-xs text-muted-foreground">{agency.total_trips || 0} trajets</p>

@@ -22,7 +22,56 @@ const emptyForm = {
   price: "", total_seats: "", bus_type: "Standard",
   assignAll: true as boolean,
   branchIds: [] as string[],
+  repeat: "none" as "none" | "daily" | "weekly" | "monthly",
+  weekDays: [] as number[],
+  until: "",
 };
+
+const WEEK_DAYS = [
+  { value: 1, label: "Lun" },
+  { value: 2, label: "Mar" },
+  { value: 3, label: "Mer" },
+  { value: 4, label: "Jeu" },
+  { value: 5, label: "Ven" },
+  { value: 6, label: "Sam" },
+  { value: 0, label: "Dim" },
+];
+
+const toISO = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/** Builds the list of trip dates from the recurrence settings (max 120 occurrences). */
+export const buildRecurrenceDates = (
+  startISO: string,
+  repeat: "none" | "daily" | "weekly" | "monthly",
+  weekDays: number[],
+  untilISO: string,
+): string[] => {
+  if (!startISO) return [];
+  if (repeat === "none" || !untilISO) return [startISO];
+  const start = new Date(`${startISO}T00:00:00`);
+  const end = new Date(`${untilISO}T00:00:00`);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return [startISO];
+
+  const dates: string[] = [];
+  if (repeat === "monthly") {
+    const cursor = new Date(start);
+    while (cursor <= end && dates.length < 120) {
+      dates.push(toISO(cursor));
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return dates;
+  }
+
+  const days = repeat === "weekly" && weekDays.length ? weekDays : null;
+  const cursor = new Date(start);
+  while (cursor <= end && dates.length < 120) {
+    if (repeat === "daily" || !days || days.includes(cursor.getDay())) dates.push(toISO(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates.length ? dates : [startISO];
+};
+
 
 const AgencyTrips = () => {
   const { agencyId } = useAuth();
@@ -99,25 +148,27 @@ const AgencyTrips = () => {
       branch_id: homeBranch,
     };
 
-    let tripId = editId;
-    let error;
     if (editId) {
       const { available_seats, ...updatePayload } = payload;
-      ({ error } = await supabase.from("trips").update(updatePayload).eq("id", editId));
+      const { error } = await supabase.from("trips").update(updatePayload).eq("id", editId);
+      if (error) { toast.error(error.message); return; }
+      await syncTripBranches(editId);
+      toast.success("Trajet mis à jour");
     } else {
-      const res = await supabase.from("trips").insert(payload).select("id").single();
-      error = res.error; tripId = res.data?.id ?? null;
+      const dates = buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until);
+      const rows = dates.map((d) => ({ ...payload, date: d }));
+      const { data, error } = await supabase.from("trips").insert(rows).select("id");
+      if (error) { toast.error(error.message); return; }
+      for (const t of (data || [])) await syncTripBranches(t.id);
+      toast.success(dates.length > 1 ? `${dates.length} trajets créés` : "Trajet créé");
     }
 
-    if (error) { toast.error(error.message); return; }
-    if (tripId) await syncTripBranches(tripId);
-
-    toast.success(editId ? "Trajet mis à jour" : "Trajet créé");
     setForm(emptyForm);
     setEditId(null);
     setDialogOpen(false);
     fetchTrips();
   };
+
 
   const deleteTrip = async (id: string) => {
     if (!confirm("Supprimer ce trajet ?")) return;
@@ -141,7 +192,11 @@ const AgencyTrips = () => {
       bus_type: trip.bus_type || "Standard",
       assignAll: allSelected || linked.length === 0,
       branchIds: linked,
+      repeat: "none" as const,
+      weekDays: [],
+      until: "",
     });
+
     setEditId(trip.id);
     setDialogOpen(true);
   };
@@ -278,6 +333,67 @@ const AgencyTrips = () => {
                 <SelectItem value="Luxe">Luxe</SelectItem>
               </SelectContent>
             </Select>
+
+            {!editId && (
+              <div className="rounded-lg border p-3 space-y-3 bg-secondary/30">
+                <label className="text-sm font-medium">Périodicité du trajet</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Select value={form.repeat} onValueChange={(v: any) => setForm(p => ({ ...p, repeat: v }))}>
+                    <SelectTrigger aria-label="Périodicité"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Une seule date</SelectItem>
+                      <SelectItem value="daily">Tous les jours</SelectItem>
+                      <SelectItem value="weekly">Certains jours de la semaine</SelectItem>
+                      <SelectItem value="monthly">Une fois par mois</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.repeat !== "none" && (
+                    <Input
+                      type="date"
+                      aria-label="Répéter jusqu'au"
+                      value={form.until}
+                      min={form.date || undefined}
+                      onChange={e => setForm(p => ({ ...p, until: e.target.value }))}
+                    />
+                  )}
+                </div>
+
+                {form.repeat === "weekly" && (
+                  <div className="flex flex-wrap gap-2">
+                    {WEEK_DAYS.map((d) => {
+                      const on = form.weekDays.includes(d.value);
+                      return (
+                        <button
+                          key={d.value}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => setForm(p => ({
+                            ...p,
+                            weekDays: on ? p.weekDays.filter(x => x !== d.value) : [...p.weekDays, d.value],
+                          }))}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                            on ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-secondary"
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {form.repeat !== "none" && form.date && form.until && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until).length} trajet(s) seront créés
+                    (max 120), du {form.date} au {form.until}.
+                  </p>
+                )}
+                {form.repeat !== "none" && !form.until && (
+                  <p className="text-[11px] text-muted-foreground">Choisissez une date de fin pour générer la série.</p>
+                )}
+              </div>
+            )}
+
 
             <div className="rounded-lg border p-3 space-y-3 bg-secondary/30">
               <div className="flex items-center justify-between">

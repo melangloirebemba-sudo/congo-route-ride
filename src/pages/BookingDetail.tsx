@@ -130,7 +130,7 @@ const BookingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState<BookingRow | null>(null);
-  const [branch, setBranch] = useState<{ name: string; city: string | null } | null>(null);
+  const [branch, setBranch] = useState<{ name: string; city: string | null; district?: string | null; address?: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState(false);
 
@@ -157,7 +157,7 @@ const BookingDetail = () => {
     if ((data as any).boarding_branch_id) {
       const { data: b } = await supabase
         .from("agency_branches" as any)
-        .select("name, city")
+        .select("name, city, district, address")
         .eq("id", (data as any).boarding_branch_id)
         .maybeSingle();
       setBranch((b as any) || null);
@@ -264,7 +264,11 @@ const BookingDetail = () => {
       line("Date / Heure", `${booking.trips.date} ${booking.trips.departure_time?.slice(0,5) || ""}`);
       if (booking.trips.agencies?.name) line("Agence", booking.trips.agencies.name);
     }
-    if (branch) line("Embarquement", `${branch.name}${branch.city ? ` (${branch.city})` : ""}`);
+    if (branch) {
+      const detail = [branch.address, branch.district, branch.city].filter(Boolean).join(", ");
+      line("Embarquement", [branch.name, detail].filter(Boolean).join(" — "));
+    }
+
     line("Siège", `#${booking.seat_number}`);
     line("Paiement", `${booking.payment_status}${booking.payment_method ? ` · ${booking.payment_method}` : ""}`);
     line("Montant", `${booking.total_amount.toLocaleString("fr-FR")} FCFA`);
@@ -571,8 +575,19 @@ const BookingDetail = () => {
             <div><p className="text-muted-foreground">Siège</p><p className="font-medium">#{booking.seat_number}</p></div>
             <div><p className="text-muted-foreground">Agence</p><p className="font-medium">{booking.trips?.agencies?.name || "—"}</p></div>
             {branch && (
-              <div className="col-span-2"><p className="text-muted-foreground">Embarquement</p><p className="font-medium flex items-center gap-1"><Building2 className="h-3 w-3" />{branch.name}{branch.city ? ` (${branch.city})` : ""}</p></div>
+              <div className="col-span-2">
+                <p className="text-muted-foreground">Lieu d'embarquement</p>
+                <p className="font-medium flex items-start gap-1">
+                  <Building2 className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span className="break-words">
+                    {[branch.name, [branch.address, branch.district, branch.city].filter(Boolean).join(", ")]
+                      .filter(Boolean)
+                      .join(" — ")}
+                  </span>
+                </p>
+              </div>
             )}
+
           </div>
           <div className="flex items-center justify-between pt-3 border-t border-border/50">
             <span className="text-xs text-muted-foreground">Montant</span>

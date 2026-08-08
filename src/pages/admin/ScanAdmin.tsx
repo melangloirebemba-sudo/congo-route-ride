@@ -39,6 +39,7 @@ type BookingResult = {
   booking_date: string;
   boarding_status?: string | null;
   boarding_notes?: string | null;
+  boarding_branch?: { name: string; city: string | null; district: string | null; address: string | null } | null;
   trip: {
     id: string;
     departure: string;
@@ -74,6 +75,14 @@ const boardingBadgeTone = (s?: string | null) =>
 
 const boardingLabel = (s?: string | null) =>
   s === "boarded" ? "Embarqué" : s === "refused" ? "Refusé" : "Non scanné";
+
+export const formatBoardingLocation = (
+  b?: { name?: string | null; city?: string | null; district?: string | null; address?: string | null } | null
+) => {
+  if (!b) return null;
+  const detail = [b.address, b.district, b.city].filter(Boolean).join(", ");
+  return [b.name, detail].filter(Boolean).join(" — ") || null;
+};
 
 
 const ScanAdmin = () => {
@@ -140,6 +149,7 @@ const ScanAdmin = () => {
         id, qr_code, passenger_name, phone, seat_number, status, payment_status,
         payment_method, total_amount, booking_date, boarding_status, boarding_notes,
         boarding_branch_id,
+        boarding_branch:agency_branches ( name, city, district, address ),
         trip:trips ( id, departure, destination, date, departure_time, arrival_time, bus_type, price, currency, branch_id, agency:agencies ( id, name ) )
       `)
       .eq("qr_code", trimmed)
@@ -382,6 +392,8 @@ const ScanAdmin = () => {
       line("Date / Heure", `${booking.trip.date} ${booking.trip.departure_time?.slice(0,5) || ""}`);
       if (booking.trip.agency?.name) line("Agence", booking.trip.agency.name);
     }
+    const loc = formatBoardingLocation(booking.boarding_branch);
+    if (loc) line("Lieu d'embarquement", loc);
     line("Siège", `#${booking.seat_number}`);
     line("Paiement", `${booking.payment_status}${booking.payment_method ? ` · ${booking.payment_method}` : ""}`);
     line("Montant", `${booking.total_amount.toLocaleString("fr-FR")} FCFA`);
@@ -522,7 +534,7 @@ const ScanAdmin = () => {
 
                 {booking && (
                   <div className="space-y-3 text-sm">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 break-words">
                       <Info label="Passager" value={booking.passenger_name} />
                       <Info label="Téléphone" value={booking.phone} />
                       <Info label="Siège" value={`#${booking.seat_number}`} />
@@ -574,6 +586,17 @@ const ScanAdmin = () => {
                         </div>
                       </>
                     )}
+
+                    {formatBoardingLocation(booking.boarding_branch) && (
+                      <>
+                        <Separator />
+                        <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
+                          <div className="text-xs font-semibold uppercase text-primary">Lieu d'embarquement</div>
+                          <div className="text-sm break-words">{formatBoardingLocation(booking.boarding_branch)}</div>
+                        </div>
+                      </>
+                    )}
+
 
                     <Separator />
                     {filterMismatch && (
@@ -632,7 +655,8 @@ const ScanAdmin = () => {
                         Motif du refus : {booking.boarding_notes}
                       </div>
                     )}
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
+
                       {verdict === "valid" ? (
                         <>
                           <Button onClick={() => setConfirmOpen(true)} disabled={validating} className="flex-1">
@@ -656,7 +680,8 @@ const ScanAdmin = () => {
                       </Button>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
+
                       <Button variant="secondary" onClick={downloadTicket} className="flex-1">
                         <Download className="h-4 w-4 mr-2" /> Télécharger PDF
                       </Button>
