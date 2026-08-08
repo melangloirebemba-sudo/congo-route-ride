@@ -587,6 +587,17 @@ const ScanAdmin = () => {
                       </>
                     )}
 
+                    {formatBoardingLocation(booking.boarding_branch) && (
+                      <>
+                        <Separator />
+                        <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
+                          <div className="text-xs font-semibold uppercase text-primary">Lieu d'embarquement</div>
+                          <div className="text-sm break-words">{formatBoardingLocation(booking.boarding_branch)}</div>
+                        </div>
+                      </>
+                    )}
+
+
                     <Separator />
                     {filterMismatch && (
                       <div className="rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 text-xs p-3 flex items-start gap-2">
