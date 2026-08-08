@@ -140,6 +140,7 @@ const ScanAdmin = () => {
         id, qr_code, passenger_name, phone, seat_number, status, payment_status,
         payment_method, total_amount, booking_date, boarding_status, boarding_notes,
         boarding_branch_id,
+        boarding_branch:agency_branches ( name, city, district, address ),
         trip:trips ( id, departure, destination, date, departure_time, arrival_time, bus_type, price, currency, branch_id, agency:agencies ( id, name ) )
       `)
       .eq("qr_code", trimmed)
