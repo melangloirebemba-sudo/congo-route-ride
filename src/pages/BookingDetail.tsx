@@ -130,7 +130,7 @@ const BookingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState<BookingRow | null>(null);
-  const [branch, setBranch] = useState<{ name: string; city: string | null } | null>(null);
+  const [branch, setBranch] = useState<{ name: string; city: string | null; district?: string | null; address?: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState(false);
 
