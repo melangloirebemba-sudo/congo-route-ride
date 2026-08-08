@@ -8,6 +8,7 @@ import SeatSelector from "@/components/SeatSelector";
 
 interface TripData {
   id: string;
+  agency_id: string;
   departure: string;
   destination: string;
   departure_time: string;
@@ -27,13 +28,16 @@ const TripDetails = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
   const [bookedSeats, setBookedSeats] = useState<number[]>([]);
+  const [occurrences, setOccurrences] = useState<{ id: string; date: string; available_seats: number }[]>([]);
 
   useEffect(() => {
     const fetch = async () => {
+      setLoading(true);
+      setSelectedSeat(null);
       const [tripRes, seatsRes] = await Promise.all([
         supabase
           .from("trips")
-          .select("id, departure, destination, departure_time, arrival_time, date, price, available_seats, total_seats, bus_type, agencies(name)")
+          .select("id, agency_id, departure, destination, departure_time, arrival_time, date, price, available_seats, total_seats, bus_type, agencies(name)")
           .eq("id", id!)
           .maybeSingle(),
         supabase
@@ -42,9 +46,29 @@ const TripDetails = () => {
           .eq("trip_id", id!)
           .neq("status", "cancelled"),
       ]);
-      setTrip(tripRes.data as unknown as TripData);
+      const t = tripRes.data as unknown as TripData | null;
+      setTrip(t);
       setBookedSeats(seatsRes.data?.map((b) => b.seat_number) || []);
       setLoading(false);
+
+      // Autres dates du même trajet récurrent (même agence, trajet et heure).
+      if (t) {
+        const today = new Date().toISOString().slice(0, 10);
+        const { data: occ } = await supabase
+          .from("trips")
+          .select("id, date, available_seats")
+          .eq("agency_id", t.agency_id)
+          .eq("departure", t.departure)
+          .eq("destination", t.destination)
+          .eq("departure_time", t.departure_time)
+          .eq("status", "active")
+          .gte("date", today)
+          .order("date")
+          .limit(30);
+        setOccurrences((occ as any[]) || []);
+      } else {
+        setOccurrences([]);
+      }
     };
     fetch();
   }, [id]);
