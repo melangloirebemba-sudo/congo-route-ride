@@ -346,7 +346,7 @@ const AgenciesAdmin = () => {
               <Input placeholder="Email" value={editAgency.email || ""} onChange={e => setEditAgency(p => p ? { ...p, email: e.target.value } : null)} />
               <Input placeholder="Téléphone" value={editAgency.phone || ""} onChange={e => setEditAgency(p => p ? { ...p, phone: e.target.value } : null)} />
               <Input placeholder="Adresse" value={editAgency.address || ""} onChange={e => setEditAgency(p => p ? { ...p, address: e.target.value } : null)} />
-              <Input placeholder="Logo (emoji)" value={editAgency.logo || ""} onChange={e => setEditAgency(p => p ? { ...p, logo: e.target.value } : null)} />
+              <LogoUploader value={editAgency.logo} name={editAgency.name} onChange={(v) => setEditAgency(p => p ? { ...p, logo: v } : null)} />
               <Input placeholder="Commission (%)" type="number" value={editAgency.commission_rate ?? ""} onChange={e => setEditAgency(p => p ? { ...p, commission_rate: parseFloat(e.target.value) } : null)} />
               <Button onClick={saveEdit} className="w-full gradient-primary text-primary-foreground">Enregistrer</Button>
             </div>
