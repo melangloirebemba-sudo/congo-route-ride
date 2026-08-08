@@ -157,7 +157,7 @@ const BookingDetail = () => {
     if ((data as any).boarding_branch_id) {
       const { data: b } = await supabase
         .from("agency_branches" as any)
-        .select("name, city")
+        .select("name, city, district, address")
         .eq("id", (data as any).boarding_branch_id)
         .maybeSingle();
       setBranch((b as any) || null);
