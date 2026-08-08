@@ -260,6 +260,11 @@ const SearchResults = () => {
                     {trip.price.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">FCFA</span>
                   </p>
                 </div>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  Prochain départ&nbsp;:{" "}
+                  {new Date(trip.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
+                  {(trip.occurrences || 1) > 1 && " · autres dates disponibles"}
+                </p>
               </motion.div>
             ))}
             {filteredTrips.length > 0 && <ListPagination {...pg} className="pt-2" />}
