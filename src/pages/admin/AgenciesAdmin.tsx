@@ -98,7 +98,7 @@ const AgenciesAdmin = () => {
     }
     toast.success("Compte agence créé");
     setCreatedCreds({ email: newAgency.email, password: newAgency.password });
-    setNewAgency({ name: "", email: "", password: "", phone: "", address: "", commission_rate: "10" });
+    setNewAgency({ name: "", email: "", password: "", phone: "", address: "", commission_rate: "10", logo: "" });
     setDialogOpen(false);
     fetchAgencies();
   };
