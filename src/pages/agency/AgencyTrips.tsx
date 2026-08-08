@@ -570,9 +570,12 @@ const AgencyTrips = () => {
               </p>
             </div>
 
-            <Button onClick={saveTrip} className="w-full gradient-primary text-primary-foreground">
-              {editId ? "Enregistrer" : "Créer le trajet"}
+            <Button onClick={saveTrip} disabled={saving} className="w-full gradient-primary text-primary-foreground">
+              {editId
+                ? (scope === "series" ? `Enregistrer pour ${series.ids.length} date(s)` : "Enregistrer cette date")
+                : "Créer le trajet"}
             </Button>
+
           </div>
         </DialogContent>
       </Dialog>
