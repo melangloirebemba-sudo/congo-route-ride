@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { ListPagination, usePagination } from "@/components/ListPagination";
+import { LogoUploader, AgencyLogo } from "@/components/LogoUploader";
+
 
 type Agency = Tables<"agencies">;
 
