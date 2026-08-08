@@ -73,6 +73,13 @@ export const buildRecurrenceDates = (
 };
 
 
+type SeriesInfo = {
+  ids: string[];
+  dates: string[];
+  bookingsSeries: number;
+  bookingsOne: number;
+};
+
 const AgencyTrips = () => {
   const { agencyId } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -81,6 +88,12 @@ const AgencyTrips = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
+  const [editTrip, setEditTrip] = useState<Trip | null>(null);
+  const [scope, setScope] = useState<"one" | "series">("one");
+  const [series, setSeries] = useState<SeriesInfo>({ ids: [], dates: [], bookingsSeries: 0, bookingsOne: 0 });
+  const [saving, setSaving] = useState(false);
+
+
 
   const fetchTrips = async () => {
     if (!agencyId) return;
@@ -148,13 +161,48 @@ const AgencyTrips = () => {
       branch_id: homeBranch,
     };
 
-    if (editId) {
+    if (editId && editTrip) {
+      setSaving(true);
       const { available_seats, ...updatePayload } = payload;
-      const { error } = await supabase.from("trips").update(updatePayload).eq("id", editId);
-      if (error) { toast.error(error.message); return; }
-      await syncTripBranches(editId);
-      toast.success("Trajet mis à jour");
+      const targetIds = scope === "series" ? series.ids : [editId];
+
+      // Anti-doublons : un trajet identique (départ, destination, heure, date)
+      // ne doit pas déjà exister en dehors des trajets modifiés.
+      const targetDates = scope === "series"
+        ? series.dates
+        : [form.date];
+      const { data: clashes } = await supabase
+        .from("trips")
+        .select("id, date")
+        .eq("agency_id", agencyId!)
+        .eq("departure", form.departure)
+        .eq("destination", form.destination)
+        .eq("departure_time", form.departure_time)
+        .in("date", targetDates);
+      const conflicting = (clashes || []).filter((c: any) => !targetIds.includes(c.id));
+      if (conflicting.length > 0) {
+        setSaving(false);
+        toast.error(
+          `Un trajet identique existe déjà sur : ${conflicting.map((c: any) => c.date).join(", ")}`,
+        );
+        return;
+      }
+
+      // En série, on ne touche pas aux dates : chaque occurrence garde la sienne.
+      const { date, ...seriesPayload } = updatePayload;
+      const body = scope === "series" ? seriesPayload : updatePayload;
+
+      const { error } = await supabase.from("trips").update(body).in("id", targetIds);
+      if (error) { setSaving(false); toast.error(error.message); return; }
+      for (const id of targetIds) await syncTripBranches(id);
+      setSaving(false);
+      toast.success(
+        scope === "series"
+          ? `Série mise à jour (${targetIds.length} date(s))`
+          : "Trajet mis à jour",
+      );
     } else {
+
       const dates = buildRecurrenceDates(form.date, form.until ? "weekly" : "none", form.weekDays, form.until);
 
       // Anti-doublons : on ignore les dates où ce même trajet (même départ,
@@ -187,7 +235,9 @@ const AgencyTrips = () => {
 
     setForm(emptyForm);
     setEditId(null);
+    setEditTrip(null);
     setDialogOpen(false);
+
     fetchTrips();
   };
 
@@ -200,7 +250,7 @@ const AgencyTrips = () => {
     fetchTrips();
   };
 
-  const openEdit = (trip: Trip) => {
+  const openEdit = async (trip: Trip) => {
     const linked = tripBranchMap[trip.id] || [];
     const allSelected = branches.length > 0 && linked.length === branches.length;
     setForm({
@@ -220,14 +270,46 @@ const AgencyTrips = () => {
     });
 
     setEditId(trip.id);
+    setEditTrip(trip);
+    setScope("one");
+    setSeries({ ids: [trip.id], dates: [trip.date], bookingsSeries: 0, bookingsOne: 0 });
     setDialogOpen(true);
+
+    // Série = mêmes départ/destination/heure, occurrences à venir
+    const today = toISO(new Date());
+    const { data: sib } = await supabase
+      .from("trips")
+      .select("id, date")
+      .eq("agency_id", trip.agency_id)
+      .eq("departure", trip.departure)
+      .eq("destination", trip.destination)
+      .eq("departure_time", trip.departure_time)
+      .gte("date", today)
+      .order("date");
+    const ids = Array.from(new Set([...(sib || []).map((s: any) => s.id), trip.id]));
+    const dates = Array.from(new Set([...(sib || []).map((s: any) => s.date), trip.date])).sort();
+
+    const { count: cSeries } = await supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .in("trip_id", ids)
+      .neq("status", "cancelled");
+    const { count: cOne } = await supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("trip_id", trip.id)
+      .neq("status", "cancelled");
+
+    setSeries({ ids, dates, bookingsSeries: cSeries || 0, bookingsOne: cOne || 0 });
   };
 
   const openNew = () => {
     setForm({ ...emptyForm, assignAll: true, branchIds: [] });
     setEditId(null);
+    setEditTrip(null);
     setDialogOpen(true);
   };
+
 
   const toggleBranch = (id: string) => {
     setForm((p) => ({
@@ -333,14 +415,58 @@ const AgencyTrips = () => {
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editId ? "Modifier le trajet" : "Nouveau trajet"}</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-2">
+            {editId && (
+              <div className="rounded-lg border p-3 space-y-2 bg-secondary/30">
+                <label className="text-sm font-medium">Portée de la modification</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={scope === "one"}
+                    onClick={() => setScope("one")}
+                    className={`text-left rounded-md border p-2 text-xs transition-colors ${scope === "one" ? "border-primary bg-primary/10" : "hover:bg-background"}`}
+                  >
+                    <span className="block font-medium">Cette date uniquement</span>
+                    <span className="text-muted-foreground">{form.date || editTrip?.date}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={scope === "series"}
+                    onClick={() => setScope("series")}
+                    className={`text-left rounded-md border p-2 text-xs transition-colors ${scope === "series" ? "border-primary bg-primary/10" : "hover:bg-background"}`}
+                  >
+                    <span className="block font-medium">Toute la série à venir</span>
+                    <span className="text-muted-foreground">{series.ids.length} date(s)</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {scope === "series"
+                    ? `Les modifications s'appliquent aux ${series.ids.length} occurrence(s) à venir (les dates restent inchangées). ${series.bookingsSeries} réservation(s) active(s) concernée(s) : les passagers gardent leur siège, mais l'horaire et le prix affichés sur leur billet seront mis à jour.`
+                    : `Seule l'occurrence du ${form.date || editTrip?.date} est modifiée. ${series.bookingsOne} réservation(s) active(s) concernée(s).`}
+                </p>
+                {parseInt(form.total_seats || "0") < (scope === "series" ? series.bookingsSeries : series.bookingsOne) && (
+                  <p className="text-[11px] text-destructive">
+                    Attention : le nombre de places est inférieur aux réservations déjà enregistrées.
+                  </p>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  Aucun doublon ne sera créé : si un trajet identique existe déjà sur une date visée, l'enregistrement est bloqué.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Input placeholder="Départ *" value={form.departure} onChange={e => setForm(p => ({ ...p, departure: e.target.value }))} />
               <Input placeholder="Destination *" value={form.destination} onChange={e => setForm(p => ({ ...p, destination: e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Date de début *</label>
-              <Input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
+              <label className="text-xs text-muted-foreground">{editId ? "Date" : "Date de début *"}</label>
+              <Input
+                type="date"
+                value={form.date}
+                disabled={!!editId && scope === "series"}
+                onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+              />
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <Input type="time" placeholder="Heure départ" value={form.departure_time} onChange={e => setForm(p => ({ ...p, departure_time: e.target.value }))} />
               <Input type="time" placeholder="Heure arrivée" value={form.arrival_time} onChange={e => setForm(p => ({ ...p, arrival_time: e.target.value }))} />
@@ -444,9 +570,12 @@ const AgencyTrips = () => {
               </p>
             </div>
 
-            <Button onClick={saveTrip} className="w-full gradient-primary text-primary-foreground">
-              {editId ? "Enregistrer" : "Créer le trajet"}
+            <Button onClick={saveTrip} disabled={saving} className="w-full gradient-primary text-primary-foreground">
+              {editId
+                ? (scope === "series" ? `Enregistrer pour ${series.ids.length} date(s)` : "Enregistrer cette date")
+                : "Créer le trajet"}
             </Button>
+
           </div>
         </DialogContent>
       </Dialog>
