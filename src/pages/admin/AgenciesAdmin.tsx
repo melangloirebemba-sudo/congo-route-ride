@@ -361,7 +361,7 @@ const AgenciesAdmin = () => {
           {detailAgency && (
             <div className="space-y-4 pt-2">
               <div className="flex items-center gap-3">
-                <span className="text-3xl">{detailAgency.logo}</span>
+                <AgencyLogo logo={detailAgency.logo} name={detailAgency.name} className="h-12 w-12" />
                 <div>
                   <h3 className="font-display font-bold text-lg">{detailAgency.name}</h3>
                   {statusBadge(detailAgency.status)}
