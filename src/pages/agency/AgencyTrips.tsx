@@ -156,11 +156,33 @@ const AgencyTrips = () => {
       toast.success("Trajet mis à jour");
     } else {
       const dates = buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until);
-      const rows = dates.map((d) => ({ ...payload, date: d }));
+
+      // Anti-doublons : on ignore les dates où ce même trajet (même départ,
+      // destination et heure) existe déjà pour l'agence.
+      const { data: existing } = await supabase
+        .from("trips")
+        .select("date")
+        .eq("agency_id", agencyId!)
+        .eq("departure", form.departure)
+        .eq("destination", form.destination)
+        .eq("departure_time", form.departure_time)
+        .in("date", dates);
+      const taken = new Set((existing || []).map((t: any) => t.date));
+      const newDates = dates.filter((d) => !taken.has(d));
+
+      if (newDates.length === 0) {
+        toast.error("Ce trajet existe déjà sur toutes les dates sélectionnées");
+        return;
+      }
+
+      const rows = newDates.map((d) => ({ ...payload, date: d }));
       const { data, error } = await supabase.from("trips").insert(rows).select("id");
       if (error) { toast.error(error.message); return; }
       for (const t of (data || [])) await syncTripBranches(t.id);
-      toast.success(dates.length > 1 ? `${dates.length} trajets créés` : "Trajet créé");
+      const skipped = dates.length - newDates.length;
+      toast.success(
+        `${newDates.length} date(s) programmée(s)${skipped ? ` · ${skipped} doublon(s) ignoré(s)` : ""}`,
+      );
     }
 
     setForm(emptyForm);
