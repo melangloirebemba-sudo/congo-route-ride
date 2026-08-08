@@ -89,6 +89,8 @@ const AgenciesAdmin = () => {
         phone: newAgency.phone || null,
         address: newAgency.address || null,
         commission_rate: parseFloat(newAgency.commission_rate) || 10,
+        logo: newAgency.logo || null,
+
       },
     });
     setCreating(false);
