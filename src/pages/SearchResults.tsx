@@ -223,7 +223,14 @@ const SearchResults = () => {
                   <span className="text-xs font-medium bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
                     {trip.agencies?.name || "Agence"}
                   </span>
-                  <span className="text-xs text-muted-foreground">{trip.bus_type}</span>
+                  <div className="flex items-center gap-2">
+                    {(trip.occurrences || 1) > 1 && (
+                      <span className="text-[10px] font-medium bg-accent/20 text-accent px-2 py-1 rounded-full whitespace-nowrap">
+                        {trip.occurrences} dates
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground">{trip.bus_type}</span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-3 mb-3">
