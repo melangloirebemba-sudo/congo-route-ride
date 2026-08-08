@@ -534,7 +534,7 @@ const ScanAdmin = () => {
 
                 {booking && (
                   <div className="space-y-3 text-sm">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3 break-words">
                       <Info label="Passager" value={booking.passenger_name} />
                       <Info label="Téléphone" value={booking.phone} />
                       <Info label="Siège" value={`#${booking.seat_number}`} />
