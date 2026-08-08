@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { Save, Send, ShieldCheck, Clock, AlertTriangle, KeyRound } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
+import { LogoUploader } from "@/components/LogoUploader";
+
 
 type Agency = Tables<"agencies">;
 
