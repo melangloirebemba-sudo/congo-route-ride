@@ -36,21 +36,25 @@ const statusLabels: Record<string, string> = {
 
 const BookingHistory = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const pg = usePagination(bookings, 5, [], { paramKey: "" });
 
   useEffect(() => {
     const fetch = async () => {
+      if (!user) { setBookings([]); setLoading(false); return; }
       const { data } = await supabase
         .from("bookings")
         .select("id, status, qr_code, seat_number, total_amount, booking_date, trips(departure, destination, departure_time, date, agencies(name))")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setBookings((data as unknown as BookingRow[]) || []);
       setLoading(false);
     };
     fetch();
-  }, []);
+  }, [user?.id]);
+
 
   return (
     <div className="min-h-screen pb-24">
