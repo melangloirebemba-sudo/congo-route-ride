@@ -69,7 +69,7 @@ const SearchResults = () => {
       const today = new Date().toISOString().slice(0, 10);
       let query = supabase
         .from("trips")
-        .select("id, departure, destination, departure_time, arrival_time, date, price, available_seats, bus_type, agencies!inner(name, status)")
+        .select("id, agency_id, departure, destination, departure_time, arrival_time, date, price, available_seats, bus_type, agencies!inner(name, status)")
         .eq("status", "active")
         .eq("agencies.status", "active")
         .gt("available_seats", 0);
@@ -82,9 +82,26 @@ const SearchResults = () => {
       else if (branchIdsFilter) query = query.in("branch_id", branchIdsFilter);
 
       const { data } = await query.order("date").order("departure_time");
+      const raw = ((data as unknown as TripRow[]) || []);
+
+      // Déduplication des trajets récurrents : un même trajet (agence, départ,
+      // destination, heure) n'apparaît qu'une fois, sur son prochain départ.
+      const seriesMap = new Map<string, TripRow>();
+      raw.forEach((t) => {
+        const key = `${t.agency_id}|${t.departure}|${t.destination}|${t.departure_time}`;
+        const existing = seriesMap.get(key);
+        if (!existing) seriesMap.set(key, { ...t, occurrences: 1 });
+        else {
+          existing.occurrences = (existing.occurrences || 1) + 1;
+          if (t.date < existing.date) {
+            seriesMap.set(key, { ...t, occurrences: existing.occurrences });
+          }
+        }
+      });
+      const rows = Array.from(seriesMap.values());
+
       // Mélange équitable: regroupe par heure de départ puis mélange aléatoirement
       // les trajets de la même tranche horaire pour ne privilégier aucune agence.
-      const rows = ((data as unknown as TripRow[]) || []);
       const groups = new Map<string, TripRow[]>();
       rows.forEach((t) => {
         const key = t.departure_time || "";
