@@ -267,7 +267,7 @@ const AgenciesAdmin = () => {
                     <TableRow key={agency.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="text-xl">{agency.logo}</span>
+                          <AgencyLogo logo={agency.logo} name={agency.name} className="h-8 w-8" />
                           <div>
                             <p className="font-display font-semibold text-sm">{agency.name}</p>
                             <p className="text-xs text-muted-foreground">{agency.address || "—"}</p>
