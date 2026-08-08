@@ -337,7 +337,10 @@ const AgencyTrips = () => {
               <Input placeholder="Départ *" value={form.departure} onChange={e => setForm(p => ({ ...p, departure: e.target.value }))} />
               <Input placeholder="Destination *" value={form.destination} onChange={e => setForm(p => ({ ...p, destination: e.target.value }))} />
             </div>
-            <Input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Date de début *</label>
+              <Input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Input type="time" placeholder="Heure départ" value={form.departure_time} onChange={e => setForm(p => ({ ...p, departure_time: e.target.value }))} />
               <Input type="time" placeholder="Heure arrivée" value={form.arrival_time} onChange={e => setForm(p => ({ ...p, arrival_time: e.target.value }))} />
