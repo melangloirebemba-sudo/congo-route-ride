@@ -7,6 +7,7 @@ import { ListPagination, usePagination } from "@/components/ListPagination";
 
 interface TripRow {
   id: string;
+  agency_id: string;
   departure: string;
   destination: string;
   departure_time: string;
@@ -16,6 +17,8 @@ interface TripRow {
   available_seats: number;
   bus_type: string | null;
   agencies: { name: string } | null;
+  /** Nombre de dates disponibles pour ce même trajet récurrent. */
+  occurrences?: number;
 }
 
 const SearchResults = () => {
