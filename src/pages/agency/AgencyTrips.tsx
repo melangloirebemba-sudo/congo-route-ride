@@ -411,6 +411,7 @@ const AgencyTrips = () => {
               </div>
             )}
 
+            <div className="rounded-lg border p-3 space-y-3 bg-secondary/30">
 
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Sous-agences autorisées à vendre ce trajet</label>
