@@ -265,48 +265,151 @@ const BookingDetail = () => {
 
   const buildPdf = async (kind: "ticket" | "receipt") => {
     if (!booking) return null;
+    const W = 148;
     const doc = new jsPDF({ format: "a5", unit: "mm" });
-    doc.setFillColor(255, 122, 0);
-    doc.rect(0, 0, 148, 20, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(15);
-    doc.text(kind === "ticket" ? "TransCongo — Billet électronique" : "TransCongo — Reçu de paiement", 10, 13);
-    doc.setTextColor(20, 20, 20);
-    doc.setFontSize(11);
-    let y = 30;
-    const line = (label: string, val: string) => {
-      doc.setFont("helvetica", "bold"); doc.text(label, 10, y);
-      doc.setFont("helvetica", "normal"); doc.text(val, 55, y);
-      y += 7;
-    };
-    line("Passager", booking.passenger_name);
-    line("Téléphone", booking.phone);
-    if (booking.trips) {
-      line("Trajet", `${booking.trips.departure} → ${booking.trips.destination}`);
-      line("Date / Heure", `${booking.trips.date} ${booking.trips.departure_time?.slice(0,5) || ""}`);
-      if (booking.trips.agencies?.name) line("Agence", booking.trips.agencies.name);
-    }
-    if (branch) {
-      const detail = [branch.address, branch.district, branch.city].filter(Boolean).join(", ");
-      line("Embarquement", [branch.name, detail].filter(Boolean).join(" — "));
+    const t = booking.trips;
+    const agencyName = t?.agencies?.name || "TransCongo";
+    const logo = t?.agencies?.logo || null;
+    const orange: [number, number, number] = [255, 122, 0];
+    const ink: [number, number, number] = [24, 24, 27];
+    const grey: [number, number, number] = [115, 115, 125];
+
+    // ---------- Header band ----------
+    doc.setFillColor(...orange);
+    doc.rect(0, 0, W, 30, "F");
+
+    let textX = 12;
+    if (logo && (logo.startsWith("data:image") || logo.startsWith("http"))) {
+      const img = await toDataUrl(logo);
+      if (img) {
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(10, 6, 18, 18, 3, 3, "F");
+        try { doc.addImage(img.data, img.format, 11.5, 7.5, 15, 15); } catch { /* ignore */ }
+        textX = 33;
+      }
+    } else if (logo) {
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(10, 6, 18, 18, 3, 3, "F");
+      doc.setTextColor(...orange);
+      doc.setFontSize(14);
+      doc.text(logo.slice(0, 2), 19, 18, { align: "center" });
+      textX = 33;
     }
 
-    line("Siège", `#${booking.seat_number}`);
-    line("Paiement", `${booking.payment_status}${booking.payment_method ? ` · ${booking.payment_method}` : ""}`);
-    line("Montant", `${booking.total_amount.toLocaleString("fr-FR")} FCFA`);
-    line("Statut", booking.status);
-    line("Code", booking.qr_code);
-    if (kind === "ticket") {
-      const qrDataUrl = await QRCode.toDataURL(booking.qr_code, { width: 240, margin: 1 });
-      doc.addImage(qrDataUrl, "PNG", 95, 55, 45, 45);
-    } else {
-      line("Émis le", fmt(booking.updated_at));
-    }
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(agencyName, textX, 15);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(kind === "ticket" ? "Billet électronique · TransCongo" : "Reçu de paiement · TransCongo", textX, 22);
+
+    // Status pill
+    const paid = booking.payment_status === "paid";
+    const pill = booking.status === "cancelled" ? "ANNULE" : paid ? "PAYE" : "EN ATTENTE";
+    doc.setFillColor(255, 255, 255);
+    const pw = doc.getTextWidth(pill) + 8;
+    doc.roundedRect(W - 10 - pw, 9, pw, 8, 2, 2, "F");
+    doc.setTextColor(...orange);
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
-    doc.setTextColor(120, 120, 120);
-    doc.text(kind === "ticket" ? "Présentez ce billet à l'embarquement" : "Reçu à conserver — merci de votre confiance", 10, 200);
+    doc.text(pill, W - 10 - pw / 2, 14.5, { align: "center" });
+
+    // ---------- Route block ----------
+    doc.setTextColor(...ink);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(t?.departure || "—", 12, 45);
+    doc.text(t?.destination || "—", W - 12, 45, { align: "right" });
+    doc.setDrawColor(...orange);
+    doc.setLineWidth(0.6);
+    doc.line(12, 49, W - 12, 49);
+    doc.setFillColor(...orange);
+    doc.circle(12, 49, 1.4, "F");
+    doc.circle(W - 12, 49, 1.4, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...grey);
+    const dateLabel = t?.date
+      ? new Date(t.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      : "—";
+    doc.text(`${dateLabel} · Départ ${t?.departure_time?.slice(0, 5) || "--:--"}`, 12, 55);
+
+    // ---------- Info grid ----------
+    let y = 66;
+    const cell = (label: string, val: string, x: number, w: number) => {
+      doc.setFontSize(7.5);
+      doc.setTextColor(...grey);
+      doc.setFont("helvetica", "normal");
+      doc.text(label.toUpperCase(), x, y);
+      doc.setFontSize(10);
+      doc.setTextColor(...ink);
+      doc.setFont("helvetica", "bold");
+      doc.text(doc.splitTextToSize(val || "—", w), x, y + 5);
+    };
+    const rowH = (val: string, w: number) => 5 + doc.splitTextToSize(val || "—", w).length * 4.6 + 4;
+
+    cell("Passager", booking.passenger_name, 12, 60);
+    cell("Siège", `#${booking.seat_number}`, 78, 25);
+    cell("Montant", `${booking.total_amount.toLocaleString("fr-FR")} FCFA`, 108, 32);
+    y += rowH(booking.passenger_name, 60);
+
+    cell("Téléphone", booking.phone, 12, 60);
+    cell("Paiement", booking.payment_method || (paid ? "Payé" : "Non réglé"), 78, 60);
+    y += rowH(booking.phone, 60);
+
+    if (branch) {
+      const detail = [branch.name, branch.address, branch.district, branch.city].filter(Boolean).join(", ");
+      cell("Lieu d'embarquement", detail, 12, 82);
+      y += rowH(detail, 82);
+    }
+    if (kind === "receipt") {
+      cell("Émis le", fmt(booking.updated_at), 12, 82);
+      y += rowH(fmt(booking.updated_at), 82);
+    }
+
+    // ---------- QR + code ----------
+    const qrY = Math.max(y + 4, 120);
+    doc.setDrawColor(225, 225, 230);
+    doc.setLineWidth(0.3);
+    doc.setLineDashPattern([1.5, 1.5], 0);
+    doc.line(10, qrY - 6, W - 10, qrY - 6);
+    doc.setLineDashPattern([], 0);
+
+    const qrDataUrl = await QRCode.toDataURL(booking.qr_code, { width: 400, margin: 1 });
+    doc.addImage(qrDataUrl, "PNG", 12, qrY, 40, 40);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...grey);
+    doc.text("Code du billet", 58, qrY + 8);
+    doc.setFont("courier", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...ink);
+    doc.text(booking.qr_code, 58, qrY + 15);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...grey);
+    doc.text(
+      doc.splitTextToSize(
+        kind === "ticket"
+          ? "Présentez ce QR code à l'embarquement. Arrivez 30 minutes avant le départ avec une pièce d'identité."
+          : "Reçu à conserver — merci de votre confiance.",
+        78
+      ),
+      58,
+      qrY + 23
+    );
+
+    // ---------- Footer ----------
+    doc.setFillColor(248, 248, 250);
+    doc.rect(0, 196, W, 14, "F");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...grey);
+    doc.text(`${agencyName} · TransCongo`, 12, 204);
+    doc.text(`Réf. ${booking.id.slice(0, 8).toUpperCase()}`, W - 12, 204, { align: "right" });
     return doc;
   };
+
 
   const downloadTicket = async () => { const d = await buildPdf("ticket"); if (d && booking) d.save(`billet-${booking.qr_code}.pdf`); };
   const downloadReceipt = async () => { const d = await buildPdf("receipt"); if (d && booking) d.save(`recu-${booking.qr_code}.pdf`); };
