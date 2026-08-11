@@ -392,7 +392,7 @@ const AgencyTrips = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold">Mes trajets</h1>
-          <p className="text-sm text-muted-foreground">{trips.length} trajets enregistrés</p>
+          <p className="text-sm text-muted-foreground">{groupedTrips.length} séries de trajets ({trips.length} départs programmés)</p>
         </div>
         <div className="flex gap-2">
           {trips.length > 0 && (
