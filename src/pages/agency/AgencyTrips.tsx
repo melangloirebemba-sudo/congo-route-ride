@@ -341,6 +341,10 @@ const AgencyTrips = () => {
     return `${ids.length} sous-agences`;
   };
 
+  const previewDates = useMemo(() => {
+    return buildRecurrenceDates(form.date, form.until ? form.repeat : "none", form.weekDays, form.until);
+  }, [form.date, form.repeat, form.weekDays, form.until]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
