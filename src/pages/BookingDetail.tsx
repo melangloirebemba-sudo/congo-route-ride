@@ -724,11 +724,15 @@ const BookingDetail = () => {
         {isPaid ? (
           <div className="bg-card rounded-2xl p-4 border border-border/50 space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <QrIcon className="h-4 w-4 text-primary" /> Billet — QR code
+              <AgencyLogo logo={booking.trips?.agencies?.logo} name={booking.trips?.agencies?.name} className="h-8 w-8" />
+              <span className="flex-1 truncate">{booking.trips?.agencies?.name || "Billet"}</span>
+              <QrIcon className="h-4 w-4 text-primary" />
             </div>
-            <div className="flex justify-center bg-white p-4 rounded-xl">
+            <div className="flex flex-col items-center bg-white p-4 rounded-xl gap-2">
               <QRCodeSVG value={booking.qr_code} size={180} />
+              <span className="font-mono text-xs tracking-widest text-neutral-700">{booking.qr_code}</span>
             </div>
+
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" onClick={downloadTicket}><Download className="h-3 w-3 mr-1" /> Billet PDF</Button>
               <Button variant="outline" size="sm" onClick={downloadReceipt}><Download className="h-3 w-3 mr-1" /> Reçu PDF</Button>
