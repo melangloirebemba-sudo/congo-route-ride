@@ -372,9 +372,16 @@ const AgencyTrips = () => {
           <h1 className="font-display text-2xl font-bold">Mes trajets</h1>
           <p className="text-sm text-muted-foreground">{trips.length} trajets enregistrés</p>
         </div>
-        <Button onClick={openNew} className="gradient-primary text-primary-foreground">
-          <Plus className="h-4 w-4 mr-1" /> Nouveau trajet
-        </Button>
+        <div className="flex gap-2">
+          {trips.length > 0 && (
+            <Button variant="outline" onClick={deleteAllTrips} className="text-destructive border-destructive hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4 mr-1" /> Tout supprimer
+            </Button>
+          )}
+          <Button onClick={openNew} className="gradient-primary text-primary-foreground">
+            <Plus className="h-4 w-4 mr-1" /> Nouveau trajet
+          </Button>
+        </div>
       </div>
 
       <Card>
