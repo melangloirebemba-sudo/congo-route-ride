@@ -465,7 +465,7 @@ const AgencyTrips = () => {
                           <Button size="icon" variant="ghost" onClick={() => openEdit(trip)} title="Modifier">
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button size="icon" variant="ghost" onClick={() => deleteTrip(trip.id)} title="Supprimer">
+                          <Button size="icon" variant="ghost" onClick={() => deleteTrip(trip)} title="Supprimer">
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
