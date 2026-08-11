@@ -43,7 +43,7 @@ export const subscribeQueue = (cb: (q: QueuedScan[]) => void) => {
 
 export const enqueueScan = (item: Omit<QueuedScan, "id" | "queuedAt" | "attempts">) => {
   const q = readQueue();
-  if (q.some((i) => i.bookingId === item.bookingId)) return q;
+  if (q.some((i) => i.qrCode === item.qrCode)) return q;
   const next: QueuedScan[] = [
     ...q,
     {
