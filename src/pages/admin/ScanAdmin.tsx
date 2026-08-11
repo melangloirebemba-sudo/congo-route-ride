@@ -262,11 +262,11 @@ const ScanAdmin = () => {
         : true; // agency owner: no branch restriction
       if (!sameAgency || !branchMatches) {
         setVerdict("notfound");
-        toast.error(
-          managerBranchId
-            ? "Ce billet n'est pas embarquable dans votre sous-agence"
-            : "Ce billet n'appartient pas à votre agence"
-        );
+        const msg = managerBranchId
+          ? "Ce billet n'est pas embarquable dans votre sous-agence"
+          : "Ce billet n'appartient pas à votre agence";
+        if (burstRef.current) pushFeed({ code: trimmed, passenger: b.passenger_name, seat: b.seat_number, outcome: "rejected", message: msg });
+        toast.error(msg);
         return;
       }
     }
@@ -281,9 +281,21 @@ const ScanAdmin = () => {
     else if (b.trip?.date && new Date(b.trip.date) < new Date(new Date().toDateString())) v = "expired";
 
     setVerdict(v);
+
+    if (burstRef.current) {
+      if (v === "valid") {
+        await autoValidate(b);
+      } else {
+        pushFeed({ code: trimmed, passenger: b.passenger_name, seat: b.seat_number, outcome: "rejected", message: verdictMeta[v].label });
+        toast.error(verdictMeta[v].label);
+      }
+      return;
+    }
+
     if (v === "valid") toast.success("Billet valide");
     else toast.warning(verdictMeta[v].label);
   };
+
 
 
 
