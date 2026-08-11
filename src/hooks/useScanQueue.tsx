@@ -40,14 +40,29 @@ export const useScanQueue = () => {
     const results: SyncOutcome[] = [];
 
     for (const item of items) {
+      let bookingId = item.bookingId;
+      if (!bookingId) {
+        const { data: bk } = await supabase
+          .from("bookings")
+          .select("id")
+          .eq("qr_code", item.qrCode)
+          .maybeSingle();
+        if (!bk?.id) {
+          removeFromQueue(item.id);
+          results.push({ item, ok: false, message: "Billet introuvable" });
+          continue;
+        }
+        bookingId = bk.id;
+      }
       const { data, error } = await supabase.rpc("check_in_booking", {
-        _booking_id: item.bookingId,
+        _booking_id: bookingId,
       });
       if (error) {
         markAttempt(item.id, error.message);
         results.push({ item, ok: false, message: error.message });
         continue;
       }
+
       const res = (data ?? {}) as { ok?: boolean; code?: string; message?: string };
       // Already used = the ticket was validated (possibly by this very queue) → drop it.
       if (res.ok || res.code === "used") {
