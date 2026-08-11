@@ -95,6 +95,29 @@ const AgencyTrips = () => {
   const [series, setSeries] = useState<SeriesInfo>({ ids: [], dates: [], bookingsSeries: 0, bookingsOne: 0 });
   const [saving, setSaving] = useState(false);
 
+  // Group trips by unique route/time to show only one line per "Trip Series"
+  const groupedTrips = useMemo(() => {
+    const map = new Map<string, Trip & { occurrences: number; nextDate: string }>();
+    trips.forEach(t => {
+      const key = `${t.departure}|${t.destination}|${t.departure_time}`;
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, { ...t, occurrences: 1, nextDate: t.date });
+      } else {
+        existing.occurrences++;
+        if (t.date < existing.nextDate && t.date >= new Date().toISOString().split('T')[0]) {
+          // Keep the closest upcoming date as the primary reference
+          existing.nextDate = t.date;
+          existing.id = t.id;
+          existing.date = t.date;
+          existing.available_seats = t.available_seats;
+          existing.total_seats = t.total_seats;
+        }
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
+  }, [trips]);
+
 
 
   const fetchTrips = async () => {
