@@ -94,14 +94,18 @@ const TripDetails = () => {
 
   if (isPast) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-md w-full text-center space-y-4">
-          <Clock className="h-12 w-12 mx-auto text-muted-foreground" />
-          <h1 className="font-display text-xl font-bold">Trajet expiré</h1>
-          <p className="text-sm text-muted-foreground">
-            Ce trajet est déjà passé et ne peut plus être réservé.
-          </p>
-          <Button onClick={() => navigate("/search")} className="gradient-primary text-primary-foreground rounded-xl w-full h-11">
+      <div className="min-h-screen flex items-center justify-center px-4 bg-background">
+        <div className="bg-card border border-border/50 rounded-2xl p-8 max-w-md w-full text-center space-y-6 shadow-xl">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+            <Clock className="h-8 w-8 text-destructive" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="font-display text-2xl font-bold text-foreground">Trajet expiré</h1>
+            <p className="text-muted-foreground leading-relaxed">
+              Ce trajet est déjà passé et ne peut plus être réservé. Veuillez choisir un autre départ.
+            </p>
+          </div>
+          <Button onClick={() => navigate("/search")} className="gradient-primary text-primary-foreground rounded-xl w-full h-12 font-display font-semibold shadow-lg hover:shadow-primary/20 transition-all">
             Rechercher un autre trajet
           </Button>
         </div>

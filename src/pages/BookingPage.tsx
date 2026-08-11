@@ -133,12 +133,18 @@ const BookingPage = () => {
   }
   if (hoursUntilTrip < 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-md w-full text-center space-y-4">
-          <AlertTriangle className="h-12 w-12 mx-auto text-destructive" />
-          <h1 className="font-display text-xl font-bold">Trajet expiré</h1>
-          <p className="text-sm text-muted-foreground">Ce trajet est déjà passé, la réservation n'est plus possible.</p>
-          <Button onClick={() => navigate("/search")} className="gradient-primary text-primary-foreground rounded-xl w-full h-11">
+      <div className="min-h-screen flex items-center justify-center px-4 bg-background">
+        <div className="bg-card border border-border/50 rounded-2xl p-8 max-w-md w-full text-center space-y-6 shadow-xl">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+            <AlertTriangle className="h-8 w-8 text-destructive" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="font-display text-2xl font-bold text-foreground">Trajet expiré</h1>
+            <p className="text-muted-foreground leading-relaxed">
+              Ce trajet est déjà passé, la réservation n'est plus possible.
+            </p>
+          </div>
+          <Button onClick={() => navigate("/search")} className="gradient-primary text-primary-foreground rounded-xl w-full h-12 font-display font-semibold shadow-lg hover:shadow-primary/20 transition-all">
             Rechercher un autre trajet
           </Button>
         </div>
