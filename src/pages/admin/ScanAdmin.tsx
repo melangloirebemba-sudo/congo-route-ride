@@ -19,11 +19,25 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { QrCode, Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Search, Loader2, ShieldCheck, Building2, Download, Printer } from "lucide-react";
+import { QrCode, Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Search, Loader2, ShieldCheck, Building2, Download, Printer, Zap, WifiOff, Wifi, CloudUpload, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
+import { useScanQueue } from "@/hooks/useScanQueue";
+import { enqueueScan } from "@/lib/scanQueue";
+import ScanHistory from "@/components/ScanHistory";
+
+type FeedEntry = {
+  id: string;
+  code: string;
+  passenger: string;
+  seat: number | null;
+  outcome: "boarded" | "queued" | "rejected";
+  message: string;
+  at: number;
+};
+
 
 
 type BookingResult = {
