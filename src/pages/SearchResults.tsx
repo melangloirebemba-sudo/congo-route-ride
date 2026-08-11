@@ -1,7 +1,7 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Users, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, Users, Loader2, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ListPagination, usePagination } from "@/components/ListPagination";
 
