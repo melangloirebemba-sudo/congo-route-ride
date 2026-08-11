@@ -23,6 +23,7 @@ const Index = () => {
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
   const [date, setDate] = useState("");
+  const today = new Date().toISOString().split("T")[0];
   const [district, setDistrict] = useState("");
   const [branchId, setBranchId] = useState("");
   const [cities, setCities] = useState<string[]>([]);
@@ -162,6 +163,7 @@ const Index = () => {
               <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <input
                 type="date"
+                min={today}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"

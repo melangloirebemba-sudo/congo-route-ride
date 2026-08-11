@@ -1,7 +1,7 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Users, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, Users, Loader2, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ListPagination, usePagination } from "@/components/ListPagination";
 
@@ -33,6 +33,7 @@ const SearchResults = () => {
   const [branchLabel, setBranchLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [when, setWhen] = useState<"all" | "today" | "tomorrow">("all");
+  const todayStr = new Date().toISOString().slice(0, 10);
   const filteredTrips = trips.filter((t) => {
     if (when === "all") return true;
     const now = new Date();
@@ -153,9 +154,27 @@ const SearchResults = () => {
           {from || "Toutes"} → {to || "Toutes"}
         </h1>
         {date && (
-          <p className="text-primary-foreground/70 text-sm mt-1">
-            {new Date(date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-primary-foreground/70 text-sm">
+              {new Date(date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+            </p>
+            <input
+              type="date"
+              min={todayStr}
+              value={date}
+              onChange={(e) => {
+                const newDate = e.target.value;
+                const newParams = new URLSearchParams(params);
+                if (newDate) newParams.set("date", newDate);
+                else newParams.delete("date");
+                navigate(`/search?${newParams.toString()}`, { replace: true });
+              }}
+              className="w-8 h-8 opacity-0 absolute cursor-pointer"
+            />
+            <button className="text-primary-foreground/60 hover:text-primary-foreground transition-colors p-1">
+              <Calendar className="h-4 w-4" />
+            </button>
+          </div>
         )}
         {branchLabel && (
           <p className="text-primary-foreground/80 text-xs mt-1">Agence régionale : {branchLabel}</p>
