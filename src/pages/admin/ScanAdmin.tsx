@@ -19,11 +19,25 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { QrCode, Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Search, Loader2, ShieldCheck, Building2, Download, Printer } from "lucide-react";
+import { QrCode, Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Search, Loader2, ShieldCheck, Building2, Download, Printer, Zap, WifiOff, Wifi, CloudUpload, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
+import { useScanQueue } from "@/hooks/useScanQueue";
+import { enqueueScan } from "@/lib/scanQueue";
+import ScanHistory from "@/components/ScanHistory";
+
+type FeedEntry = {
+  id: string;
+  code: string;
+  passenger: string;
+  seat: number | null;
+  outcome: "boarded" | "queued" | "rejected";
+  message: string;
+  at: number;
+};
+
 
 
 type BookingResult = {
@@ -99,6 +113,62 @@ const ScanAdmin = () => {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [lastCode, setLastCode] = useState<string>("");
 
+  // Offline queue + burst (continuous) boarding mode
+  const { queue, online, syncing, sync } = useScanQueue();
+  const [burst, setBurst] = useState(false);
+  const [feed, setFeed] = useState<FeedEntry[]>([]);
+  const burstRef = useRef(false);
+  useEffect(() => { burstRef.current = burst; }, [burst]);
+
+  const pushFeed = (e: Omit<FeedEntry, "id" | "at">) =>
+    setFeed((f) => [{ ...e, id: `${Date.now()}-${Math.random()}`, at: Date.now() }, ...f].slice(0, 50));
+
+  const feedStats = useMemo(() => ({
+    boarded: feed.filter((f) => f.outcome === "boarded").length,
+    queued: feed.filter((f) => f.outcome === "queued").length,
+    rejected: feed.filter((f) => f.outcome === "rejected").length,
+  }), [feed]);
+
+  /** Validate a ticket without any dialog (burst mode). Falls back to the offline queue. */
+  const autoValidate = async (b: BookingResult) => {
+    const base = { code: b.qr_code, passenger: b.passenger_name, seat: b.seat_number };
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      enqueueScan({
+        bookingId: b.id,
+        qrCode: b.qr_code,
+        passengerName: b.passenger_name,
+        seatNumber: b.seat_number,
+        tripLabel: b.trip ? `${b.trip.departure} → ${b.trip.destination}` : null,
+      });
+      pushFeed({ ...base, outcome: "queued", message: "Hors ligne — en attente de synchronisation" });
+      toast.info("Hors ligne : embarquement mis en file d'attente");
+      return;
+    }
+    const { data, error } = await supabase.rpc("check_in_booking", { _booking_id: b.id });
+    if (error) {
+      enqueueScan({
+        bookingId: b.id,
+        qrCode: b.qr_code,
+        passengerName: b.passenger_name,
+        seatNumber: b.seat_number,
+        tripLabel: b.trip ? `${b.trip.departure} → ${b.trip.destination}` : null,
+      });
+      pushFeed({ ...base, outcome: "queued", message: "Réseau instable — mis en file d'attente" });
+      return;
+    }
+    const res = (data ?? {}) as { ok?: boolean; message?: string };
+    if (res.ok) {
+      pushFeed({ ...base, outcome: "boarded", message: res.message || "Embarquement validé" });
+      setVerdict("used");
+      setBooking({ ...b, status: "used", boarding_status: "boarded" });
+      toast.success(`${b.passenger_name} — embarqué`);
+    } else {
+      pushFeed({ ...base, outcome: "rejected", message: res.message || "Validation refusée" });
+      toast.error(res.message || "Validation refusée");
+    }
+  };
+
+
   // Filters propagated from the Boarding dashboard so scanning stays in-context.
   const [searchParams] = useSearchParams();
   const filterDateFrom = searchParams.get("date_from") || "";
@@ -138,10 +208,24 @@ const ScanAdmin = () => {
     const trimmed = code.trim();
     if (!trimmed || trimmed === lastCode) return;
     setLastCode(trimmed);
+    if (burstRef.current) {
+      // allow the same ticket to be re-scanned after a short cooldown
+      setTimeout(() => setLastCode(""), 2500);
+    }
+
+    // Fully offline: we cannot read the booking — queue the code, resolved at sync time.
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      enqueueScan({ bookingId: "", qrCode: trimmed });
+      pushFeed({ code: trimmed, passenger: "—", seat: null, outcome: "queued", message: "Hors ligne — en attente de synchronisation" });
+      toast.info("Hors ligne : billet mis en file d'attente");
+      return;
+    }
+
     setLoading(true);
     setBooking(null);
     setVerdict(null);
     setRpcError(null);
+
 
     const { data, error } = await supabase
       .from("bookings")
@@ -178,11 +262,11 @@ const ScanAdmin = () => {
         : true; // agency owner: no branch restriction
       if (!sameAgency || !branchMatches) {
         setVerdict("notfound");
-        toast.error(
-          managerBranchId
-            ? "Ce billet n'est pas embarquable dans votre sous-agence"
-            : "Ce billet n'appartient pas à votre agence"
-        );
+        const msg = managerBranchId
+          ? "Ce billet n'est pas embarquable dans votre sous-agence"
+          : "Ce billet n'appartient pas à votre agence";
+        if (burstRef.current) pushFeed({ code: trimmed, passenger: b.passenger_name, seat: b.seat_number, outcome: "rejected", message: msg });
+        toast.error(msg);
         return;
       }
     }
@@ -197,9 +281,21 @@ const ScanAdmin = () => {
     else if (b.trip?.date && new Date(b.trip.date) < new Date(new Date().toDateString())) v = "expired";
 
     setVerdict(v);
+
+    if (burstRef.current) {
+      if (v === "valid") {
+        await autoValidate(b);
+      } else {
+        pushFeed({ code: trimmed, passenger: b.passenger_name, seat: b.seat_number, outcome: "rejected", message: verdictMeta[v].label });
+        toast.error(verdictMeta[v].label);
+      }
+      return;
+    }
+
     if (v === "valid") toast.success("Billet valide");
     else toast.warning(verdictMeta[v].label);
   };
+
 
 
 
@@ -459,7 +555,85 @@ const ScanAdmin = () => {
         </div>
       )}
 
+      {/* Connectivity + offline queue */}
+      <div className={`rounded-lg border p-3 flex flex-wrap items-center gap-3 text-sm ${online ? "bg-muted/40" : "border-amber-500/40 bg-amber-500/10"}`}>
+        <span className="flex items-center gap-1.5 font-medium">
+          {online ? <Wifi className="h-4 w-4 text-green-600" /> : <WifiOff className="h-4 w-4 text-amber-600" />}
+          {online ? "En ligne" : "Hors ligne — validations mises en file d'attente"}
+        </span>
+        <Badge variant="outline" className="gap-1">
+          <Clock className="h-3 w-3" /> En attente : {queue.length}
+        </Badge>
+        {queue.length > 0 && (
+          <Button size="sm" variant="outline" onClick={sync} disabled={!online || syncing}>
+            {syncing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CloudUpload className="h-4 w-4 mr-1" />}
+            Synchroniser
+          </Button>
+        )}
+        <Button
+          size="sm"
+          variant={burst ? "default" : "outline"}
+          onClick={() => setBurst((v) => !v)}
+          className="ml-auto"
+        >
+          <Zap className="h-4 w-4 mr-1" /> Mode rafale {burst ? "activé" : "désactivé"}
+        </Button>
+      </div>
 
+      {queue.length > 0 && (
+        <div className="rounded-lg border p-3 space-y-1 text-xs">
+          <div className="font-medium text-sm mb-1">Billets en attente de synchronisation</div>
+          {queue.slice(0, 5).map((q) => (
+            <div key={q.id} className="flex items-center justify-between gap-2">
+              <span className="truncate">
+                <code>{q.qrCode}</code>{q.passengerName ? ` · ${q.passengerName}` : ""}
+              </span>
+              <span className="text-muted-foreground whitespace-nowrap">
+                {format(new Date(q.queuedAt), "HH:mm")}{q.attempts > 0 ? ` · ${q.attempts} essai(s)` : ""}
+              </span>
+            </div>
+          ))}
+          {queue.length > 5 && <div className="text-muted-foreground">+ {queue.length - 5} autre(s)</div>}
+        </div>
+      )}
+
+      {burst && (
+        <Card className="border-primary/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Zap className="h-4 w-4 text-primary" /> Mode rafale — embarquement continu
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Chaque billet valide scanné est validé automatiquement, sans confirmation. Laissez la caméra active et enchaînez les passagers.
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/30">Embarqués : {feedStats.boarded}</Badge>
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30">En attente : {feedStats.queued}</Badge>
+              <Badge variant="outline" className="bg-red-500/10 text-red-700 border-red-500/30">Rejetés : {feedStats.rejected}</Badge>
+              {feed.length > 0 && (
+                <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => setFeed([])}>Vider</Button>
+              )}
+            </div>
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {feed.length === 0 && <p className="text-sm text-muted-foreground">Aucun billet scanné pour l'instant.</p>}
+              {feed.map((f) => (
+                <div key={f.id} className="rounded-md border p-2 text-xs flex items-start gap-2">
+                  {f.outcome === "boarded" ? <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                    : f.outcome === "queued" ? <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+                    : <XCircle className="h-4 w-4 text-red-600 shrink-0" />}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium truncate">{f.passenger}{f.seat != null ? ` · Siège #${f.seat}` : ""}</div>
+                    <div className="text-muted-foreground break-all"><code>{f.code}</code> — {f.message}</div>
+                  </div>
+                  <span className="text-muted-foreground whitespace-nowrap">{format(new Date(f.at), "HH:mm:ss")}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -776,6 +950,9 @@ const ScanAdmin = () => {
           </CardContent>
         </Card>
       </div>
+
+      <ScanHistory />
+
     </div>
   );
 };
