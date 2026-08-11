@@ -950,6 +950,9 @@ const ScanAdmin = () => {
           </CardContent>
         </Card>
       </div>
+
+      <ScanHistory />
+
     </div>
   );
 };
