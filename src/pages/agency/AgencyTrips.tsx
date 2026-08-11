@@ -552,10 +552,18 @@ const AgencyTrips = () => {
                 )}
 
                 {form.date && form.until && form.repeat !== "none" ? (
-                  <p className="text-[11px] text-muted-foreground">
-                    {buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until).length} date(s) programmée(s)
-                    (max 120), du {form.date} au {form.until}. Les doublons seront ignorés.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-muted-foreground">
+                      {previewDates.length} date(s) programmée(s) (max 120), du {form.date} au {form.until}.
+                    </p>
+                    <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-2 border rounded bg-background/50">
+                      {previewDates.map((d) => (
+                        <Badge key={d} variant="secondary" className="text-[10px] py-0 px-1.5 h-5 flex items-center gap-1">
+                          <Check className="h-2 w-2" /> {format(parseISO(d), "dd MMM", { locale: fr })}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
                 ) : (
                   <p className="text-[11px] text-muted-foreground">
                     {form.repeat === "none" ? "Un seul départ sera créé." : "Sélectionnez une date de fin pour activer la récurrence."}
