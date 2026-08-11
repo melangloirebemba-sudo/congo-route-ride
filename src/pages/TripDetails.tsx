@@ -182,11 +182,31 @@ const TripDetails = () => {
             animate={{ opacity: 1, y: 0 }}
             className="bg-card rounded-2xl p-4 border border-border/50"
           >
-            <h2 className="font-display font-semibold mb-1">Choisir la date de départ</h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-display font-semibold">Choisir la date de départ</h2>
+              <div className="relative">
+                <input
+                  type="date"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => {
+                    const selectedDate = e.target.value;
+                    const found = occurrences.find(o => o.date === selectedDate);
+                    if (found) {
+                      navigate(`/trip/${found.id}`, { replace: true });
+                    }
+                  }}
+                />
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-2 rounded-lg border-primary/20 hover:bg-primary/5">
+                  <Calendar className="h-3 w-3 text-primary" />
+                  Calendrier
+                </Button>
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground mb-3">
               Ce trajet circule à plusieurs dates. Sélectionnez celle qui vous convient.
             </p>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {occurrences.map((o) => {
                 const active = o.id === trip.id;
                 const full = o.available_seats <= 0;
@@ -195,12 +215,12 @@ const TripDetails = () => {
                     key={o.id}
                     disabled={full}
                     onClick={() => navigate(`/trip/${o.id}`, { replace: true })}
-                    className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap border transition-colors ${
+                    className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap border transition-all ${
                       active
-                        ? "bg-primary text-primary-foreground border-primary"
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm scale-105"
                         : full
                           ? "bg-muted text-muted-foreground border-border opacity-60"
-                          : "bg-background text-foreground border-border hover:bg-secondary"
+                          : "bg-background text-foreground border-border hover:bg-secondary hover:border-primary/30"
                     }`}
                   >
                     {new Date(o.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
