@@ -555,7 +555,85 @@ const ScanAdmin = () => {
         </div>
       )}
 
+      {/* Connectivity + offline queue */}
+      <div className={`rounded-lg border p-3 flex flex-wrap items-center gap-3 text-sm ${online ? "bg-muted/40" : "border-amber-500/40 bg-amber-500/10"}`}>
+        <span className="flex items-center gap-1.5 font-medium">
+          {online ? <Wifi className="h-4 w-4 text-green-600" /> : <WifiOff className="h-4 w-4 text-amber-600" />}
+          {online ? "En ligne" : "Hors ligne — validations mises en file d'attente"}
+        </span>
+        <Badge variant="outline" className="gap-1">
+          <Clock className="h-3 w-3" /> En attente : {queue.length}
+        </Badge>
+        {queue.length > 0 && (
+          <Button size="sm" variant="outline" onClick={sync} disabled={!online || syncing}>
+            {syncing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CloudUpload className="h-4 w-4 mr-1" />}
+            Synchroniser
+          </Button>
+        )}
+        <Button
+          size="sm"
+          variant={burst ? "default" : "outline"}
+          onClick={() => setBurst((v) => !v)}
+          className="ml-auto"
+        >
+          <Zap className="h-4 w-4 mr-1" /> Mode rafale {burst ? "activé" : "désactivé"}
+        </Button>
+      </div>
 
+      {queue.length > 0 && (
+        <div className="rounded-lg border p-3 space-y-1 text-xs">
+          <div className="font-medium text-sm mb-1">Billets en attente de synchronisation</div>
+          {queue.slice(0, 5).map((q) => (
+            <div key={q.id} className="flex items-center justify-between gap-2">
+              <span className="truncate">
+                <code>{q.qrCode}</code>{q.passengerName ? ` · ${q.passengerName}` : ""}
+              </span>
+              <span className="text-muted-foreground whitespace-nowrap">
+                {format(new Date(q.queuedAt), "HH:mm")}{q.attempts > 0 ? ` · ${q.attempts} essai(s)` : ""}
+              </span>
+            </div>
+          ))}
+          {queue.length > 5 && <div className="text-muted-foreground">+ {queue.length - 5} autre(s)</div>}
+        </div>
+      )}
+
+      {burst && (
+        <Card className="border-primary/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Zap className="h-4 w-4 text-primary" /> Mode rafale — embarquement continu
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Chaque billet valide scanné est validé automatiquement, sans confirmation. Laissez la caméra active et enchaînez les passagers.
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/30">Embarqués : {feedStats.boarded}</Badge>
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30">En attente : {feedStats.queued}</Badge>
+              <Badge variant="outline" className="bg-red-500/10 text-red-700 border-red-500/30">Rejetés : {feedStats.rejected}</Badge>
+              {feed.length > 0 && (
+                <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => setFeed([])}>Vider</Button>
+              )}
+            </div>
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {feed.length === 0 && <p className="text-sm text-muted-foreground">Aucun billet scanné pour l'instant.</p>}
+              {feed.map((f) => (
+                <div key={f.id} className="rounded-md border p-2 text-xs flex items-start gap-2">
+                  {f.outcome === "boarded" ? <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                    : f.outcome === "queued" ? <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+                    : <XCircle className="h-4 w-4 text-red-600 shrink-0" />}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium truncate">{f.passenger}{f.seat != null ? ` · Siège #${f.seat}` : ""}</div>
+                    <div className="text-muted-foreground break-all"><code>{f.code}</code> — {f.message}</div>
+                  </div>
+                  <span className="text-muted-foreground whitespace-nowrap">{format(new Date(f.at), "HH:mm:ss")}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
 
       <div className="grid gap-6 lg:grid-cols-2">
