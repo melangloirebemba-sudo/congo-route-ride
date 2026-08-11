@@ -22,7 +22,7 @@ const emptyForm = {
   price: "", total_seats: "", bus_type: "Standard",
   assignAll: true as boolean,
   branchIds: [] as string[],
-  repeat: "none" as "none" | "daily" | "weekly" | "monthly",
+  repeat: "daily" as "none" | "daily" | "weekly" | "monthly",
   weekDays: [] as number[],
   until: "",
 };
