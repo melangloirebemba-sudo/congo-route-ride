@@ -170,9 +170,9 @@ const AgencyTrips = () => {
 
       // Anti-doublons : un trajet identique (départ, destination, heure, date)
       // ne doit pas déjà exister en dehors des trajets modifiés.
-      const targetDates = scope === "series"
-        ? series.dates
-        : [form.date];
+      const targetDates = scope === "series" ? series.dates : [form.date];
+      
+      // In series mode, we only check for clashes on dates that ARE NOT part of the series being edited
       const { data: clashes } = await supabase
         .from("trips")
         .select("id, date")
@@ -181,12 +181,11 @@ const AgencyTrips = () => {
         .eq("destination", form.destination)
         .eq("departure_time", form.departure_time)
         .in("date", targetDates);
+
       const conflicting = (clashes || []).filter((c: any) => !targetIds.includes(c.id));
       if (conflicting.length > 0) {
         setSaving(false);
-        toast.error(
-          `Un trajet identique existe déjà sur : ${conflicting.map((c: any) => c.date).join(", ")}`,
-        );
+        toast.error(`Un trajet identique existe déjà sur : ${conflicting.map((c: any) => c.date).join(", ")}`);
         return;
       }
 
@@ -307,7 +306,7 @@ const AgencyTrips = () => {
       .eq("destination", trip.destination)
       .eq("departure_time", trip.departure_time)
       .gte("date", today)
-      .order("date");
+      .order("date", { ascending: false });
     const ids = Array.from(new Set([...(sib || []).map((s: any) => s.id), trip.id]));
     const dates = Array.from(new Set([...(sib || []).map((s: any) => s.date), trip.date])).sort();
 
