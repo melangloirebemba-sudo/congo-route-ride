@@ -252,6 +252,26 @@ const AgencyTrips = () => {
     fetchTrips();
   };
 
+  const deleteAllTrips = async () => {
+    if (!agencyId) return;
+    if (!confirm("Êtes-vous sûr de vouloir supprimer TOUS les trajets ? Cette action est irréversible et supprimera également les réservations associées en cascade.")) return;
+    
+    setSaving(true);
+    const { error } = await supabase
+      .from("trips")
+      .delete()
+      .eq("agency_id", agencyId);
+      
+    setSaving(false);
+    if (error) {
+      toast.error("Erreur lors de la suppression : " + error.message);
+      return;
+    }
+    
+    toast.success("Tous les trajets ont été supprimés");
+    fetchTrips();
+  };
+
   const openEdit = async (trip: Trip) => {
     const linked = tripBranchMap[trip.id] || [];
     const allSelected = branches.length > 0 && linked.length === branches.length;
