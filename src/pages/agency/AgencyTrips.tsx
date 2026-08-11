@@ -518,8 +518,9 @@ const AgencyTrips = () => {
                   </div>
                 )}
 
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Jours de circulation (aucun = tous les jours)</label>
+                {form.repeat === "weekly" && (
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Jours de circulation *</label>
                   <div className="flex flex-wrap gap-2">
                     {WEEK_DAYS.map((d) => {
                       const on = form.weekDays.includes(d.value);
