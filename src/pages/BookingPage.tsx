@@ -94,8 +94,8 @@ const BookingPage = () => {
   }, [trip]);
 
   const canReserveLater = hoursUntilTrip > 48;
-  const canBuyDirect = hoursUntilTrip >= 0; // always allow direct, esp <24h forced
-  const tooLate = hoursUntilTrip < 0;
+  const canBuyDirect = hoursUntilTrip >= -0.083; // Allow booking up to 5 mins past (approx -0.083 hours)
+  const tooLate = hoursUntilTrip < -0.083;
 
   // Force "now" when reservation not allowed
   useEffect(() => {
