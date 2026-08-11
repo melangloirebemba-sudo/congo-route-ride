@@ -47,9 +47,31 @@ interface BookingRow {
     destination: string;
     date: string;
     departure_time: string;
-    agencies: { name: string } | null;
+    agencies: { name: string; logo: string | null } | null;
   } | null;
 }
+
+/** Load an image URL / data-URI into a data URL usable by jsPDF. */
+const toDataUrl = async (src: string): Promise<{ data: string; format: string } | null> => {
+  try {
+    if (src.startsWith("data:image")) {
+      return { data: src, format: src.includes("png") ? "PNG" : "JPEG" };
+    }
+    const res = await fetch(src, { mode: "cors" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob.type.startsWith("image/")) return null;
+    const data: string = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+    return { data, format: blob.type.includes("png") ? "PNG" : "JPEG" };
+  } catch {
+    return null;
+  }
+};
 
 interface EventItem {
   key: string;
