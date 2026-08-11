@@ -94,8 +94,8 @@ const BookingPage = () => {
   }, [trip]);
 
   const canReserveLater = hoursUntilTrip > 48;
-  const canBuyDirect = hoursUntilTrip >= 0; // always allow direct, esp <24h forced
-  const tooLate = hoursUntilTrip < 0;
+  const canBuyDirect = hoursUntilTrip >= -0.083; // Allow booking up to 5 mins past (approx -0.083 hours)
+  const tooLate = hoursUntilTrip < -0.083;
 
   // Force "now" when reservation not allowed
   useEffect(() => {
@@ -131,7 +131,7 @@ const BookingPage = () => {
   if (!trip) {
     return <div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Trajet introuvable</p></div>;
   }
-  if (hoursUntilTrip < 0) {
+  if (tooLate) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 bg-background">
         <div className="bg-card border border-border/50 rounded-2xl p-8 max-w-md w-full text-center space-y-6 shadow-xl">

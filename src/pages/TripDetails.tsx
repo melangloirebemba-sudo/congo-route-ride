@@ -90,7 +90,9 @@ const TripDetails = () => {
   }
 
   const departDateTime = new Date(`${trip.date}T${trip.departure_time || "00:00"}`);
-  const isPast = departDateTime.getTime() < Date.now();
+  // We allow booking until the exact departure time. 
+  // We use a 5-minute grace period to account for minor clock desyncs.
+  const isPast = departDateTime.getTime() + (5 * 60 * 1000) < Date.now();
 
   if (isPast) {
     return (
