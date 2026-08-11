@@ -131,7 +131,7 @@ const BookingPage = () => {
   if (!trip) {
     return <div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Trajet introuvable</p></div>;
   }
-  if (hoursUntilTrip < 0) {
+  if (tooLate) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 bg-background">
         <div className="bg-card border border-border/50 rounded-2xl p-8 max-w-md w-full text-center space-y-6 shadow-xl">
