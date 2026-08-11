@@ -153,29 +153,50 @@ const SearchResults = () => {
         <h1 className="font-display text-xl font-bold text-primary-foreground">
           {from || "Toutes"} → {to || "Toutes"}
         </h1>
-        {date && (
-          <div className="flex items-center gap-2 mt-1">
-            <p className="text-primary-foreground/70 text-sm">
-              {new Date(date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-            </p>
-            <input
-              type="date"
-              min={todayStr}
-              value={date}
-              onChange={(e) => {
-                const newDate = e.target.value;
-                const newParams = new URLSearchParams(params);
-                if (newDate) newParams.set("date", newDate);
-                else newParams.delete("date");
-                navigate(`/search?${newParams.toString()}`, { replace: true });
-              }}
-              className="w-8 h-8 opacity-0 absolute cursor-pointer"
-            />
-            <button className="text-primary-foreground/60 hover:text-primary-foreground transition-colors p-1">
-              <Calendar className="h-4 w-4" />
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2 mt-1 min-h-[24px]">
+          {date ? (
+            <div className="flex items-center gap-2 relative">
+              <p className="text-primary-foreground/70 text-sm">
+                {new Date(date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+              </p>
+              <input
+                type="date"
+                min={todayStr}
+                value={date}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  const newParams = new URLSearchParams(params);
+                  if (newDate) newParams.set("date", newDate);
+                  else newParams.delete("date");
+                  navigate(`/search?${newParams.toString()}`, { replace: true });
+                }}
+                className="w-full h-full opacity-0 absolute inset-0 cursor-pointer z-10"
+              />
+              <button className="text-primary-foreground/60 hover:text-primary-foreground transition-colors p-1">
+                <Calendar className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 relative">
+              <p className="text-primary-foreground/70 text-sm italic">Aucune date sélectionnée</p>
+              <input
+                type="date"
+                min={todayStr}
+                value=""
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  const newParams = new URLSearchParams(params);
+                  if (newDate) newParams.set("date", newDate);
+                  navigate(`/search?${newParams.toString()}`, { replace: true });
+                }}
+                className="w-full h-full opacity-0 absolute inset-0 cursor-pointer z-10"
+              />
+              <button className="text-primary-foreground/60 hover:text-primary-foreground transition-colors p-1">
+                <Calendar className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
         {branchLabel && (
           <p className="text-primary-foreground/80 text-xs mt-1">Agence régionale : {branchLabel}</p>
         )}
