@@ -28,7 +28,10 @@ export const useScanQueue = () => {
   const [syncing, setSyncing] = useState(false);
   const [lastResults, setLastResults] = useState<SyncOutcome[]>([]);
 
-  useEffect(() => subscribeQueue(setQueue), []);
+  useEffect(() => {
+    const unsub = subscribeQueue(setQueue);
+    return () => { unsub(); };
+  }, []);
 
   const sync = useCallback(async () => {
     const items = readQueue();
