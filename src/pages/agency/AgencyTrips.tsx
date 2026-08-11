@@ -435,13 +435,14 @@ const AgencyTrips = () => {
                       <TableCell className="font-medium text-sm">{trip.departure} → {trip.destination}</TableCell>
                       <TableCell className="text-sm">{trip.date}</TableCell>
                       <TableCell className="text-xs">{trip.departure_time} - {trip.arrival_time}</TableCell>
-                      <span className="text-sm font-semibold">{trip.price.toLocaleString()} FCFA</span>
-                      {(trip as any).occurrences > 1 && (
-                        <Badge variant="secondary" className="text-[10px] ml-2">
-                          {(trip as any).occurrences} dates
-                        </Badge>
-                      )}
-                    </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-semibold">{trip.price.toLocaleString()} FCFA</span>
+                        {(trip as any).occurrences > 1 && (
+                          <Badge variant="secondary" className="text-[10px] ml-2">
+                            {(trip as any).occurrences} dates
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <span className="text-sm">{trip.available_seats}/{trip.total_seats}</span>
                       </TableCell>
