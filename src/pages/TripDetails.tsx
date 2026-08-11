@@ -191,7 +191,7 @@ const TripDetails = () => {
                   min={new Date().toISOString().split("T")[0]}
                   onChange={(e) => {
                     const selectedDate = e.target.value;
-                    const found = occurrences.find(o => o.date === selectedDate);
+                    const found = occurrences.find(o => o.date === selectedDate && o.available_seats > 0);
                     if (found) {
                       navigate(`/trip/${found.id}`, { replace: true });
                     }
