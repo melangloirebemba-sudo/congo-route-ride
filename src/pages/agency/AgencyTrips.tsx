@@ -95,6 +95,29 @@ const AgencyTrips = () => {
   const [series, setSeries] = useState<SeriesInfo>({ ids: [], dates: [], bookingsSeries: 0, bookingsOne: 0 });
   const [saving, setSaving] = useState(false);
 
+  // Group trips by unique route/time to show only one line per "Trip Series"
+  const groupedTrips = useMemo(() => {
+    const map = new Map<string, Trip & { occurrences: number; nextDate: string }>();
+    trips.forEach(t => {
+      const key = `${t.departure}|${t.destination}|${t.departure_time}`;
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, { ...t, occurrences: 1, nextDate: t.date });
+      } else {
+        existing.occurrences++;
+        if (t.date < existing.nextDate && t.date >= new Date().toISOString().split('T')[0]) {
+          // Keep the closest upcoming date as the primary reference
+          existing.nextDate = t.date;
+          existing.id = t.id;
+          existing.date = t.date;
+          existing.available_seats = t.available_seats;
+          existing.total_seats = t.total_seats;
+        }
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
+  }, [trips]);
+
 
 
   const fetchTrips = async () => {
@@ -170,9 +193,9 @@ const AgencyTrips = () => {
 
       // Anti-doublons : un trajet identique (départ, destination, heure, date)
       // ne doit pas déjà exister en dehors des trajets modifiés.
-      const targetDates = scope === "series"
-        ? series.dates
-        : [form.date];
+      const targetDates = scope === "series" ? series.dates : [form.date];
+      
+      // In series mode, we only check for clashes on dates that ARE NOT part of the series being edited
       const { data: clashes } = await supabase
         .from("trips")
         .select("id, date")
@@ -181,12 +204,11 @@ const AgencyTrips = () => {
         .eq("destination", form.destination)
         .eq("departure_time", form.departure_time)
         .in("date", targetDates);
+
       const conflicting = (clashes || []).filter((c: any) => !targetIds.includes(c.id));
       if (conflicting.length > 0) {
         setSaving(false);
-        toast.error(
-          `Un trajet identique existe déjà sur : ${conflicting.map((c: any) => c.date).join(", ")}`,
-        );
+        toast.error(`Un trajet identique existe déjà sur : ${conflicting.map((c: any) => c.date).join(", ")}`);
         return;
       }
 
@@ -244,11 +266,39 @@ const AgencyTrips = () => {
   };
 
 
-  const deleteTrip = async (id: string) => {
-    if (!confirm("Supprimer ce trajet ?")) return;
-    const { error } = await supabase.from("trips").delete().eq("id", id);
+  const deleteTrip = async (trip: Trip) => {
+    // Check if it's a series or a single trip
+    const seriesIds = trips
+      .filter(t => t.departure === trip.departure && t.destination === trip.destination && t.departure_time === trip.departure_time)
+      .map(t => t.id);
+
+    if (seriesIds.length > 1) {
+      if (confirm(`Ce trajet a ${seriesIds.length} occurrences. Voulez-vous supprimer TOUTE LA SÉRIE ?\n\nCliquez sur Annuler pour ne supprimer QUE le départ du ${trip.date}.`)) {
+        const { error } = await supabase.from("trips").delete().in("id", seriesIds);
+        if (error) { toast.error(error.message); return; }
+        toast.success("Série de trajets supprimée");
+        fetchTrips();
+        return;
+      }
+    }
+
+    if (!confirm(`Supprimer le trajet du ${trip.date} ?`)) return;
+    const { error } = await supabase.from("trips").delete().eq("id", trip.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Trajet supprimé");
+    fetchTrips();
+  };
+
+  const deleteAllTrips = async () => {
+    if (!agencyId) return;
+    if (!confirm("ATTENTION : Êtes-vous sûr de vouloir supprimer ABSOLUMENT TOUS les trajets de votre agence ? Cette action est irréversible.")) return;
+    
+    setSaving(true);
+    const { error } = await supabase.from("trips").delete().eq("agency_id", agencyId);
+    setSaving(false);
+    
+    if (error) { toast.error(error.message); return; }
+    toast.success("Tous les trajets ont été supprimés");
     fetchTrips();
   };
 
@@ -287,7 +337,7 @@ const AgencyTrips = () => {
       .eq("destination", trip.destination)
       .eq("departure_time", trip.departure_time)
       .gte("date", today)
-      .order("date");
+      .order("date", { ascending: false });
     const ids = Array.from(new Set([...(sib || []).map((s: any) => s.id), trip.id]));
     const dates = Array.from(new Set([...(sib || []).map((s: any) => s.date), trip.date])).sort();
 
@@ -320,7 +370,7 @@ const AgencyTrips = () => {
     }));
   };
 
-  const pg = usePagination(trips, 5, [], { paramKey: "" });
+  const pg = usePagination(groupedTrips, 5, [], { paramKey: "" });
 
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -350,11 +400,18 @@ const AgencyTrips = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold">Mes trajets</h1>
-          <p className="text-sm text-muted-foreground">{trips.length} trajets enregistrés</p>
+          <p className="text-sm text-muted-foreground">{groupedTrips.length} séries de trajets ({trips.length} départs programmés)</p>
         </div>
-        <Button onClick={openNew} className="gradient-primary text-primary-foreground">
-          <Plus className="h-4 w-4 mr-1" /> Nouveau trajet
-        </Button>
+        <div className="flex gap-2">
+          {trips.length > 0 && (
+            <Button variant="outline" onClick={deleteAllTrips} className="text-destructive border-destructive hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4 mr-1" /> Tout supprimer
+            </Button>
+          )}
+          <Button onClick={openNew} className="gradient-primary text-primary-foreground">
+            <Plus className="h-4 w-4 mr-1" /> Nouveau trajet
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -386,7 +443,14 @@ const AgencyTrips = () => {
                       <TableCell className="font-medium text-sm">{trip.departure} → {trip.destination}</TableCell>
                       <TableCell className="text-sm">{trip.date}</TableCell>
                       <TableCell className="text-xs">{trip.departure_time} - {trip.arrival_time}</TableCell>
-                      <TableCell className="font-semibold">{trip.price.toLocaleString()} FCFA</TableCell>
+                      <TableCell>
+                        <span className="text-sm font-semibold">{trip.price.toLocaleString()} FCFA</span>
+                        {(trip as any).occurrences > 1 && (
+                          <Badge variant="secondary" className="text-[10px] ml-2">
+                            {(trip as any).occurrences} dates
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <span className="text-sm">{trip.available_seats}/{trip.total_seats}</span>
                       </TableCell>
@@ -401,7 +465,7 @@ const AgencyTrips = () => {
                           <Button size="icon" variant="ghost" onClick={() => openEdit(trip)} title="Modifier">
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button size="icon" variant="ghost" onClick={() => deleteTrip(trip.id)} title="Supprimer">
+                          <Button size="icon" variant="ghost" onClick={() => deleteTrip(trip)} title="Supprimer">
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
