@@ -113,6 +113,62 @@ const ScanAdmin = () => {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [lastCode, setLastCode] = useState<string>("");
 
+  // Offline queue + burst (continuous) boarding mode
+  const { queue, online, syncing, sync } = useScanQueue();
+  const [burst, setBurst] = useState(false);
+  const [feed, setFeed] = useState<FeedEntry[]>([]);
+  const burstRef = useRef(false);
+  useEffect(() => { burstRef.current = burst; }, [burst]);
+
+  const pushFeed = (e: Omit<FeedEntry, "id" | "at">) =>
+    setFeed((f) => [{ ...e, id: `${Date.now()}-${Math.random()}`, at: Date.now() }, ...f].slice(0, 50));
+
+  const feedStats = useMemo(() => ({
+    boarded: feed.filter((f) => f.outcome === "boarded").length,
+    queued: feed.filter((f) => f.outcome === "queued").length,
+    rejected: feed.filter((f) => f.outcome === "rejected").length,
+  }), [feed]);
+
+  /** Validate a ticket without any dialog (burst mode). Falls back to the offline queue. */
+  const autoValidate = async (b: BookingResult) => {
+    const base = { code: b.qr_code, passenger: b.passenger_name, seat: b.seat_number };
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      enqueueScan({
+        bookingId: b.id,
+        qrCode: b.qr_code,
+        passengerName: b.passenger_name,
+        seatNumber: b.seat_number,
+        tripLabel: b.trip ? `${b.trip.departure} → ${b.trip.destination}` : null,
+      });
+      pushFeed({ ...base, outcome: "queued", message: "Hors ligne — en attente de synchronisation" });
+      toast.info("Hors ligne : embarquement mis en file d'attente");
+      return;
+    }
+    const { data, error } = await supabase.rpc("check_in_booking", { _booking_id: b.id });
+    if (error) {
+      enqueueScan({
+        bookingId: b.id,
+        qrCode: b.qr_code,
+        passengerName: b.passenger_name,
+        seatNumber: b.seat_number,
+        tripLabel: b.trip ? `${b.trip.departure} → ${b.trip.destination}` : null,
+      });
+      pushFeed({ ...base, outcome: "queued", message: "Réseau instable — mis en file d'attente" });
+      return;
+    }
+    const res = (data ?? {}) as { ok?: boolean; message?: string };
+    if (res.ok) {
+      pushFeed({ ...base, outcome: "boarded", message: res.message || "Embarquement validé" });
+      setVerdict("used");
+      setBooking({ ...b, status: "used", boarding_status: "boarded" });
+      toast.success(`${b.passenger_name} — embarqué`);
+    } else {
+      pushFeed({ ...base, outcome: "rejected", message: res.message || "Validation refusée" });
+      toast.error(res.message || "Validation refusée");
+    }
+  };
+
+
   // Filters propagated from the Boarding dashboard so scanning stays in-context.
   const [searchParams] = useSearchParams();
   const filterDateFrom = searchParams.get("date_from") || "";
