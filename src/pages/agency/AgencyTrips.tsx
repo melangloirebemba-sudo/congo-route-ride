@@ -266,9 +266,24 @@ const AgencyTrips = () => {
   };
 
 
-  const deleteTrip = async (id: string) => {
-    if (!confirm("Supprimer ce trajet ?")) return;
-    const { error } = await supabase.from("trips").delete().eq("id", id);
+  const deleteTrip = async (trip: Trip) => {
+    // Check if it's a series or a single trip
+    const seriesIds = trips
+      .filter(t => t.departure === trip.departure && t.destination === trip.destination && t.departure_time === trip.departure_time)
+      .map(t => t.id);
+
+    if (seriesIds.length > 1) {
+      if (confirm(`Ce trajet a ${seriesIds.length} occurrences. Voulez-vous supprimer TOUTE LA SÉRIE ?\n\nCliquez sur Annuler pour ne supprimer QUE le départ du ${trip.date}.`)) {
+        const { error } = await supabase.from("trips").delete().in("id", seriesIds);
+        if (error) { toast.error(error.message); return; }
+        toast.success("Série de trajets supprimée");
+        fetchTrips();
+        return;
+      }
+    }
+
+    if (!confirm(`Supprimer le trajet du ${trip.date} ?`)) return;
+    const { error } = await supabase.from("trips").delete().eq("id", trip.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Trajet supprimé");
     fetchTrips();
@@ -276,20 +291,13 @@ const AgencyTrips = () => {
 
   const deleteAllTrips = async () => {
     if (!agencyId) return;
-    if (!confirm("Êtes-vous sûr de vouloir supprimer TOUS les trajets ? Cette action est irréversible et supprimera également les réservations associées en cascade.")) return;
+    if (!confirm("ATTENTION : Êtes-vous sûr de vouloir supprimer ABSOLUMENT TOUS les trajets de votre agence ? Cette action est irréversible.")) return;
     
     setSaving(true);
-    const { error } = await supabase
-      .from("trips")
-      .delete()
-      .eq("agency_id", agencyId);
-      
+    const { error } = await supabase.from("trips").delete().eq("agency_id", agencyId);
     setSaving(false);
-    if (error) {
-      toast.error("Erreur lors de la suppression : " + error.message);
-      return;
-    }
     
+    if (error) { toast.error(error.message); return; }
     toast.success("Tous les trajets ont été supprimés");
     fetchTrips();
   };
