@@ -487,17 +487,36 @@ const AgencyTrips = () => {
 
             {!editId && (
               <div className="rounded-lg border p-3 space-y-3 bg-secondary/30">
-                <label className="text-sm font-medium">Trajet récurrent (hebdomadaire)</label>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Date de fin (laisser vide pour une seule date)</label>
-                  <Input
-                    type="date"
-                    aria-label="Date de fin"
-                    value={form.until}
-                    min={form.date || undefined}
-                    onChange={e => setForm(p => ({ ...p, until: e.target.value }))}
-                  />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Fréquence du trajet</label>
+                  <Select
+                    value={form.repeat}
+                    onValueChange={(v: any) => setForm(p => ({ ...p, repeat: v }))}
+                  >
+                    <SelectTrigger className="w-32 h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Une seule fois</SelectItem>
+                      <SelectItem value="daily">Tous les jours</SelectItem>
+                      <SelectItem value="weekly">Hebdomadaire</SelectItem>
+                      <SelectItem value="monthly">Mensuel</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {form.repeat !== "none" && (
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Jusqu'au * (Date de fin)</label>
+                    <Input
+                      type="date"
+                      aria-label="Date de fin"
+                      value={form.until}
+                      min={form.date || undefined}
+                      onChange={e => setForm(p => ({ ...p, until: e.target.value }))}
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Jours de circulation (aucun = tous les jours)</label>
