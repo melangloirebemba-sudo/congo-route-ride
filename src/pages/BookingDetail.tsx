@@ -171,7 +171,7 @@ const BookingDetail = () => {
     if (!id) return;
     const { data, error } = await supabase
       .from("bookings")
-      .select("id, qr_code, seat_number, total_amount, passenger_name, phone, status, payment_status, payment_method, payment_deadline, sale_channel, booking_date, created_at, updated_at, boarding_status, boarded_at, boarding_notes, boarding_branch_id, trip_id, trips(departure, destination, date, departure_time, agencies(name))")
+      .select("id, qr_code, seat_number, total_amount, passenger_name, phone, status, payment_status, payment_method, payment_deadline, sale_channel, booking_date, created_at, updated_at, boarding_status, boarded_at, boarding_notes, boarding_branch_id, trip_id, trips(departure, destination, date, departure_time, agencies(name, logo))")
       .eq("id", id)
       .maybeSingle();
     if (error || !data) { setLoading(false); return; }
