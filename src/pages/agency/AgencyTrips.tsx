@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { Plus, Edit, Trash2, Building2 } from "lucide-react";
+import { Plus, Edit, Trash2, Building2, Calendar as CalendarIcon, Clock, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tables } from "@/integrations/supabase/types";
 import { ListPagination, usePagination } from "@/components/ListPagination";
+import { format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
 
 type Trip = Tables<"trips">;
 type Branch = { id: string; name: string; city: string | null };
@@ -339,6 +341,10 @@ const AgencyTrips = () => {
     return `${ids.length} sous-agences`;
   };
 
+  const previewDates = useMemo(() => {
+    return buildRecurrenceDates(form.date, form.until ? form.repeat : "none", form.weekDays, form.until);
+  }, [form.date, form.repeat, form.weekDays, form.until]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -546,10 +552,18 @@ const AgencyTrips = () => {
                 )}
 
                 {form.date && form.until && form.repeat !== "none" ? (
-                  <p className="text-[11px] text-muted-foreground">
-                    {buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until).length} date(s) programmée(s)
-                    (max 120), du {form.date} au {form.until}. Les doublons seront ignorés.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-muted-foreground">
+                      {previewDates.length} date(s) programmée(s) (max 120), du {form.date} au {form.until}.
+                    </p>
+                    <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-2 border rounded bg-background/50">
+                      {previewDates.map((d) => (
+                        <Badge key={d} variant="secondary" className="text-[10px] py-0 px-1.5 h-5 flex items-center gap-1">
+                          <Check className="h-2 w-2" /> {format(parseISO(d), "dd MMM", { locale: fr })}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
                 ) : (
                   <p className="text-[11px] text-muted-foreground">
                     {form.repeat === "none" ? "Un seul départ sera créé." : "Sélectionnez une date de fin pour activer la récurrence."}
