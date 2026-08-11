@@ -521,37 +521,38 @@ const AgencyTrips = () => {
                 {form.repeat === "weekly" && (
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">Jours de circulation *</label>
-                  <div className="flex flex-wrap gap-2">
-                    {WEEK_DAYS.map((d) => {
-                      const on = form.weekDays.includes(d.value);
-                      return (
-                        <button
-                          key={d.value}
-                          type="button"
-                          aria-pressed={on}
-                          onClick={() => setForm(p => ({
-                            ...p,
-                            weekDays: on ? p.weekDays.filter(x => x !== d.value) : [...p.weekDays, d.value],
-                          }))}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                            on ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-secondary"
-                          }`}
-                        >
-                          {d.label}
-                        </button>
-                      );
-                    })}
+                    <div className="flex flex-wrap gap-2">
+                      {WEEK_DAYS.map((d) => {
+                        const on = form.weekDays.includes(d.value);
+                        return (
+                          <button
+                            key={d.value}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => setForm(p => ({
+                              ...p,
+                              weekDays: on ? p.weekDays.filter(x => x !== d.value) : [...p.weekDays, d.value],
+                            }))}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                              on ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-secondary"
+                            }`}
+                          >
+                            {d.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {form.date && form.until ? (
+                {form.date && form.until && form.repeat !== "none" ? (
                   <p className="text-[11px] text-muted-foreground">
-                    {buildRecurrenceDates(form.date, "weekly", form.weekDays, form.until).length} date(s) programmée(s)
-                    (max 120), du {form.date} au {form.until}. Les dates déjà existantes pour ce trajet seront ignorées.
+                    {buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until).length} date(s) programmée(s)
+                    (max 120), du {form.date} au {form.until}. Les doublons seront ignorés.
                   </p>
                 ) : (
                   <p className="text-[11px] text-muted-foreground">
-                    Sans date de fin, un seul départ sera créé à la date de début.
+                    {form.repeat === "none" ? "Un seul départ sera créé." : "Sélectionnez une date de fin pour activer la récurrence."}
                   </p>
                 )}
               </div>
