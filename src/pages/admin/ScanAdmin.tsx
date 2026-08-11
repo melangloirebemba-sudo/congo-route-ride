@@ -208,10 +208,24 @@ const ScanAdmin = () => {
     const trimmed = code.trim();
     if (!trimmed || trimmed === lastCode) return;
     setLastCode(trimmed);
+    if (burstRef.current) {
+      // allow the same ticket to be re-scanned after a short cooldown
+      setTimeout(() => setLastCode(""), 2500);
+    }
+
+    // Fully offline: we cannot read the booking — queue the code, resolved at sync time.
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      enqueueScan({ bookingId: "", qrCode: trimmed });
+      pushFeed({ code: trimmed, passenger: "—", seat: null, outcome: "queued", message: "Hors ligne — en attente de synchronisation" });
+      toast.info("Hors ligne : billet mis en file d'attente");
+      return;
+    }
+
     setLoading(true);
     setBooking(null);
     setVerdict(null);
     setRpcError(null);
+
 
     const { data, error } = await supabase
       .from("bookings")
