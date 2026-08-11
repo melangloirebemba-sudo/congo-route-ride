@@ -21,6 +21,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { googleCalendarUrl, outlookCalendarUrl, yahooCalendarUrl, downloadIcs, type CalendarEvent } from "@/lib/calendar";
+import { AgencyLogo } from "@/components/LogoUploader";
 
 interface BookingRow {
   id: string;
