@@ -22,7 +22,7 @@ const emptyForm = {
   price: "", total_seats: "", bus_type: "Standard",
   assignAll: true as boolean,
   branchIds: [] as string[],
-  repeat: "none" as "none" | "daily" | "weekly" | "monthly",
+  repeat: "daily" as "none" | "daily" | "weekly" | "monthly",
   weekDays: [] as number[],
   until: "",
 };
@@ -203,7 +203,7 @@ const AgencyTrips = () => {
       );
     } else {
 
-      const dates = buildRecurrenceDates(form.date, form.until ? "weekly" : "none", form.weekDays, form.until);
+      const dates = buildRecurrenceDates(form.date, form.until ? form.repeat : "none", form.weekDays, form.until);
 
       // Anti-doublons : on ignore les dates où ce même trajet (même départ,
       // destination et heure) existe déjà pour l'agence.
@@ -487,51 +487,72 @@ const AgencyTrips = () => {
 
             {!editId && (
               <div className="rounded-lg border p-3 space-y-3 bg-secondary/30">
-                <label className="text-sm font-medium">Trajet récurrent (hebdomadaire)</label>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Date de fin (laisser vide pour une seule date)</label>
-                  <Input
-                    type="date"
-                    aria-label="Date de fin"
-                    value={form.until}
-                    min={form.date || undefined}
-                    onChange={e => setForm(p => ({ ...p, until: e.target.value }))}
-                  />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Fréquence du trajet</label>
+                  <Select
+                    value={form.repeat}
+                    onValueChange={(v: any) => setForm(p => ({ ...p, repeat: v }))}
+                  >
+                    <SelectTrigger className="w-32 h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Une seule fois</SelectItem>
+                      <SelectItem value="daily">Tous les jours</SelectItem>
+                      <SelectItem value="weekly">Hebdomadaire</SelectItem>
+                      <SelectItem value="monthly">Mensuel</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Jours de circulation (aucun = tous les jours)</label>
-                  <div className="flex flex-wrap gap-2">
-                    {WEEK_DAYS.map((d) => {
-                      const on = form.weekDays.includes(d.value);
-                      return (
-                        <button
-                          key={d.value}
-                          type="button"
-                          aria-pressed={on}
-                          onClick={() => setForm(p => ({
-                            ...p,
-                            weekDays: on ? p.weekDays.filter(x => x !== d.value) : [...p.weekDays, d.value],
-                          }))}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                            on ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-secondary"
-                          }`}
-                        >
-                          {d.label}
-                        </button>
-                      );
-                    })}
+                {form.repeat !== "none" && (
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Jusqu'au * (Date de fin)</label>
+                    <Input
+                      type="date"
+                      aria-label="Date de fin"
+                      value={form.until}
+                      min={form.date || undefined}
+                      onChange={e => setForm(p => ({ ...p, until: e.target.value }))}
+                    />
                   </div>
-                </div>
+                )}
 
-                {form.date && form.until ? (
+                {form.repeat === "weekly" && (
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Jours de circulation *</label>
+                    <div className="flex flex-wrap gap-2">
+                      {WEEK_DAYS.map((d) => {
+                        const on = form.weekDays.includes(d.value);
+                        return (
+                          <button
+                            key={d.value}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => setForm(p => ({
+                              ...p,
+                              weekDays: on ? p.weekDays.filter(x => x !== d.value) : [...p.weekDays, d.value],
+                            }))}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                              on ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-secondary"
+                            }`}
+                          >
+                            {d.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {form.date && form.until && form.repeat !== "none" ? (
                   <p className="text-[11px] text-muted-foreground">
-                    {buildRecurrenceDates(form.date, "weekly", form.weekDays, form.until).length} date(s) programmée(s)
-                    (max 120), du {form.date} au {form.until}. Les dates déjà existantes pour ce trajet seront ignorées.
+                    {buildRecurrenceDates(form.date, form.repeat, form.weekDays, form.until).length} date(s) programmée(s)
+                    (max 120), du {form.date} au {form.until}. Les doublons seront ignorés.
                   </p>
                 ) : (
                   <p className="text-[11px] text-muted-foreground">
-                    Sans date de fin, un seul départ sera créé à la date de début.
+                    {form.repeat === "none" ? "Un seul départ sera créé." : "Sélectionnez une date de fin pour activer la récurrence."}
                   </p>
                 )}
               </div>
