@@ -203,7 +203,7 @@ const AgencyTrips = () => {
       );
     } else {
 
-      const dates = buildRecurrenceDates(form.date, form.until ? "weekly" : "none", form.weekDays, form.until);
+      const dates = buildRecurrenceDates(form.date, form.until ? form.repeat : "none", form.weekDays, form.until);
 
       // Anti-doublons : on ignore les dates où ce même trajet (même départ,
       // destination et heure) existe déjà pour l'agence.
