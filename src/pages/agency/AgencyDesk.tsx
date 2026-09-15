@@ -361,6 +361,17 @@ const AgencyDesk = () => {
                         </TableCell>
                         <TableCell>{statusBadge(b.boarding_status || "pending")}</TableCell>
                         <TableCell className="text-right whitespace-nowrap">
+                          {b.payment_status !== "paid" && b.status !== "cancelled" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mr-1 border-accent/40 text-accent hover:bg-accent/10"
+                              disabled={busyId === b.id}
+                              onClick={() => collectCash(b)}
+                            >
+                              <Banknote className="h-4 w-4 mr-1" /> Encaisser
+                            </Button>
+                          )}
                           <Button size="sm" variant="outline" className="mr-1" onClick={() => printTicket(b)}>
                             <Printer className="h-4 w-4 mr-1" /> Imprimer
                           </Button>
