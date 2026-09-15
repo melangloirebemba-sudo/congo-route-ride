@@ -32,24 +32,27 @@ const SearchResults = () => {
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [branchLabel, setBranchLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date();
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-  const filteredTrips = trips.filter((t) => {
-    const now = new Date();
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const td = new Date(t.date); td.setHours(0, 0, 0, 0);
+  const localDay = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const todayStr = localDay(new Date());
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowStr = localDay(tomorrowDate);
 
-    // Hide trips whose departure time has already passed (5 min grace)
-    if (td.getTime() === today.getTime()) {
-      const departTime = new Date(`${t.date}T${t.departure_time || "00:00"}`);
-      if (departTime.getTime() + (5 * 60 * 1000) < now.getTime()) return false;
+  const filteredTrips = trips.filter((t) => {
+    const tripDay = (t.date || "").slice(0, 10);
+    // Jamais de trajet dans le passé
+    if (tripDay < todayStr) return false;
+
+    // Masque les trajets du jour dont l'heure de départ est dépassée (5 min de marge)
+    if (tripDay === todayStr) {
+      const departTime = new Date(`${tripDay}T${(t.departure_time || "00:00").slice(0, 5)}`);
+      if (departTime.getTime() + 5 * 60 * 1000 < Date.now()) return false;
     }
 
     return true;
   });
-  const pg = usePagination(filteredTrips, 5, [], { paramKey: "" });
+  const pg = usePagination(filteredTrips, 5, [from, to, date, branch, district], { paramKey: "" });
 
   useEffect(() => {
     const fetch = async () => {
