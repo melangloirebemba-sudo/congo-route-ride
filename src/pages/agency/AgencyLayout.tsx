@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText, PlusCircle, Megaphone, AlertOctagon, Printer, Clock } from "lucide-react";
+import { LayoutDashboard, Bus, Ticket, Settings, LogOut, Building2, QrCode, UserCog, ScrollText, PlusCircle, Megaphone, AlertOctagon, Printer, Clock, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
