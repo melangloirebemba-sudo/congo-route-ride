@@ -75,7 +75,6 @@ const SearchResults = () => {
         }
       }
 
-      const today = new Date().toISOString().slice(0, 10);
       let query = supabase
         .from("trips")
         .select("id, agency_id, departure, destination, departure_time, arrival_time, date, price, available_seats, bus_type, agencies!inner(name, status)")
@@ -86,7 +85,7 @@ const SearchResults = () => {
       if (from) query = query.eq("departure", from);
       if (to) query = query.eq("destination", to);
       if (date) query = query.eq("date", date);
-      else query = query.gte("date", today);
+      else query = query.gte("date", tomorrowStr);
       if (branch) query = query.eq("branch_id", branch);
       else if (branchIdsFilter) query = query.in("branch_id", branchIdsFilter);
 
