@@ -78,161 +78,170 @@ const Index = () => {
     navigate(`/search?${params.toString()}`);
   };
 
+  const fieldClass =
+    "w-full pl-11 pr-4 py-3.5 rounded-2xl bg-secondary/70 text-secondary-foreground text-sm font-body border border-border/60 focus:outline-none focus:ring-2 focus:ring-warning focus:border-transparent transition-all";
+
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-32">
       {/* Hero */}
-      <section className="relative gradient-hero px-4 pt-12 pb-16 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
+      <section className="relative gradient-hero px-5 pt-12 pb-28 overflow-hidden rounded-b-[2.5rem]">
+        <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-primary-foreground/10 blur-2xl" />
+        <div className="absolute bottom-6 right-5 opacity-20" aria-hidden="true">
+          <svg width="72" height="72" viewBox="0 0 60 60" fill="none">
+            <circle cx="30" cy="30" r="28" stroke="white" strokeWidth="2" strokeDasharray="4 4" />
+            <circle cx="30" cy="30" r="14" fill="white" />
+          </svg>
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="relative z-10 max-w-lg mx-auto"
         >
-          <h1 className="font-display text-3xl md:text-5xl font-bold text-primary-foreground mb-2">
-            Voyagez<br />simplement.
+          <h1 className="font-display text-3xl md:text-4xl font-extrabold text-primary-foreground leading-tight mb-2">
+            Voyagez en toute sérénité
           </h1>
-          <p className="text-primary-foreground/80 text-sm md:text-base mb-8">
-            Réservez vos billets de transport terrestre au Congo en quelques clics.
+          <p className="text-primary-foreground/90 text-sm font-medium max-w-xs">
+            Réservez votre trajet à travers le Congo en quelques clics.
           </p>
-
-          <div className="glass rounded-2xl p-4 space-y-3">
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-4 w-4 text-primary" />
-              <select
-                value={departure}
-                onChange={(e) => setDeparture(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Ville de départ</option>
-                {cities.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-4 w-4 text-accent" />
-              <select
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Destination</option>
-                {cities.filter((c) => c !== departure).map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-
-
-            {departure && (
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3 h-4 w-4 text-primary" />
-                <select
-                  value={district}
-                  onChange={(e) => { setDistrict(e.target.value); setBranchId(""); }}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Arrondissement / quartier (tous)</option>
-                  {availableDistricts.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="relative">
-              <Bus className="absolute left-3 top-3 h-4 w-4 text-primary" />
-              <select
-                value={branchId}
-                onChange={(e) => setBranchId(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Agence la plus proche (toutes)</option>
-                {filteredBranches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.agency?.name ? `${b.agency.name} — ` : ""}{b.name}{b.district ? ` · ${b.district}` : ""}{b.city ? ` (${b.city})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-
-            <div className="relative">
-              <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <input
-                type="date"
-                min={today}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <Button
-              onClick={handleSearch}
-              className="w-full gradient-primary text-primary-foreground py-3 rounded-xl font-display font-semibold text-base h-12"
-            >
-              <Search className="mr-2 h-4 w-4" />
-              Rechercher un trajet
-            </Button>
-          </div>
         </motion.div>
       </section>
 
+      {/* Search card */}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        className="px-5 -mt-20 relative z-10 max-w-lg mx-auto"
+      >
+        <div className="bg-card rounded-4xl p-5 shadow-lifted border border-border/40 space-y-3">
+          <div className="relative">
+            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+            <select value={departure} onChange={(e) => setDeparture(e.target.value)} className={fieldClass}>
+              <option value="">Ville de départ</option>
+              {cities.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="relative">
+            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-accent" />
+            <select value={destination} onChange={(e) => setDestination(e.target.value)} className={fieldClass}>
+              <option value="">Destination</option>
+              {cities.filter((c) => c !== departure).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          {departure && (
+            <div className="relative">
+              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+              <select
+                value={district}
+                onChange={(e) => { setDistrict(e.target.value); setBranchId(""); }}
+                className={fieldClass}
+              >
+                <option value="">Arrondissement / quartier (tous)</option>
+                {availableDistricts.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="relative">
+            <Bus className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+            <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className={fieldClass}>
+              <option value="">Agence la plus proche (toutes)</option>
+              {filteredBranches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.agency?.name ? `${b.agency.name} — ` : ""}{b.name}{b.district ? ` · ${b.district}` : ""}{b.city ? ` (${b.city})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="relative">
+            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="date"
+              min={today}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={fieldClass}
+            />
+          </div>
+
+          <Button
+            onClick={handleSearch}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-display font-bold text-base h-14 shadow-warm press"
+          >
+            <Search className="mr-2 h-4 w-4" />
+            Rechercher un trajet
+          </Button>
+        </div>
+      </motion.div>
+
       {/* Features */}
-      <section className="px-4 py-10 max-w-lg mx-auto">
-        <h2 className="font-display text-lg font-bold mb-4">Pourquoi TransCongo ?</h2>
-        <div className="grid grid-cols-3 gap-3">
+      <section className="px-5 pt-10 max-w-lg mx-auto">
+        <h2 className="font-display text-xl font-bold mb-4">Pourquoi TransCongo ?</h2>
+        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
           {[
-            { icon: Shield, label: "Paiement\nsécurisé", color: "text-accent" },
-            { icon: Clock, label: "Réservation\ninstantanée", color: "text-primary" },
-            { icon: Bus, label: "Meilleures\nagences", color: "text-warning" },
-          ].map(({ icon: Icon, label, color }) => (
-            <div key={label} className="bg-card rounded-xl p-4 text-center border border-border/50">
-              <Icon className={`h-6 w-6 mx-auto mb-2 ${color}`} />
-              <p className="text-xs font-body text-muted-foreground whitespace-pre-line">{label}</p>
+            { icon: Shield, label: "Paiement sécurisé", hint: "Mobile Money & carte", tint: "bg-accent/10 text-accent" },
+            { icon: Clock, label: "Réservation instantanée", hint: "Votre place en 2 min", tint: "bg-primary/10 text-primary" },
+            { icon: Bus, label: "Meilleures agences", hint: "Compagnies vérifiées", tint: "bg-warning/20 text-warning" },
+          ].map(({ icon: Icon, label, hint, tint }) => (
+            <div
+              key={label}
+              className="min-w-[150px] flex-1 card-soft p-4 hover:shadow-warm transition-shadow duration-300"
+            >
+              <div className={`pill-icon h-11 w-11 mb-3 ${tint}`}>
+                <Icon className="h-5 w-5" strokeWidth={1.9} />
+              </div>
+              <p className="font-display font-bold text-sm leading-tight">{label}</p>
+              <p className="text-xs text-muted-foreground mt-1">{hint}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Popular Agencies */}
-      <section className="px-4 pb-10 max-w-lg mx-auto">
+      <section className="px-5 pt-8 max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg font-bold">Agences populaires</h2>
+          <h2 className="font-display text-xl font-bold">Agences partenaires</h2>
           <button
             onClick={() => navigate("/agencies")}
-            className="text-primary text-sm font-medium flex items-center gap-1"
+            className="text-primary text-sm font-semibold flex items-center gap-1 press"
           >
             Voir tout <ArrowRight className="h-3 w-3" />
           </button>
         </div>
         <div className="space-y-3">
           {agencies.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="text-sm text-muted-foreground text-center py-6">
               Aucune agence active pour le moment.
             </p>
           )}
           {agencies.map((agency, i) => (
             <motion.button
               key={agency.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => navigate(`/agencies/${agency.id}`)}
-              className="w-full flex items-center gap-4 bg-card rounded-xl p-4 border border-border/50 hover:border-primary/50 transition text-left"
+              className="w-full flex items-center gap-4 card-soft p-3.5 hover:shadow-warm text-left press"
             >
-              <AgencyLogo logo={agency.logo} name={agency.name} className="h-12 w-12" />
-              <div className="flex-1">
-                <h3 className="font-display font-semibold text-sm">{agency.name}</h3>
+              <AgencyLogo logo={agency.logo} name={agency.name} className="h-14 w-14 rounded-2xl" />
+              <div className="flex-1 min-w-0">
+                <h3 className="font-display font-bold text-sm truncate">{agency.name}</h3>
                 <p className="text-xs text-muted-foreground">{agency.total_trips || 0} trajets</p>
               </div>
-              <div className="flex items-center gap-1">
+              <span className="flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1">
                 <Star className="h-3 w-3 fill-warning text-warning" />
-                <span className="text-sm font-semibold">{agency.rating || 0}</span>
-              </div>
+                <span className="text-xs font-bold text-foreground">{agency.rating || 0}</span>
+              </span>
             </motion.button>
           ))}
         </div>
