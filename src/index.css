@@ -110,15 +110,47 @@
 
 @layer utilities {
   .glass {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+    @apply bg-card/90 backdrop-blur-xl border border-border/60;
+    box-shadow: var(--shadow-warm);
   }
   .gradient-primary {
-    @apply bg-gradient-to-r from-primary to-orange-400;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--warning)) 100%);
   }
   .gradient-hero {
-    background: linear-gradient(135deg, hsl(24 95% 53%) 0%, hsl(35 95% 55%) 50%, hsl(24 90% 48%) 100%);
+    background: linear-gradient(135deg, hsl(16 77% 48%) 0%, hsl(26 82% 53%) 45%, hsl(39 87% 59%) 100%);
   }
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-orange-400;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--warning)));
+  }
+
+  /* Formes douces & matière */
+  .card-soft {
+    @apply bg-card border border-border/60 rounded-3xl;
+    box-shadow: var(--shadow-soft);
+  }
+  .card-warm {
+    @apply bg-card border border-border/50 rounded-4xl;
+    box-shadow: var(--shadow-warm);
+  }
+  .pill-icon {
+    @apply flex items-center justify-center rounded-2xl;
+  }
+  .ticket-divider {
+    height: 1px;
+    background-image: linear-gradient(to right, hsl(var(--border)) 55%, transparent 0%);
+    background-size: 10px 1px;
+    background-repeat: repeat-x;
+  }
+  .press {
+    @apply transition-transform duration-200 active:scale-[0.97];
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
+
