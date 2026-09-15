@@ -369,7 +369,7 @@ const AgencyDesk = () => {
                   </TableBody>
                 </Table>
               </div>
-              <ListPagination page={page} pageCount={pageCount} onPageChange={setPage} />
+              <ListPagination {...pagination} className="mt-4" />
             </>
           )}
         </CardContent>
