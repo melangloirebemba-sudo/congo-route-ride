@@ -43,6 +43,7 @@ import AgencySubAgencies from "./pages/agency/AgencySubAgencies";
 import AgencyManagers from "./pages/agency/AgencyManagers";
 import AgencySettings from "./pages/agency/AgencySettings";
 import AgencyDesk from "./pages/agency/AgencyDesk";
+import AgencyCashbox from "./pages/agency/AgencyCashbox";
 import AgencyContactSettings from "./pages/agency/AgencyContactSettings";
 import AgencyAudit from "./pages/agency/AgencyAudit";
 import AgencyBroadcast from "./pages/agency/AgencyBroadcast";
