@@ -37,7 +37,8 @@ const ownerNavItems = [
 ];
 
 const managerNavItems = ownerNavItems.filter((i) =>
-  i.to !== "/agency/counter-sale" && i.to !== "/agency/broadcast" && i.to !== "/agency/reports"
+  i.to !== "/agency/counter-sale" && i.to !== "/agency/broadcast" && i.to !== "/agency/reports" &&
+  i.to !== "/agency/contact-settings"
 );
 
 const AgencySidebar = ({
