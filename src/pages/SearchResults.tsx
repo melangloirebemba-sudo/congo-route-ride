@@ -33,6 +33,9 @@ const SearchResults = () => {
   const [branchLabel, setBranchLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const todayStr = new Date().toISOString().slice(0, 10);
+  const tomorrow = new Date();
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
   const filteredTrips = trips.filter((t) => {
     const now = new Date();
     const today = new Date(); today.setHours(0, 0, 0, 0);
