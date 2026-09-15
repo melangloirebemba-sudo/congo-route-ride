@@ -187,6 +187,8 @@ const AgencyCounterSale = () => {
       return;
     }
 
+    if ((insertedBooking as any)?.id) void sendBookingWhatsApp((insertedBooking as any).id, "ticket");
+
     await supabase.rpc("release_seat" as any, { _trip_id: trip.id, _seat_number: seat });
     await supabase.from("trips").update({ available_seats: Math.max(0, (trip.available_seats || 0) - 1) }).eq("id", trip.id);
 
