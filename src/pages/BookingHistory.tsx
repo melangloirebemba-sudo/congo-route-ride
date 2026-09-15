@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, QrCode, MapPin, Calendar, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import { ListPagination, usePagination } from "@/components/ListPagination";
 
 interface BookingRow {
@@ -13,6 +14,7 @@ interface BookingRow {
   seat_number: number;
   total_amount: number;
   booking_date: string;
+  payment_method: string | null;
   trips: {
     departure: string;
     destination: string;
@@ -46,8 +48,9 @@ const BookingHistory = () => {
       if (!user) { setBookings([]); setLoading(false); return; }
       const { data } = await supabase
         .from("bookings")
-        .select("id, status, qr_code, seat_number, total_amount, booking_date, trips(departure, destination, departure_time, date, agencies(name))")
+        .select("id, status, qr_code, seat_number, total_amount, booking_date, payment_method, trips(departure, destination, departure_time, date, agencies(name))")
         .eq("user_id", user.id)
+        .eq("payment_status", "paid")
         .order("created_at", { ascending: false });
       setBookings((data as unknown as BookingRow[]) || []);
       setLoading(false);
@@ -62,7 +65,8 @@ const BookingHistory = () => {
         <button onClick={() => navigate(-1)} className="text-primary-foreground mb-4">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="font-display text-xl font-bold text-primary-foreground">Mes réservations</h1>
+        <h1 className="font-display text-xl font-bold text-primary-foreground">Mes billets</h1>
+        <p className="text-primary-foreground/70 text-xs mt-1">Voyages payés et confirmés</p>
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-3">
@@ -73,7 +77,8 @@ const BookingHistory = () => {
         ) : bookings.length === 0 ? (
           <div className="text-center py-16">
             <QrCode className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-            <p className="text-muted-foreground">Aucune réservation</p>
+            <p className="text-muted-foreground">Aucun billet payé</p>
+            <Button variant="link" onClick={() => navigate("/reservations")} className="mt-2">Voir mes réservations en attente →</Button>
           </div>
         ) : (
           pg.paginated.map((b, i) => (
@@ -108,7 +113,7 @@ const BookingHistory = () => {
 
               <div className="flex items-center justify-between pt-2 border-t border-border/50">
                 <span className="text-xs text-muted-foreground">
-                  Siège {b.seat_number} · {b.trips?.agencies?.name || "Agence"}
+                  Siège {b.seat_number} · {b.trips?.agencies?.name || "Agence"}{b.payment_method ? ` · ${b.payment_method}` : ""}
                 </span>
                 <span className="font-display font-bold text-sm text-primary">
                   {b.total_amount.toLocaleString()} FCFA
