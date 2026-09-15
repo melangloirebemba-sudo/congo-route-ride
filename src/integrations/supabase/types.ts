@@ -69,6 +69,8 @@ export type Database = {
           is_popular: boolean
           logo: string | null
           name: string
+          official_address: string | null
+          opening_hours: Json
           owner_id: string | null
           phone: string | null
           popularity_rank: number | null
@@ -87,6 +89,8 @@ export type Database = {
           is_popular?: boolean
           logo?: string | null
           name: string
+          official_address?: string | null
+          opening_hours?: Json
           owner_id?: string | null
           phone?: string | null
           popularity_rank?: number | null
@@ -105,6 +109,8 @@ export type Database = {
           is_popular?: boolean
           logo?: string | null
           name?: string
+          official_address?: string | null
+          opening_hours?: Json
           owner_id?: string | null
           phone?: string | null
           popularity_rank?: number | null
@@ -169,6 +175,8 @@ export type Database = {
           id: string
           manager_name: string | null
           name: string
+          official_address: string | null
+          opening_hours: Json
           parent_branch_id: string | null
           phone: string | null
           status: string
@@ -189,6 +197,8 @@ export type Database = {
           id?: string
           manager_name?: string | null
           name: string
+          official_address?: string | null
+          opening_hours?: Json
           parent_branch_id?: string | null
           phone?: string | null
           status?: string
@@ -209,6 +219,8 @@ export type Database = {
           id?: string
           manager_name?: string | null
           name?: string
+          official_address?: string | null
+          opening_hours?: Json
           parent_branch_id?: string | null
           phone?: string | null
           status?: string
