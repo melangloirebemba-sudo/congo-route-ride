@@ -33,6 +33,9 @@ const SearchResults = () => {
   const [branchLabel, setBranchLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const todayStr = new Date().toISOString().slice(0, 10);
+  const tomorrow = new Date();
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
   const filteredTrips = trips.filter((t) => {
     const now = new Date();
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -72,7 +75,6 @@ const SearchResults = () => {
         }
       }
 
-      const today = new Date().toISOString().slice(0, 10);
       let query = supabase
         .from("trips")
         .select("id, agency_id, departure, destination, departure_time, arrival_time, date, price, available_seats, bus_type, agencies!inner(name, status)")
@@ -83,7 +85,7 @@ const SearchResults = () => {
       if (from) query = query.eq("departure", from);
       if (to) query = query.eq("destination", to);
       if (date) query = query.eq("date", date);
-      else query = query.gte("date", today);
+      else query = query.gte("date", tomorrowStr);
       if (branch) query = query.eq("branch_id", branch);
       else if (branchIdsFilter) query = query.in("branch_id", branchIdsFilter);
 
@@ -175,7 +177,7 @@ const SearchResults = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2 relative">
-              <p className="text-primary-foreground/70 text-sm italic">Aucune date sélectionnée</p>
+              <p className="text-primary-foreground/70 text-sm">À partir de demain</p>
               <input
                 type="date"
                 min={todayStr}
