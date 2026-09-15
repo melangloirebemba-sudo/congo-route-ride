@@ -32,24 +32,27 @@ const SearchResults = () => {
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [branchLabel, setBranchLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date();
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-  const filteredTrips = trips.filter((t) => {
-    const now = new Date();
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const td = new Date(t.date); td.setHours(0, 0, 0, 0);
+  const localDay = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const todayStr = localDay(new Date());
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowStr = localDay(tomorrowDate);
 
-    // Hide trips whose departure time has already passed (5 min grace)
-    if (td.getTime() === today.getTime()) {
-      const departTime = new Date(`${t.date}T${t.departure_time || "00:00"}`);
-      if (departTime.getTime() + (5 * 60 * 1000) < now.getTime()) return false;
+  const filteredTrips = trips.filter((t) => {
+    const tripDay = (t.date || "").slice(0, 10);
+    // Jamais de trajet dans le passé
+    if (tripDay < todayStr) return false;
+
+    // Masque les trajets du jour dont l'heure de départ est dépassée (5 min de marge)
+    if (tripDay === todayStr) {
+      const departTime = new Date(`${tripDay}T${(t.departure_time || "00:00").slice(0, 5)}`);
+      if (departTime.getTime() + 5 * 60 * 1000 < Date.now()) return false;
     }
 
     return true;
   });
-  const pg = usePagination(filteredTrips, 5, [], { paramKey: "" });
+  const pg = usePagination(filteredTrips, 5, [from, to, date, branch, district], { paramKey: "" });
 
   useEffect(() => {
     const fetch = async () => {
@@ -82,9 +85,10 @@ const SearchResults = () => {
         .eq("agencies.status", "active")
         .gt("available_seats", 0);
 
-      if (from) query = query.eq("departure", from);
-      if (to) query = query.eq("destination", to);
-      if (date) query = query.eq("date", date);
+      // Comparaison de villes insensible à la casse et aux espaces superflus
+      if (from) query = query.ilike("departure", from.trim());
+      if (to) query = query.ilike("destination", to.trim());
+      if (date) query = query.eq("date", date < todayStr ? todayStr : date);
       else query = query.gte("date", tomorrowStr);
       if (branch) query = query.eq("branch_id", branch);
       else if (branchIdsFilter) query = query.in("branch_id", branchIdsFilter);
@@ -93,18 +97,31 @@ const SearchResults = () => {
       const raw = ((data as unknown as TripRow[]) || []);
 
       // Déduplication des trajets récurrents : un même trajet (agence, départ,
-      // destination, heure) n'apparaît qu'une fois, sur son prochain départ.
+      // destination, heure, prix) n'apparaît qu'une fois, sur son prochain départ.
+      const norm = (v: string | null) =>
+        (v || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim()
+          .toLowerCase();
       const seriesMap = new Map<string, TripRow>();
       raw.forEach((t) => {
-        const key = `${t.agency_id}|${t.departure}|${t.destination}|${t.departure_time}`;
+        const key = [
+          t.agency_id,
+          norm(t.departure),
+          norm(t.destination),
+          (t.departure_time || "").slice(0, 5),
+          t.price,
+        ].join("|");
         const existing = seriesMap.get(key);
-        if (!existing) seriesMap.set(key, { ...t, occurrences: 1 });
-        else {
-          existing.occurrences = (existing.occurrences || 1) + 1;
-          if (t.date < existing.date) {
-            seriesMap.set(key, { ...t, occurrences: existing.occurrences });
-          }
+        if (!existing) {
+          seriesMap.set(key, { ...t, occurrences: 1 });
+          return;
         }
+        const occurrences = (existing.occurrences || 1) + 1;
+        // On garde la date la plus proche comme prochain départ
+        const next = t.date < existing.date ? { ...t } : { ...existing };
+        seriesMap.set(key, { ...next, occurrences });
       });
       const rows = Array.from(seriesMap.values());
 
@@ -112,7 +129,7 @@ const SearchResults = () => {
       // les trajets de la même tranche horaire pour ne privilégier aucune agence.
       const groups = new Map<string, TripRow[]>();
       rows.forEach((t) => {
-        const key = t.departure_time || "";
+        const key = (t.departure_time || "").slice(0, 5);
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key)!.push(t);
       });
