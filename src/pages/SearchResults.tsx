@@ -35,18 +35,18 @@ const SearchResults = () => {
   const [when, setWhen] = useState<"all" | "today" | "tomorrow">("all");
   const todayStr = new Date().toISOString().slice(0, 10);
   const filteredTrips = trips.filter((t) => {
-    if (when === "all") return true;
     const now = new Date();
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const td = new Date(t.date); td.setHours(0, 0, 0, 0);
-    
-    if (when === "today") {
-      if (td.getTime() !== today.getTime()) return false;
-      // For today, only show if departure is not too far in the past (5 min grace)
+
+    // Hide trips whose departure time has already passed (5 min grace)
+    if (td.getTime() === today.getTime()) {
       const departTime = new Date(`${t.date}T${t.departure_time || "00:00"}`);
-      return departTime.getTime() + (5 * 60 * 1000) >= now.getTime();
+      if (departTime.getTime() + (5 * 60 * 1000) < now.getTime()) return false;
     }
-    
+
+    if (when === "all") return true;
+    if (when === "today") return td.getTime() === today.getTime();
     return td.getTime() > today.getTime();
   });
   const pg = usePagination(filteredTrips, 5, [when], { paramKey: "" });
