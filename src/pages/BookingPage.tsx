@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { generateUniqueTicketCode } from "@/lib/ticketCode";
+import { sendBookingWhatsApp } from "@/lib/whatsapp";
 
 interface TripData {
   id: string;

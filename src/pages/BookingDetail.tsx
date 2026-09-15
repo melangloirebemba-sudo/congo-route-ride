@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { googleCalendarUrl, outlookCalendarUrl, yahooCalendarUrl, downloadIcs, type CalendarEvent } from "@/lib/calendar";
 import { AgencyLogo } from "@/components/LogoUploader";
+import { sendBookingWhatsApp } from "@/lib/whatsapp";
 
 interface BookingRow {
   id: string;
