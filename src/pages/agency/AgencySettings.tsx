@@ -57,6 +57,7 @@ const AgencySettings = () => {
       phone: agency.phone,
       address: agency.address,
       logo: agency.logo,
+      whatsapp_number: (agency as any).whatsapp_number || null,
     }).eq("id", agencyId);
     if (error) { toast.error(error.message); return; }
     toast.success("Informations enregistrées");
@@ -188,6 +189,11 @@ const AgencySettings = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Téléphone</label>
               <Input disabled={readOnly} value={agency.phone || ""} onChange={e => setAgency(p => ({ ...p, phone: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Numéro WhatsApp (par défaut)</label>
+              <Input disabled={readOnly} placeholder="+242 06 000 00 00" value={(agency as any).whatsapp_number || ""} onChange={e => setAgency(p => ({ ...p, whatsapp_number: e.target.value } as any))} />
+              <p className="text-xs text-muted-foreground">Utilisé si une sous-agence n'a pas son propre numéro WhatsApp.</p>
             </div>
           </div>
           <div className="space-y-2">
