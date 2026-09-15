@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 
 type AuthMode = "login" | "signup" | "otp-request" | "otp-verify";
@@ -100,6 +101,27 @@ const Auth = () => {
       }
     } catch (error: any) {
       toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin + "/auth",
+      });
+      if (result.error) {
+        toast.error(result.error.message || "Connexion Google impossible");
+        return;
+      }
+      if (result.redirected) return; // le navigateur redirige vers Google
+      // Session déjà en place (popup) : rediriger selon le rôle
+      toast.success("Connexion réussie !");
+      await redirectByRole();
+    } catch (error: any) {
+      toast.error(error.message || "Connexion Google impossible");
     } finally {
       setLoading(false);
     }
