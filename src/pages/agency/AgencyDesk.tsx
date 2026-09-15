@@ -177,6 +177,23 @@ const AgencyDesk = () => {
     load();
   };
 
+  const collectCash = async (b: any) => {
+    setBusyId(b.id);
+    const { data, error } = await supabase.rpc("collect_cash_payment" as any, { _booking_id: b.id });
+    setBusyId(null);
+    const res = data as any;
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (res?.ok === false) {
+      toast.error(res?.message || "Encaissement impossible");
+      return;
+    }
+    toast.success(`Paiement en espèces encaissé — ${b.passenger_name}`);
+    load();
+  };
+
   const printTicket = (b: any) => {
     const loc = branch
       ? [branch.name, branch.official_address || branch.address, branch.district, branch.city]
