@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { generateUniqueTicketCode } from "@/lib/ticketCode";
+import { sendBookingWhatsApp } from "@/lib/whatsapp";
 
 interface TripData {
   id: string;
@@ -221,6 +222,10 @@ const BookingPage = () => {
         status: "completed",
       });
     }
+
+    // Envoi WhatsApp réel au numéro renseigné
+    void sendBookingWhatsApp(inserted.id, "booking_created");
+    if (initialPaid) void sendBookingWhatsApp(inserted.id, "ticket");
 
     if (isMomo) {
       const { data: sim, error: simErr } = await (supabase as any).rpc("init_payment_simulation", {

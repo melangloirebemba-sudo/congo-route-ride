@@ -13,6 +13,7 @@ import SeatSelector from "@/components/SeatSelector";
 import QRCode from "qrcode";
 import { jsPDF } from "jspdf";
 import { generateUniqueTicketCode } from "@/lib/ticketCode";
+import { sendBookingWhatsApp } from "@/lib/whatsapp";
 
 
 const paymentMethods = [
@@ -122,7 +123,8 @@ const AgencyCounterSale = () => {
   const handleSelectSeat = async (n: number) => {
     if (!tripId) return;
     if (mySeatLock && mySeatLock.seat !== n) {
-      await supabase.rpc("release_seat" as any, { _trip_id: tripId, _seat_number: mySeatLock.seat });
+      if (insertedBooking?.id) void sendBookingWhatsApp((insertedBooking as any).id, "ticket");
+    await supabase.rpc("release_seat" as any, { _trip_id: tripId, _seat_number: mySeatLock.seat });
     }
     const { data, error } = await supabase.rpc("lock_seat" as any, { _trip_id: tripId, _seat_number: n, _ttl_seconds: 300 });
     if (error) { toast.error(error.message); return; }
@@ -162,7 +164,7 @@ const AgencyCounterSale = () => {
     setSubmitting(true);
     // Même format de code que la vente au guichet gestionnaire
     const qr = await generateUniqueTicketCode();
-    const { error } = await supabase.from("bookings").insert({
+    const { data: insertedBooking, error } = await supabase.from("bookings").insert({
       trip_id: trip.id,
       user_id: user?.id,
       passenger_name: passengerName.trim(),
@@ -175,7 +177,7 @@ const AgencyCounterSale = () => {
       qr_code: qr,
       total_amount: trip.price,
       boarding_branch_id: boardingBranchId,
-    } as any);
+    } as any).select("id").single();
 
     if (error) {
       setSubmitting(false);

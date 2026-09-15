@@ -16,6 +16,7 @@ import SeatSelector from "@/components/SeatSelector";
 import QRCode from "qrcode";
 import { jsPDF } from "jspdf";
 import { generateUniqueTicketCode } from "@/lib/ticketCode";
+import { sendBookingWhatsApp } from "@/lib/whatsapp";
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 
@@ -215,7 +216,7 @@ const ManagerSale = () => {
 
     setSubmitting(true);
     const qr = await generateUniqueTicketCode();
-    const { error } = await supabase.from("bookings").insert({
+    const { data: insertedBooking, error } = await supabase.from("bookings").insert({
       trip_id: trip.id,
       user_id: user?.id,
       passenger_name: passengerName.trim(),
@@ -228,7 +229,7 @@ const ManagerSale = () => {
       qr_code: qr,
       total_amount: trip.price,
       boarding_branch_id: boardingBranchId || manager?.branch_id || null,
-    });
+    }).select("id").single();
 
 
     if (error) {
@@ -239,6 +240,8 @@ const ManagerSale = () => {
       refreshSeats(trip.id);
       return;
     }
+
+    if (insertedBooking?.id) void sendBookingWhatsApp(insertedBooking.id, "ticket");
 
     // Consume the lock
     await supabase.rpc("release_seat" as any, { _trip_id: trip.id, _seat_number: seat });

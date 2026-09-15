@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { sendBookingWhatsApp } from "@/lib/whatsapp";
 
 interface Reservation {
   id: string;
@@ -89,12 +90,14 @@ const MyReservations = () => {
 
   const confirmRequest = async (id: string) => {
     setProcessingReq(id);
+    const bookingIdForReq = pendingRequests.find((r: any) => r.id === id)?.booking_id;
     const { data, error } = await (supabase as any).rpc("confirm_payment_simulation", { _notification_id: id });
     setProcessingReq(null);
     if (error || (data && data.ok === false)) {
       toast.error(data?.message || error?.message || "Échec de la confirmation");
       return;
     }
+    if (bookingIdForReq) void sendBookingWhatsApp(bookingIdForReq, "ticket");
     toast.success("Paiement confirmé");
     await Promise.all([loadPendingRequests(), load()]);
   };
@@ -205,6 +208,7 @@ const MyReservations = () => {
       setSubmitting(false);
       return;
     }
+    void sendBookingWhatsApp(payFor.id, "ticket");
     const commission = Math.round(payFor.total_amount * 0.1);
     await supabase.from("transactions").insert({
       agency_id: null,
