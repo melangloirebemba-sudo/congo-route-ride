@@ -29,6 +29,8 @@ type Branch = {
   can_sell_counter?: boolean;
   can_scan?: boolean;
   can_view_stats?: boolean;
+  whatsapp_number?: string | null;
+  whatsapp_enabled?: boolean;
 };
 
 const emptyForm = {
@@ -44,6 +46,8 @@ const emptyForm = {
   can_sell_counter: true,
   can_scan: true,
   can_view_stats: true,
+  whatsapp_number: "",
+  whatsapp_enabled: true,
 };
 
 
@@ -93,6 +97,8 @@ const AgencyBranches = () => {
       can_sell_counter: b.can_sell_counter ?? true,
       can_scan: b.can_scan ?? true,
       can_view_stats: b.can_view_stats ?? true,
+      whatsapp_number: b.whatsapp_number || "",
+      whatsapp_enabled: b.whatsapp_enabled ?? true,
     });
     setDialogOpen(true);
   };
@@ -114,6 +120,8 @@ const AgencyBranches = () => {
       can_sell_counter: form.can_sell_counter,
       can_scan: form.can_scan,
       can_view_stats: form.can_view_stats,
+      whatsapp_number: form.whatsapp_number.trim() || null,
+      whatsapp_enabled: form.whatsapp_enabled,
     };
 
     const q = editing
@@ -177,6 +185,14 @@ const AgencyBranches = () => {
               )}
               <Input placeholder="Adresse (ex. Mafouta, Château d'eau...)" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} />
               <Input placeholder="Téléphone" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
+              <Input placeholder="Numéro WhatsApp de l'agence (ex. +242 06 000 00 00)" value={form.whatsapp_number} onChange={e => setForm(p => ({ ...p, whatsapp_number: e.target.value }))} />
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <div className="text-sm font-medium">Envois WhatsApp automatiques</div>
+                  <div className="text-xs text-muted-foreground">Réservation, billet et annulation envoyés au client</div>
+                </div>
+                <Switch checked={form.whatsapp_enabled} onCheckedChange={v => setForm(p => ({ ...p, whatsapp_enabled: v }))} />
+              </div>
               <Input placeholder="Nom du responsable" value={form.manager_name} onChange={e => setForm(p => ({ ...p, manager_name: e.target.value }))} />
               <div>
                 <label className="text-xs text-muted-foreground">Agence parente (laisser vide pour une agence principale)</label>
@@ -277,6 +293,7 @@ const AgencyBranches = () => {
                       <TableCell className="text-sm">
                         <div>{b.manager_name || "—"}</div>
                         <div className="text-xs text-muted-foreground">{b.phone || ""}</div>
+                        <div className="text-xs text-muted-foreground">{b.whatsapp_number ? `WhatsApp : ${b.whatsapp_number}${b.whatsapp_enabled === false ? " (désactivé)" : ""}` : "WhatsApp : —"}</div>
                       </TableCell>
                       <TableCell className="text-sm">{parentName(b.parent_branch_id)}</TableCell>
                       <TableCell>
