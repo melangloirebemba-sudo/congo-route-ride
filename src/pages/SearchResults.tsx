@@ -85,9 +85,10 @@ const SearchResults = () => {
         .eq("agencies.status", "active")
         .gt("available_seats", 0);
 
-      if (from) query = query.eq("departure", from);
-      if (to) query = query.eq("destination", to);
-      if (date) query = query.eq("date", date);
+      // Comparaison de villes insensible à la casse et aux espaces superflus
+      if (from) query = query.ilike("departure", from.trim());
+      if (to) query = query.ilike("destination", to.trim());
+      if (date) query = query.eq("date", date < todayStr ? todayStr : date);
       else query = query.gte("date", tomorrowStr);
       if (branch) query = query.eq("branch_id", branch);
       else if (branchIdsFilter) query = query.in("branch_id", branchIdsFilter);
@@ -96,18 +97,31 @@ const SearchResults = () => {
       const raw = ((data as unknown as TripRow[]) || []);
 
       // Déduplication des trajets récurrents : un même trajet (agence, départ,
-      // destination, heure) n'apparaît qu'une fois, sur son prochain départ.
+      // destination, heure, prix) n'apparaît qu'une fois, sur son prochain départ.
+      const norm = (v: string | null) =>
+        (v || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim()
+          .toLowerCase();
       const seriesMap = new Map<string, TripRow>();
       raw.forEach((t) => {
-        const key = `${t.agency_id}|${t.departure}|${t.destination}|${t.departure_time}`;
+        const key = [
+          t.agency_id,
+          norm(t.departure),
+          norm(t.destination),
+          (t.departure_time || "").slice(0, 5),
+          t.price,
+        ].join("|");
         const existing = seriesMap.get(key);
-        if (!existing) seriesMap.set(key, { ...t, occurrences: 1 });
-        else {
-          existing.occurrences = (existing.occurrences || 1) + 1;
-          if (t.date < existing.date) {
-            seriesMap.set(key, { ...t, occurrences: existing.occurrences });
-          }
+        if (!existing) {
+          seriesMap.set(key, { ...t, occurrences: 1 });
+          return;
         }
+        const occurrences = (existing.occurrences || 1) + 1;
+        // On garde la date la plus proche comme prochain départ
+        const next = t.date < existing.date ? { ...t } : { ...existing };
+        seriesMap.set(key, { ...next, occurrences });
       });
       const rows = Array.from(seriesMap.values());
 
