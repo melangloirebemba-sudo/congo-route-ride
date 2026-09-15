@@ -129,7 +129,7 @@ const SearchResults = () => {
       // les trajets de la même tranche horaire pour ne privilégier aucune agence.
       const groups = new Map<string, TripRow[]>();
       rows.forEach((t) => {
-        const key = t.departure_time || "";
+        const key = (t.departure_time || "").slice(0, 5);
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key)!.push(t);
       });
