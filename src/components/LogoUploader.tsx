@@ -17,12 +17,12 @@ export const AgencyLogo = ({
         src={logo as string}
         alt={`Logo ${name || "agence"}`}
         loading="lazy"
-        className={`${className} rounded-lg object-contain bg-secondary shrink-0`}
+        className={`rounded-2xl object-contain bg-secondary shrink-0 ${className}`}
       />
     );
   }
   return (
-    <span className={`${className} rounded-lg bg-secondary flex items-center justify-center text-lg shrink-0`}>
+    <span className={`rounded-2xl bg-secondary flex items-center justify-center text-lg shrink-0 ${className}`}>
       {logo || (name || "A").charAt(0).toUpperCase()}
     </span>
   );
