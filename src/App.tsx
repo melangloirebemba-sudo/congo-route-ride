@@ -42,6 +42,8 @@ import AgencyBranches from "./pages/agency/AgencyBranches";
 import AgencySubAgencies from "./pages/agency/AgencySubAgencies";
 import AgencyManagers from "./pages/agency/AgencyManagers";
 import AgencySettings from "./pages/agency/AgencySettings";
+import AgencyDesk from "./pages/agency/AgencyDesk";
+import AgencyContactSettings from "./pages/agency/AgencyContactSettings";
 import AgencyAudit from "./pages/agency/AgencyAudit";
 import AgencyBroadcast from "./pages/agency/AgencyBroadcast";
 import AgencyReports from "./pages/agency/AgencyReports";
@@ -127,6 +129,8 @@ const App = () => (
               <Route path="trips" element={<AgencyTrips />} />
               <Route path="bookings" element={<AgencyBookings />} />
               <Route path="counter-sale" element={<AgencyCounterSale />} />
+              <Route path="desk" element={<AgencyDesk />} />
+              <Route path="contact-settings" element={<AgencyContactSettings />} />
               <Route path="broadcast" element={<AgencyBroadcast />} />
               <Route path="reports" element={<AgencyReports />} />
               <Route path="audit" element={<AgencyAudit />} />
