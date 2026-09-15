@@ -76,6 +76,7 @@ export type Database = {
           status: string
           total_trips: number | null
           updated_at: string
+          whatsapp_number: string | null
         }
         Insert: {
           address?: string | null
@@ -93,6 +94,7 @@ export type Database = {
           status?: string
           total_trips?: number | null
           updated_at?: string
+          whatsapp_number?: string | null
         }
         Update: {
           address?: string | null
@@ -110,6 +112,7 @@ export type Database = {
           status?: string
           total_trips?: number | null
           updated_at?: string
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
@@ -170,6 +173,8 @@ export type Database = {
           phone: string | null
           status: string
           updated_at: string
+          whatsapp_enabled: boolean
+          whatsapp_number: string | null
         }
         Insert: {
           address?: string | null
@@ -188,6 +193,8 @@ export type Database = {
           phone?: string | null
           status?: string
           updated_at?: string
+          whatsapp_enabled?: boolean
+          whatsapp_number?: string | null
         }
         Update: {
           address?: string | null
@@ -206,6 +213,8 @@ export type Database = {
           phone?: string | null
           status?: string
           updated_at?: string
+          whatsapp_enabled?: boolean
+          whatsapp_number?: string | null
         }
         Relationships: [
           {
@@ -995,6 +1004,73 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          agency_id: string | null
+          body: string
+          booking_id: string | null
+          branch_id: string | null
+          created_at: string
+          error: string | null
+          event: string
+          from_number: string | null
+          id: string
+          provider_sid: string | null
+          status: string
+          to_number: string
+        }
+        Insert: {
+          agency_id?: string | null
+          body: string
+          booking_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          error?: string | null
+          event: string
+          from_number?: string | null
+          id?: string
+          provider_sid?: string | null
+          status?: string
+          to_number: string
+        }
+        Update: {
+          agency_id?: string | null
+          body?: string
+          booking_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          error?: string | null
+          event?: string
+          from_number?: string | null
+          id?: string
+          provider_sid?: string | null
+          status?: string
+          to_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "agency_branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
