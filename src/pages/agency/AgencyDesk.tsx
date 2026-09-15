@@ -124,8 +124,8 @@ const AgencyDesk = () => {
     });
   }, [rows, date, status, search]);
 
-  const { page, setPage, pageCount, slice } = usePagination(filtered.length, 5);
-  const pageRows = slice(filtered);
+  const pagination = usePagination(filtered, 5, [branchId, date, status, search]);
+  const pageRows = pagination.paginated;
 
   const counts = useMemo(
     () => ({
