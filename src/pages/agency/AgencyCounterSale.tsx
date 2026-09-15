@@ -123,8 +123,7 @@ const AgencyCounterSale = () => {
   const handleSelectSeat = async (n: number) => {
     if (!tripId) return;
     if (mySeatLock && mySeatLock.seat !== n) {
-      if (insertedBooking?.id) void sendBookingWhatsApp((insertedBooking as any).id, "ticket");
-    await supabase.rpc("release_seat" as any, { _trip_id: tripId, _seat_number: mySeatLock.seat });
+      await supabase.rpc("release_seat" as any, { _trip_id: tripId, _seat_number: mySeatLock.seat });
     }
     const { data, error } = await supabase.rpc("lock_seat" as any, { _trip_id: tripId, _seat_number: n, _ttl_seconds: 300 });
     if (error) { toast.error(error.message); return; }
