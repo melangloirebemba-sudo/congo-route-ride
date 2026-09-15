@@ -28,6 +28,14 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Retour de Google (redirection pleine page) : si une session existe déjà, rediriger
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) redirectByRole();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const tryClaim = async () => {
     if (!claimQr || !claimPhone) return false;
     const { data, error } = await supabase.rpc("claim_booking_by_ref", { _qr: claimQr, _phone: claimPhone });
