@@ -6,40 +6,46 @@
 
 @layer base {
   :root {
-    --background: 30 15% 97%;
-    --foreground: 20 20% 12%;
+    /* Palette "Marché & pagne" — terre cuite, jaune pagne, vert feuille, crème */
+    --background: 35 100% 96%;
+    --foreground: 24 12% 18%;
 
-    --card: 30 20% 99%;
-    --card-foreground: 20 20% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 24 12% 18%;
 
-    --popover: 30 20% 99%;
-    --popover-foreground: 20 20% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 12% 18%;
 
-    --primary: 24 95% 53%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 16 77% 48%;
+    --primary-foreground: 35 100% 97%;
+    --primary-soft: 16 80% 94%;
 
-    --secondary: 30 15% 93%;
-    --secondary-foreground: 20 20% 20%;
+    --secondary: 35 70% 93%;
+    --secondary-foreground: 24 14% 24%;
 
-    --muted: 30 10% 94%;
-    --muted-foreground: 20 10% 50%;
+    --muted: 35 55% 94%;
+    --muted-foreground: 24 10% 45%;
 
-    --accent: 160 60% 40%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 159 59% 30%;
+    --accent-foreground: 35 100% 97%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 6 70% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 15% 88%;
-    --input: 30 15% 88%;
-    --ring: 24 95% 53%;
+    --border: 30 45% 90%;
+    --input: 30 45% 90%;
+    --ring: 39 87% 59%;
 
-    --radius: 0.75rem;
+    --radius: 1.25rem;
 
-    --success: 160 60% 40%;
-    --success-foreground: 0 0% 100%;
-    --warning: 45 93% 47%;
-    --warning-foreground: 20 20% 12%;
+    --success: 159 59% 30%;
+    --success-foreground: 35 100% 97%;
+    --warning: 39 87% 59%;
+    --warning-foreground: 24 12% 18%;
+
+    --shadow-soft: 0 2px 10px -2px hsl(16 45% 30% / 0.06);
+    --shadow-warm: 0 14px 34px -14px hsl(16 60% 32% / 0.16);
+    --shadow-lifted: 0 24px 50px -20px hsl(16 60% 28% / 0.22);
 
     --font-display: 'Urbanist', sans-serif;
     --font-body: 'Epilogue', sans-serif;
