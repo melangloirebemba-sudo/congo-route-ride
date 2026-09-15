@@ -241,6 +241,8 @@ const ManagerSale = () => {
       return;
     }
 
+    if (insertedBooking?.id) void sendBookingWhatsApp(insertedBooking.id, "ticket");
+
     // Consume the lock
     await supabase.rpc("release_seat" as any, { _trip_id: trip.id, _seat_number: seat });
     await supabase.from("trips").update({ available_seats: Math.max(0, (trip.available_seats || 0) - 1) }).eq("id", trip.id);
