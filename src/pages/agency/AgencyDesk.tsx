@@ -9,7 +9,7 @@ import { ListPagination, usePagination } from "@/components/ListPagination";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Printer, CheckCircle2, XCircle, RefreshCw, Building2, Search, Clock } from "lucide-react";
+import { Printer, CheckCircle2, XCircle, RefreshCw, Building2, Search, Clock, Banknote } from "lucide-react";
 import {
   Dialog,
   DialogContent,
