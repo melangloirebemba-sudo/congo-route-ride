@@ -29,6 +29,7 @@ const ownerNavItems = [
   { to: "/agency/counter-sale", icon: PlusCircle, label: "Nouvelle réservation" },
   { to: "/agency/desk", icon: Printer, label: "Guichet" },
   { to: "/agency/contact-settings", icon: Clock, label: "Coordonnées & horaires" },
+  { to: "/agency/cashbox", icon: Wallet, label: "Caisse" },
   { to: "/agency/broadcast", icon: Megaphone, label: "Communication" },
   { to: "/agency/reports", icon: AlertOctagon, label: "Signalements" },
   { to: "/admin/scan", icon: QrCode, label: "Scan billets" },
