@@ -32,7 +32,6 @@ const SearchResults = () => {
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [branchLabel, setBranchLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [when, setWhen] = useState<"all" | "today" | "tomorrow">("all");
   const todayStr = new Date().toISOString().slice(0, 10);
   const filteredTrips = trips.filter((t) => {
     const now = new Date();
@@ -45,9 +44,7 @@ const SearchResults = () => {
       if (departTime.getTime() + (5 * 60 * 1000) < now.getTime()) return false;
     }
 
-    if (when === "all") return true;
-    if (when === "today") return td.getTime() === today.getTime();
-    return td.getTime() > today.getTime();
+    return true;
   });
   const pg = usePagination(filteredTrips, 5, [when], { paramKey: "" });
 
@@ -209,25 +206,6 @@ const SearchResults = () => {
           </div>
         ) : (
           <>
-            {!date && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {([
-                  { k: "all", label: "Tous à venir" },
-                  { k: "today", label: "Aujourd'hui" },
-                  { k: "tomorrow", label: "À partir de demain" },
-                ] as const).map((opt) => (
-                  <button
-                    key={opt.k}
-                    onClick={() => setWhen(opt.k)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                      when === opt.k ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            )}
             <p className="text-sm text-muted-foreground">{filteredTrips.length} trajet(s) trouvé(s)</p>
 
             {filteredTrips.length === 0 && (
@@ -240,14 +218,6 @@ const SearchResults = () => {
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 max-w-xs mx-auto">
-                  {when !== "all" && (
-                    <button
-                      onClick={() => setWhen("all")}
-                      className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium"
-                    >
-                      Voir tous les trajets à venir
-                    </button>
-                  )}
                   <button
                     onClick={() => navigate("/")}
                     className="px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-display font-semibold"
