@@ -5,7 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ListPagination, usePagination } from "@/components/ListPagination";
-import { Globe, Search, Wallet, CheckCircle2 } from "lucide-react";
+import { Globe, Search, Wallet, CheckCircle2, Banknote } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const ManagerOnlineSales = () => {
   const { manager } = useAuth();
@@ -14,14 +16,15 @@ const ManagerOnlineSales = () => {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [payTab, setPayTab] = useState<"paid" | "pending">("paid");
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = async () => {
     if (!manager?.branch_id) { setRows([]); setLoading(false); return; }
     const { data } = await (supabase as any)
       .from("bookings")
-      .select("id, passenger_name, phone, seat_number, qr_code, total_amount, payment_method, payment_status, payment_deadline, booking_date, created_at, boarding_status, trips!inner(departure, destination, date, departure_time, agency_id)")
+      .select("id, status, passenger_name, phone, seat_number, qr_code, total_amount, payment_method, payment_status, payment_deadline, booking_date, created_at, boarding_status, trips!inner(departure, destination, date, departure_time, agency_id)")
       .eq("sale_channel", "online")
-      .eq("payment_status", "paid")
       .eq("boarding_branch_id", manager.branch_id)
       .eq("trips.agency_id", manager.agency_id)
       .order("created_at", { ascending: false });
@@ -40,8 +43,25 @@ const ManagerOnlineSales = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manager?.branch_id]);
 
+  const paidRows = useMemo(() => rows.filter((r) => r.payment_status === "paid"), [rows]);
+  const pendingRows = useMemo(
+    () => rows.filter((r) => r.payment_status !== "paid" && r.status !== "cancelled"),
+    [rows]
+  );
+
+  const collectCash = async (b: any) => {
+    setBusyId(b.id);
+    const { data, error } = await (supabase as any).rpc("collect_cash_payment", { _booking_id: b.id });
+    setBusyId(null);
+    if (error) { toast.error(error.message); return; }
+    if ((data as any)?.ok === false) { toast.error((data as any)?.message || "Encaissement impossible"); return; }
+    toast.success(`Paiement en espèces encaissé — ${b.passenger_name}`);
+    load();
+  };
+
   const stats = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
+    const rows = paidRows;
     const todayRows = rows.filter((r) => (r.booking_date || r.created_at || "").slice(0, 10) === today);
     return {
       total: rows.length,
@@ -49,9 +69,10 @@ const ManagerOnlineSales = () => {
       revenue: rows.reduce((s, r) => s + (r.total_amount || 0), 0),
       todayRevenue: todayRows.reduce((s, r) => s + (r.total_amount || 0), 0),
     };
-  }, [rows]);
+  }, [paidRows]);
 
-  const filtered = rows.filter((r) => {
+  const source = payTab === "paid" ? paidRows : pendingRows;
+  const filtered = source.filter((r) => {
     const q = search.toLowerCase();
     const matchQ = !q || r.passenger_name?.toLowerCase().includes(q) || r.phone?.includes(search) || r.qr_code?.toLowerCase().includes(q);
     const day = (r.booking_date || r.created_at || "").slice(0, 10);
@@ -59,13 +80,13 @@ const ManagerOnlineSales = () => {
     const matchTo = !dateTo || day <= dateTo;
     return matchQ && matchFrom && matchTo;
   });
-  const pg = usePagination(filtered, 10, [search, dateFrom, dateTo], { paramKey: "" });
+  const pg = usePagination(filtered, 10, [search, dateFrom, dateTo, payTab], { paramKey: "" });
 
   const cards = [
     { label: "Ventes en ligne aujourd'hui", value: stats.today, icon: Globe, color: "text-primary" },
     { label: "Recettes du jour", value: `${stats.todayRevenue.toLocaleString()} FCFA`, icon: Wallet, color: "text-accent" },
     { label: "Total ventes confirmées", value: stats.total, icon: CheckCircle2, color: "text-primary" },
-    { label: "Recettes totales", value: `${stats.revenue.toLocaleString()} FCFA`, icon: Wallet, color: "text-accent" },
+    { label: "À encaisser au guichet", value: pendingRows.length, icon: Banknote, color: "text-primary" },
   ];
 
   return (
@@ -82,6 +103,19 @@ const ManagerOnlineSales = () => {
             <p className="text-xs text-muted-foreground">{c.label}</p>
             <p className="font-display text-xl font-bold">{c.value}</p>
           </CardContent></Card>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        {([["paid", "Payées"], ["pending", `À encaisser (${pendingRows.length})`]] as const).map(([v, label]) => (
+          <Button
+            key={v}
+            size="sm"
+            variant={payTab === v ? "default" : "outline"}
+            onClick={() => setPayTab(v as "paid" | "pending")}
+          >
+            {label}
+          </Button>
         ))}
       </div>
 
@@ -123,12 +157,13 @@ const ManagerOnlineSales = () => {
               <TableHead>Montant</TableHead>
               <TableHead>Paiement</TableHead>
               <TableHead>Code</TableHead>
+              {payTab === "pending" && <TableHead className="text-right">Guichet</TableHead>}
             </TableRow></TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8">Chargement...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={payTab === "pending" ? 9 : 8} className="text-center py-8">Chargement...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Aucune vente en ligne confirmée</TableCell></TableRow>
+                <TableRow><TableCell colSpan={payTab === "pending" ? 9 : 8} className="text-center py-8 text-muted-foreground">{payTab === "paid" ? "Aucune vente en ligne confirmée" : "Aucune réservation en attente de paiement"}</TableCell></TableRow>
               ) : pg.paginated.map((b: any) => (
                 <TableRow key={b.id}>
                   <TableCell>
@@ -142,6 +177,13 @@ const ManagerOnlineSales = () => {
                   <TableCell className="font-semibold text-sm">{b.total_amount?.toLocaleString()} FCFA</TableCell>
                   <TableCell className="text-xs">{b.payment_method || "-"}</TableCell>
                   <TableCell className="font-mono text-xs">{b.qr_code}</TableCell>
+                  {payTab === "pending" && (
+                    <TableCell className="text-right">
+                      <Button size="sm" disabled={busyId === b.id} onClick={() => collectCash(b)}>
+                        <Banknote className="h-4 w-4 mr-1" /> Encaisser en espèces
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
