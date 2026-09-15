@@ -237,6 +237,7 @@ const BookingDetail = () => {
         payment_method: paymentLabels[useMethod] || useMethod,
         status: "completed",
       } as any);
+      void sendBookingWhatsApp(booking.id, "ticket");
       toast.success("Paiement confirmé");
       setPayOpen(false);
       setMethod(useMethod);
@@ -578,6 +579,7 @@ const BookingDetail = () => {
         status: "refunded",
       } as any);
     }
+    void sendBookingWhatsApp(booking.id, "cancelled");
     toast.success("Réservation annulée" + (refund.refund > 0 ? ` — remboursement ${refund.refund.toLocaleString("fr-FR")} FCFA` : ""));
     setCancelOpen(false);
     setCancelling(false);

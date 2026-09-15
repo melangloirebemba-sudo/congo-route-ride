@@ -223,6 +223,10 @@ const BookingPage = () => {
       });
     }
 
+    // Envoi WhatsApp réel au numéro renseigné
+    void sendBookingWhatsApp(inserted.id, "booking_created");
+    if (initialPaid) void sendBookingWhatsApp(inserted.id, "ticket");
+
     if (isMomo) {
       const { data: sim, error: simErr } = await (supabase as any).rpc("init_payment_simulation", {
         _booking_id: inserted.id,

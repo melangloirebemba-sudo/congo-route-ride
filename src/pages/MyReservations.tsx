@@ -90,12 +90,14 @@ const MyReservations = () => {
 
   const confirmRequest = async (id: string) => {
     setProcessingReq(id);
+    const bookingIdForReq = pendingRequests.find((r: any) => r.id === id)?.booking_id;
     const { data, error } = await (supabase as any).rpc("confirm_payment_simulation", { _notification_id: id });
     setProcessingReq(null);
     if (error || (data && data.ok === false)) {
       toast.error(data?.message || error?.message || "Échec de la confirmation");
       return;
     }
+    if (bookingIdForReq) void sendBookingWhatsApp(bookingIdForReq, "ticket");
     toast.success("Paiement confirmé");
     await Promise.all([loadPendingRequests(), load()]);
   };
