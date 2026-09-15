@@ -177,7 +177,7 @@ const SearchResults = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2 relative">
-              <p className="text-primary-foreground/70 text-sm italic">Aucune date sélectionnée</p>
+              <p className="text-primary-foreground/70 text-sm">À partir de demain</p>
               <input
                 type="date"
                 min={todayStr}
