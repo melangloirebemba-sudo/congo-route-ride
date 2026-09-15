@@ -1099,6 +1099,7 @@ export type Database = {
         Args: { _phone: string; _qr: string }
         Returns: Json
       }
+      collect_cash_payment: { Args: { _booking_id: string }; Returns: Json }
       confirm_payment_simulation: {
         Args: { _notification_id: string }
         Returns: Json

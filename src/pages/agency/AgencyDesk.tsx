@@ -9,7 +9,7 @@ import { ListPagination, usePagination } from "@/components/ListPagination";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Printer, CheckCircle2, XCircle, RefreshCw, Building2, Search, Clock } from "lucide-react";
+import { Printer, CheckCircle2, XCircle, RefreshCw, Building2, Search, Clock, Banknote } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -174,6 +174,23 @@ const AgencyDesk = () => {
     toast.success("Embarquement refusé");
     setRefuseFor(null);
     setRefuseReason("");
+    load();
+  };
+
+  const collectCash = async (b: any) => {
+    setBusyId(b.id);
+    const { data, error } = await supabase.rpc("collect_cash_payment" as any, { _booking_id: b.id });
+    setBusyId(null);
+    const res = data as any;
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (res?.ok === false) {
+      toast.error(res?.message || "Encaissement impossible");
+      return;
+    }
+    toast.success(`Paiement en espèces encaissé — ${b.passenger_name}`);
     load();
   };
 
@@ -344,6 +361,17 @@ const AgencyDesk = () => {
                         </TableCell>
                         <TableCell>{statusBadge(b.boarding_status || "pending")}</TableCell>
                         <TableCell className="text-right whitespace-nowrap">
+                          {b.payment_status !== "paid" && b.status !== "cancelled" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mr-1 border-accent/40 text-accent hover:bg-accent/10"
+                              disabled={busyId === b.id}
+                              onClick={() => collectCash(b)}
+                            >
+                              <Banknote className="h-4 w-4 mr-1" /> Encaisser
+                            </Button>
+                          )}
                           <Button size="sm" variant="outline" className="mr-1" onClick={() => printTicket(b)}>
                             <Printer className="h-4 w-4 mr-1" /> Imprimer
                           </Button>
