@@ -46,7 +46,7 @@ const SearchResults = () => {
 
     return true;
   });
-  const pg = usePagination(filteredTrips, 5, [when], { paramKey: "" });
+  const pg = usePagination(filteredTrips, 5, [], { paramKey: "" });
 
   useEffect(() => {
     const fetch = async () => {
