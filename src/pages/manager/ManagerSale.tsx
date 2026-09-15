@@ -216,7 +216,7 @@ const ManagerSale = () => {
 
     setSubmitting(true);
     const qr = await generateUniqueTicketCode();
-    const { error } = await supabase.from("bookings").insert({
+    const { data: insertedBooking, error } = await supabase.from("bookings").insert({
       trip_id: trip.id,
       user_id: user?.id,
       passenger_name: passengerName.trim(),
@@ -229,7 +229,7 @@ const ManagerSale = () => {
       qr_code: qr,
       total_amount: trip.price,
       boarding_branch_id: boardingBranchId || manager?.branch_id || null,
-    });
+    }).select("id").single();
 
 
     if (error) {

@@ -208,6 +208,7 @@ const MyReservations = () => {
       setSubmitting(false);
       return;
     }
+    void sendBookingWhatsApp(payFor.id, "ticket");
     const commission = Math.round(payFor.total_amount * 0.1);
     await supabase.from("transactions").insert({
       agency_id: null,
